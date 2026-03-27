@@ -170,18 +170,36 @@ function TaskCard({ task, isManager, onEdit, onDelete, onProgressChange }: {
 }) {
   const cat = CAT_MAP[task.category];
   const [localProg, setLocalProg] = useState(task.progress);
-  // Trạng thái tính động theo % — không cần chờ save
   const liveStatus: TaskStatus = localProg === 100 ? "done" : localProg > 0 ? "inprogress" : "notstarted";
   const meta = STATUS_META[liveStatus];
 
   useEffect(() => { setLocalProg(task.progress); }, [task.progress]);
 
+  function toggleDone() {
+    const next = localProg === 100 ? 0 : 100;
+    setLocalProg(next);
+    onProgressChange(task.id, next);
+  }
+
+  const sliderStyle = {
+    background: `linear-gradient(to right, #f97316 0%, #f97316 ${localProg}%, #334155 ${localProg}%, #334155 100%)`,
+  };
+
   return (
-    <div className="bg-slate-800/50 rounded-xl border border-slate-700/40 p-4 space-y-3 group">
+    <div
+      className="rounded-xl border p-3 space-y-2 group transition-colors"
+      style={{
+        background: `${cat?.color ?? "#94a3b8"}0d`,
+        borderColor: `${cat?.color ?? "#94a3b8"}30`,
+      }}
+    >
+      {/* Header row */}
       <div className="flex items-start gap-2">
         <span className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: cat?.color ?? "#94a3b8" }} />
         <div className="flex-1 min-w-0">
-          <div className="text-sm text-slate-100 font-medium leading-snug">{task.title}</div>
+          <div className={`text-sm font-medium leading-snug ${liveStatus === "done" ? "line-through text-slate-400" : "text-slate-100"}`}>
+            {task.title}
+          </div>
           {task.description && <div className="text-xs text-slate-500 mt-0.5">{task.description}</div>}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
@@ -194,23 +212,44 @@ function TaskCard({ task, isManager, onEdit, onDelete, onProgressChange }: {
           )}
         </div>
       </div>
-      {/* Progress bar */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-2 bg-slate-700/50 rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${localProg}%`, background: "#f97316" }} />
-        </div>
-        <span className="text-xs font-semibold text-orange-400 w-8 text-right tabular-nums">{localProg}%</span>
+
+      {/* Slider row — manager: kéo được + nút tích; viewer: chỉ xem */}
+      <div className="flex items-center gap-2">
+        {/* Nút tích ✓ */}
+        {isManager && (
+          <button
+            onClick={toggleDone}
+            className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border transition-all ${
+              liveStatus === "done"
+                ? "bg-green-500 border-green-500 text-white"
+                : "border-slate-500 hover:border-green-400 text-transparent hover:text-green-400"
+            }`}
+            title="Đánh dấu hoàn thành"
+          >
+            <Check size={11} strokeWidth={3} />
+          </button>
+        )}
+
+        {/* Slider kéo (manager) hoặc thanh tĩnh (viewer) */}
+        {isManager ? (
+          <input
+            type="range" min={0} max={100} value={localProg}
+            onChange={(e) => setLocalProg(Number(e.target.value))}
+            onMouseUp={() => onProgressChange(task.id, localProg)}
+            onTouchEnd={() => onProgressChange(task.id, localProg)}
+            className="flex-1 h-2 rounded-full appearance-none cursor-pointer"
+            style={sliderStyle}
+          />
+        ) : (
+          <div className="flex-1 h-2 bg-slate-700/50 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${localProg}%`, background: "#f97316" }} />
+          </div>
+        )}
+
+        <span className={`text-xs font-bold tabular-nums w-9 text-right ${liveStatus === "done" ? "text-green-400" : "text-orange-400"}`}>
+          {localProg}%
+        </span>
       </div>
-      {/* Progress slider — manager only */}
-      {isManager && (
-        <input
-          type="range" min={0} max={100} value={localProg}
-          onChange={(e) => setLocalProg(Number(e.target.value))}
-          onMouseUp={() => onProgressChange(task.id, localProg)}
-          onTouchEnd={() => onProgressChange(task.id, localProg)}
-          className="w-full h-1 accent-orange-400 cursor-pointer"
-        />
-      )}
     </div>
   );
 }
