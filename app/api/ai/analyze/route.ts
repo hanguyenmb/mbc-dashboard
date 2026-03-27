@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@/lib/auth";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Khởi tạo trong request để đảm bảo đọc đúng env var
+function getClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY chưa được cấu hình");
+  return new Anthropic({ apiKey });
+}
 
 function buildPrompt(context: string, data: any): string {
   const basePrompt = `Bạn là chuyên gia phân tích kinh doanh cao cấp của Mắt Bão Corporation (MBC).
@@ -49,6 +54,7 @@ export async function POST(req: NextRequest) {
   try {
     const { context, data } = await req.json();
 
+    const client = getClient();
     const message = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
