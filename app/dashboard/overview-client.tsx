@@ -63,6 +63,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   const [showAI, setShowAI] = useState(false);
   const [view, setView] = useState<"thang" | "quy">("thang");
   const [svcView, setSvcView] = useState<"stacked" | "grouped">("stacked");
+  const [regionTab, setRegionTab] = useState<"hn" | "hcm">("hn");
 
   const SVC_KEYS = [
     { key: "hostMail",    label: "Hosting/Email",      color: "#0066CC" },
@@ -542,75 +543,67 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
               </div>
             )}
 
-            {/* HN / HCM breakdown table */}
-            <div className="mt-6 overflow-x-auto rounded-xl border border-slate-700/50">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-800/80">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400 border-b border-slate-700/60 min-w-[130px]">Nhóm DV</td>
-                    {["T1", "T2", "T3"].map((m) => (
-                      <td key={`hn-${m}`} colSpan={1} className="py-2.5 px-2 text-right font-semibold text-blue-400 border-b border-slate-700/60 min-w-[60px]">
-                        HN {m}
-                      </td>
+            {/* HN / HCM breakdown table — tab riêng */}
+            {(() => {
+              const isHN = regionTab === "hn";
+              const textColor  = isHN ? "text-blue-400" : "text-cyan-400";
+              const totalColor = isHN ? "text-blue-300" : "text-cyan-300";
+              const cellColor  = isHN ? "text-blue-200" : "text-cyan-200";
+              return (
+                <div className="mt-6 space-y-3">
+                  <div className="flex gap-1 bg-slate-800/50 rounded-xl p-1 w-fit">
+                    {(["hn", "hcm"] as const).map((r) => (
+                      <button key={r} onClick={() => setRegionTab(r)}
+                        className={`px-5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                          regionTab === r ? (r === "hn" ? "bg-blue-600 text-white" : "bg-cyan-600 text-white") : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {r === "hn" ? "Hà Nội" : "HCM"}
+                      </button>
                     ))}
-                    {["T1", "T2", "T3"].map((m) => (
-                      <td key={`hcm-${m}`} colSpan={1} className="py-2.5 px-2 text-right font-semibold text-cyan-400 border-b border-slate-700/60 min-w-[60px]">
-                        HCM {m}
-                      </td>
-                    ))}
-                    <td className="py-2.5 px-3 text-right font-bold text-white border-b border-slate-700/60 min-w-[70px]">Q1 Tổng</td>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SVC_KEYS.map((s, si) => {
-                    const q1total = SERVICE_MONTHLY.reduce((sum, m) => sum + ((m as any)[s.key] as number), 0);
-                    return (
-                      <tr key={s.key} className={si % 2 === 0 ? "bg-slate-800/30 border-b border-slate-700/30" : "bg-slate-900/20 border-b border-slate-700/30"}>
-                        <td className="py-2 px-3 font-semibold text-slate-200" style={{ borderLeft: `3px solid ${s.color}` }}>
-                          {s.label}
-                        </td>
-                        {SERVICE_MONTHLY.map((m) => (
-                          <td key={`hn-${m.month}`} className="py-2 px-2 text-right tabular-nums text-blue-200">
-                            {((m.hn as any)[s.key] as number).toFixed(1)}
+                  </div>
+                  <div className="overflow-x-auto rounded-xl border border-slate-700/50">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-800/80">
+                          <td className="py-2.5 px-3 font-semibold text-slate-400 border-b border-slate-700/60 min-w-[150px]">Nhóm DV</td>
+                          {SERVICE_MONTHLY.map((m) => (
+                            <td key={m.month} className={`py-2.5 px-3 text-right font-semibold border-b border-slate-700/60 min-w-[80px] ${textColor}`}>{m.month}</td>
+                          ))}
+                          <td className="py-2.5 px-3 text-right font-bold text-white border-b border-slate-700/60 min-w-[80px]">Q1 Tổng</td>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {SVC_KEYS.map((s, si) => {
+                          const q1 = SERVICE_MONTHLY.reduce((sum, m) => sum + ((isHN ? m.hn : m.hcm) as any)[s.key] as number, 0);
+                          return (
+                            <tr key={s.key} className={si % 2 === 0 ? "bg-slate-800/30 border-b border-slate-700/30" : "bg-slate-900/20 border-b border-slate-700/30"}>
+                              <td className="py-2 px-3 font-semibold text-slate-200" style={{ borderLeft: `3px solid ${s.color}` }}>{s.label}</td>
+                              {SERVICE_MONTHLY.map((m) => (
+                                <td key={m.month} className={`py-2 px-3 text-right tabular-nums ${cellColor}`}>
+                                  {(((isHN ? m.hn : m.hcm) as any)[s.key] as number).toFixed(1)}
+                                </td>
+                              ))}
+                              <td className="py-2 px-3 text-right font-bold tabular-nums text-white">{q1.toFixed(1)}</td>
+                            </tr>
+                          );
+                        })}
+                        <tr className="bg-slate-700/40 font-bold">
+                          <td className="py-2.5 px-3 text-slate-100 border-l-2 border-slate-500">Tổng cộng</td>
+                          {SERVICE_MONTHLY.map((m) => {
+                            const tot = SVC_KEYS.reduce((sum, s) => sum + ((isHN ? m.hn : m.hcm) as any)[s.key] as number, 0);
+                            return <td key={m.month} className={`py-2.5 px-3 text-right tabular-nums ${totalColor}`}>{tot.toFixed(1)}</td>;
+                          })}
+                          <td className="py-2.5 px-3 text-right tabular-nums text-white">
+                            {SVC_KEYS.reduce((sum, s) => sum + SERVICE_MONTHLY.reduce((s2, m) => s2 + ((isHN ? m.hn : m.hcm) as any)[s.key] as number, 0), 0).toFixed(1)}
                           </td>
-                        ))}
-                        {SERVICE_MONTHLY.map((m) => (
-                          <td key={`hcm-${m.month}`} className="py-2 px-2 text-right tabular-nums text-cyan-200">
-                            {((m.hcm as any)[s.key] as number).toFixed(1)}
-                          </td>
-                        ))}
-                        <td className="py-2 px-3 text-right font-bold tabular-nums text-white">
-                          {q1total.toFixed(1)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {/* Total row */}
-                  <tr className="bg-slate-700/40 font-bold">
-                    <td className="py-2.5 px-3 text-slate-100 border-l-2 border-slate-500">Tổng cộng</td>
-                    {SERVICE_MONTHLY.map((m) => {
-                      const hnTotal = SVC_KEYS.reduce((sum, s) => sum + ((m.hn as any)[s.key] as number), 0);
-                      return (
-                        <td key={`hn-total-${m.month}`} className="py-2.5 px-2 text-right tabular-nums text-blue-300">
-                          {hnTotal.toFixed(1)}
-                        </td>
-                      );
-                    })}
-                    {SERVICE_MONTHLY.map((m) => {
-                      const hcmTotal = SVC_KEYS.reduce((sum, s) => sum + ((m.hcm as any)[s.key] as number), 0);
-                      return (
-                        <td key={`hcm-total-${m.month}`} className="py-2.5 px-2 text-right tabular-nums text-cyan-300">
-                          {hcmTotal.toFixed(1)}
-                        </td>
-                      );
-                    })}
-                    <td className="py-2.5 px-3 text-right tabular-nums text-white">
-                      {SVC_KEYS.reduce((sum, s) => sum + SERVICE_MONTHLY.reduce((s2, m) => s2 + ((m as any)[s.key] as number), 0), 0).toFixed(1)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
