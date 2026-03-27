@@ -370,12 +370,12 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                   </thead>
                   <tbody>
                     {[
-                      { label: "ĐK Mới Tổng", key: "dangKyMoi", color: "text-blue-300",    bg: "bg-blue-500/10",    border: "border-blue-500/20",    lb: "border-l-2 border-blue-500" },
-                      { label: "— HN",         key: "dkHn",      color: "text-blue-400",    bg: "bg-blue-500/5",     border: "border-blue-500/10",    lb: "border-l-2 border-blue-700 pl-5" },
-                      { label: "— HCM",        key: "dkHcm",     color: "text-sky-400",     bg: "bg-sky-500/5",      border: "border-sky-500/10",     lb: "border-l-2 border-sky-600 pl-5" },
-                      { label: "Gia Hạn Tổng", key: "giaHan",   color: "text-emerald-300", bg: "bg-emerald-500/10", border: "border-emerald-500/20", lb: "border-l-2 border-emerald-500" },
-                      { label: "— HN",         key: "ghHn",      color: "text-emerald-400", bg: "bg-emerald-500/5",  border: "border-emerald-500/10", lb: "border-l-2 border-emerald-700 pl-5" },
-                      { label: "— HCM",        key: "ghHcm",     color: "text-green-400",   bg: "bg-green-500/5",    border: "border-green-500/10",   lb: "border-l-2 border-green-600 pl-5" },
+                      { label: "ĐK Mới Tổng", key: "dangKyMoi", color: "text-sky-300",    bg: "bg-sky-500/10",    border: "border-sky-500/20",    lb: "border-l-2 border-sky-400" },
+                      { label: "— HN",         key: "dkHn",      color: "text-sky-400",    bg: "bg-sky-500/5",     border: "border-sky-500/10",    lb: "border-l-2 border-sky-600 pl-5" },
+                      { label: "— HCM",        key: "dkHcm",     color: "text-cyan-400",   bg: "bg-cyan-500/5",    border: "border-cyan-500/10",   lb: "border-l-2 border-cyan-600 pl-5" },
+                      { label: "Gia Hạn Tổng", key: "giaHan",   color: "text-purple-300", bg: "bg-purple-500/10", border: "border-purple-500/20", lb: "border-l-2 border-purple-400" },
+                      { label: "— HN",         key: "ghHn",      color: "text-purple-400", bg: "bg-purple-500/5",  border: "border-purple-500/10", lb: "border-l-2 border-purple-600 pl-5" },
+                      { label: "— HCM",        key: "ghHcm",     color: "text-violet-400", bg: "bg-violet-500/5",  border: "border-violet-500/10", lb: "border-l-2 border-violet-600 pl-5" },
                     ].map((row) => {
                       const vals = REVENUE_TYPE.map(r => (r as any)[row.key] as number);
                       const total = vals.reduce((s, v) => s + v, 0);
