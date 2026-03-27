@@ -27,9 +27,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Tổng Quan", icon: LayoutDashboard, roles: ["manager"] },
-  { href: "/dashboard/teams", label: "Báo Cáo Nhóm", icon: Users, roles: ["manager", "leader"] },
-  { href: "/dashboard/personal", label: "Báo Cáo Cá Nhân", icon: UserCircle, roles: ["manager", "leader", "employee"] },
-  { href: "/dashboard/sources", label: "Dữ Liệu Nguồn", icon: Database, roles: ["manager"] },
+  { href: "/dashboard/teams", label: "Chi Tiết Doanh Số", icon: Users, roles: ["manager", "leader"] },
   { href: "/dashboard/weekly", label: "Báo Cáo Tuần", icon: BarChart3, roles: ["manager", "leader"] },
   { href: "/dashboard/ranking", label: "Bảng Xếp Hạng", icon: Trophy, roles: ["manager", "leader"] },
   { href: "/dashboard/import", label: "Nhập Dữ Liệu", icon: Upload, roles: ["manager"] },
@@ -68,7 +66,7 @@ export function Sidebar({ role, userName, userAvatar }: SidebarProps) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2 mb-2">
-          Điều Hướng
+          Dashboard
         </div>
         {visibleItems.map((item) => {
           const Icon = item.icon;
