@@ -168,9 +168,11 @@ function TaskCard({ task, isManager, onEdit, onDelete, onProgressChange }: {
   onDelete: (id: string) => void;
   onProgressChange: (id: string, p: number) => void;
 }) {
-  const meta = STATUS_META[task.status];
   const cat = CAT_MAP[task.category];
   const [localProg, setLocalProg] = useState(task.progress);
+  // Trạng thái tính động theo % — không cần chờ save
+  const liveStatus: TaskStatus = localProg === 100 ? "done" : localProg > 0 ? "inprogress" : "notstarted";
+  const meta = STATUS_META[liveStatus];
 
   useEffect(() => { setLocalProg(task.progress); }, [task.progress]);
 
@@ -280,8 +282,10 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
   }
 
   async function handleProgressChange(id: string, progress: number) {
-    await fetch("/api/weekly", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, progress }) });
-    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, progress } : t));
+    // Tự động cập nhật trạng thái theo tiến độ
+    const status: TaskStatus = progress === 100 ? "done" : progress > 0 ? "inprogress" : "notstarted";
+    await fetch("/api/weekly", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, progress, status }) });
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, progress, status } : t));
   }
 
   function openAddTask(category: string, forNextWeek = false) {
