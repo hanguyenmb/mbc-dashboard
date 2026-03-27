@@ -10,11 +10,16 @@ import { Header, PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { OVERVIEW_KPIs, MONTHLY_DATA, QUARTERLY_DATA, REVENUE_TYPE, SERVICE_MONTHLY } from "@/lib/mock-data";
+import { OVERVIEW_KPIs, QUARTERLY_DATA, MONTHLY_DATA, SERVICE_MONTHLY, REVENUE_TYPE } from "@/lib/mock-data";
 import { Sparkles, History, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 
-interface OverviewClientProps { userName: string; }
+interface OverviewClientProps {
+  userName: string;
+  monthlyData: typeof MONTHLY_DATA;
+  serviceMonthly: typeof SERVICE_MONTHLY;
+  revenueType: typeof REVENUE_TYPE;
+}
 
 const TOOLTIP_STYLE = {
   contentStyle: {
@@ -49,8 +54,12 @@ function RateBadge({ value, label }: { value: number; label: string }) {
   );
 }
 
-export function OverviewClient({ userName }: OverviewClientProps) {
+export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueType }: OverviewClientProps) {
   const kpi = OVERVIEW_KPIs;
+  // Dùng prop (từ DB) thay vì import mock
+  const MONTHLY_DATA = monthlyData;
+  const SERVICE_MONTHLY = serviceMonthly;
+  const REVENUE_TYPE = revenueType;
   const [showAI, setShowAI] = useState(false);
   const [view, setView] = useState<"thang" | "quy">("thang");
   const [svcView, setSvcView] = useState<"stacked" | "grouped">("stacked");
