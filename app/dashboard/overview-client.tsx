@@ -317,7 +317,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                     }}
                   />
                   {/* Đăng ký mới — label % bên trong */}
-                  <Bar dataKey="dangKyMoi" name="dangKyMoi" stackId="a" fill="#3b82f6" maxBarSize={64}>
+                  <Bar dataKey="dangKyMoi" name="dangKyMoi" stackId="a" fill="#0ea5e9" maxBarSize={64}>
                     <LabelList dataKey="dangKyMoi" content={(props: any) => {
                       const { x, y, width, height, value, index } = props;
                       if (!height || height < 22) return null;
@@ -332,7 +332,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                     }} />
                   </Bar>
                   {/* Gia hạn — label % bên trong + tổng tháng trên đỉnh */}
-                  <Bar dataKey="giaHan" name="giaHan" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={64}>
+                  <Bar dataKey="giaHan" name="giaHan" stackId="a" fill="#a855f7" radius={[4, 4, 0, 0]} maxBarSize={64}>
                     <LabelList dataKey="giaHan" content={(props: any) => {
                       const { x, y, width, height, value, index } = props;
                       if (!height) return null;
@@ -402,14 +402,28 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
               <Badge variant="brand">6 nhóm</Badge>
             </CardHeader>
             <CardContent>
-              {/* Donut chart — to hơn, căn giữa */}
+              {/* Donut chart — label trên từng phần */}
               <div className="flex justify-center">
-                <ResponsiveContainer width="100%" height={240}>
+                <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
                       data={svcQ1} cx="50%" cy="50%"
-                      innerRadius={70} outerRadius={110}
+                      innerRadius={68} outerRadius={105}
                       paddingAngle={2} dataKey="value" nameKey="name"
+                      label={({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
+                        if (percent < 0.03) return null;
+                        const RADIAN = Math.PI / 180;
+                        const r = outerRadius + 28;
+                        const x = cx + r * Math.cos(-midAngle * RADIAN);
+                        const y = cy + r * Math.sin(-midAngle * RADIAN);
+                        const shortName = name.split("/")[0].split(" ")[0]; // "Hosting", "MS", "Tên", "Transfer"
+                        return (
+                          <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fill="#cbd5e1" fontSize={11} fontWeight={500}>
+                            {shortName} {(percent * 100).toFixed(1)}%
+                          </text>
+                        );
+                      }}
+                      labelLine={{ stroke: "#475569", strokeWidth: 1 }}
                     >
                       {svcQ1.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
