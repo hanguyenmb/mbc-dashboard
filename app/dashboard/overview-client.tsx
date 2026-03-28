@@ -201,19 +201,42 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                   <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}`} />
                   <Tooltip {...TOOLTIP_STYLE} formatter={fmtTip} />
                   {/* Stacked bars: HN + HCM */}
-                  <Bar dataKey="hn"  name="hn"  stackId="kq" fill="#2563eb" radius={[0,0,0,0]} maxBarSize={32} />
+                  <Bar dataKey="hn" name="hn" stackId="kq" fill="#2563eb" radius={[0,0,0,0]} maxBarSize={32}>
+                    <LabelList content={(props: any) => {
+                      const { x, y, width, height, value, index } = props;
+                      const m = MONTHLY_DATA[index];
+                      if (!m || m.hn == null || height < 18) return null;
+                      const total = (m.hn ?? 0) + (m.hcm ?? 0);
+                      const pct = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
+                      return (
+                        <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={10} fontWeight={600}>
+                          HN {pct}%
+                        </text>
+                      );
+                    }} />
+                  </Bar>
                   <Bar dataKey="hcm" name="hcm" stackId="kq" fill="#06b6d4" radius={[4,4,0,0]} maxBarSize={32}>
                     <LabelList content={(props: any) => {
-                      const { x, y, width, value, index } = props;
+                      const { x, y, width, height, value, index } = props;
                       const m = MONTHLY_DATA[index];
-                      if (!m || m.hn == null || !m.mt10) return null;
+                      if (!m || m.hn == null) return null;
                       const total = (m.hn ?? 0) + (value ?? 0);
-                      const pct = ((total / m.mt10) * 100).toFixed(0);
-                      const color = total >= m.mt10 ? "#4ade80" : total >= m.mt8 ? "#fbbf24" : "#f87171";
+                      const hcmPct = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
+                      const achPct = m.mt10 > 0 ? ((total / m.mt10) * 100).toFixed(0) : "0";
+                      const achColor = total >= m.mt10 ? "#4ade80" : total >= m.mt8 ? "#fbbf24" : "#f87171";
                       return (
-                        <text x={x + width / 2} y={y - 6} textAnchor="middle" fill={color} fontSize={11} fontWeight={700}>
-                          {pct}%
-                        </text>
+                        <g>
+                          {/* HCM % trong cột */}
+                          {height >= 18 && (
+                            <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={10} fontWeight={600}>
+                              HCM {hcmPct}%
+                            </text>
+                          )}
+                          {/* Tổng % đạt MT10% trên đỉnh */}
+                          <text x={x + width / 2} y={y - 7} textAnchor="middle" dominantBaseline="auto" fill={achColor} fontSize={11} fontWeight={700}>
+                            {achPct}%
+                          </text>
+                        </g>
                       );
                     }} />
                   </Bar>
