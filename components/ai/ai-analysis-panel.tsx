@@ -5,7 +5,7 @@ import { X, Sparkles, Loader2, RefreshCw, Copy, CheckCheck } from "lucide-react"
 import { Button } from "@/components/ui/button";
 
 interface AiAnalysisPanelProps {
-  context: "overview" | "teams" | "personal";
+  context: "overview" | "teams" | "personal" | "weekly";
   data: any;
   onClose: () => void;
 }
@@ -14,6 +14,7 @@ const CONTEXT_LABELS = {
   overview: "Tổng Quan Công Ty",
   teams: "Báo Cáo Nhóm",
   personal: "Cá Nhân",
+  weekly: "Báo Cáo Tuần",
 };
 
 export function AiAnalysisPanel({ context, data, onClose }: AiAnalysisPanelProps) {

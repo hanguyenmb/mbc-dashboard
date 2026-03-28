@@ -36,6 +36,21 @@ DỮ LIỆU CÁ NHÂN: ${data.name} (${data.teamName})
 - Khách hàng: ${data.customers} / ${data.target.customers} (${Math.round(data.customers / data.target.customers * 100)}%)`;
   }
 
+  if (context === "weekly") {
+    const taskList = (data.tasks ?? []).map((t: any) =>
+      `- [${t.status}] ${t.title} (${t.progress}%)`
+    ).join("\n");
+    return `${basePrompt}
+
+DỮ LIỆU BÁO CÁO TUẦN: ${data.week}
+- Tổng tác vụ: ${data.total ?? data.tasks?.length ?? 0}
+- Hoàn thành: ${data.done} | Đang làm: ${data.inprogress} | Chưa bắt đầu: ${data.notstarted}
+- Tiến độ trung bình: ${data.avgProgress}%
+
+DANH SÁCH TÁC VỤ:
+${taskList || "Không có tác vụ"}`;
+  }
+
   return `${basePrompt}\n\nDỮ LIỆU:\n${JSON.stringify(data, null, 2)}`;
 }
 

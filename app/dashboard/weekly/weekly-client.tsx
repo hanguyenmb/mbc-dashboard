@@ -625,8 +625,8 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
 
       {showAI && (
         <AiAnalysisPanel
-          context="overview"
-          data={{ week: week.label, tasks, avgProgress, done, inprogress, notstarted }}
+          context="weekly"
+          data={{ week: week.label, tasks, total: tasks.length, avgProgress, done, inprogress, notstarted }}
           onClose={() => setShowAI(false)}
         />
       )}
