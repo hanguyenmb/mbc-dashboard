@@ -487,35 +487,43 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             {/* Bảng tóm tắt */}
             <div className="mt-4 overflow-x-auto rounded-lg border border-slate-700/50">
               <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-800/80">
-                    <td className="py-2 px-3 font-semibold text-slate-400 border-b border-slate-700/50 min-w-[120px]">Chỉ tiêu</td>
-                    {REVENUE_TYPE.map(r => <td key={r.month} className="py-2 px-2 text-right font-semibold text-slate-400 border-b border-slate-700/50 min-w-[44px]">{r.month}</td>)}
-                    <td className="py-2 px-3 text-right font-bold text-white border-b border-slate-700/50">Tổng</td>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { label: "ĐK Mới 2026", key: "dangKyMoi", color: "text-sky-300",    bg: "bg-sky-500/10",    border: "border-sky-500/20",    lb: "border-l-2 border-sky-400" },
-                    { label: "Gia Hạn 2026", key: "giaHan",    color: "text-purple-300", bg: "bg-purple-500/10", border: "border-purple-500/20", lb: "border-l-2 border-purple-400" },
-                    { label: "ĐK Mới 2025", key: "prev_dk",   color: "text-sky-400",    bg: "bg-slate-700/20",  border: "border-slate-600/30", lb: "border-l-2 border-sky-700" },
-                    { label: "Gia Hạn 2025", key: "prev_gh",   color: "text-purple-400", bg: "bg-slate-700/10",  border: "border-slate-600/20", lb: "border-l-2 border-purple-700" },
-                  ].map((row) => {
-                    const vals = REVENUE_TYPE.map(r => (r as any)[row.key] as number);
-                    const tot = vals.filter(v => v > 0).reduce((s, v) => s + v, 0);
-                    return (
-                      <tr key={row.label} className={`${row.bg} border-b ${row.border}`}>
-                        <td className={`py-1.5 px-3 font-semibold ${row.color} ${row.lb}`}>{row.label}</td>
-                        {vals.map((v, i) => (
-                          <td key={i} className={`py-1.5 px-2 text-right tabular-nums ${v > 0 ? row.color : "text-slate-700"}`}>
-                            {v > 0 ? v.toFixed(3) : "—"}
-                          </td>
-                        ))}
-                        <td className={`py-1.5 px-3 text-right font-bold tabular-nums ${row.color}`}>{tot.toFixed(3)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
+                {(() => {
+                  const months2026 = REVENUE_TYPE.filter(r => r.dangKyMoi > 0 || r.giaHan > 0);
+                  const rows = [
+                    { label: "ĐK Mới Tổng", key: "dangKyMoi", color: "text-sky-300",    bg: "bg-sky-500/10",    border: "border-sky-500/20",    lb: "border-l-2 border-sky-400",    bold: true },
+                    { label: "— HN",          key: "dkHn",      color: "text-sky-400",    bg: "bg-sky-500/5",     border: "border-sky-500/10",    lb: "border-l-2 border-sky-600 pl-5", bold: false },
+                    { label: "— HCM",         key: "dkHcm",     color: "text-cyan-400",   bg: "bg-cyan-500/5",    border: "border-cyan-500/10",   lb: "border-l-2 border-cyan-600 pl-5", bold: false },
+                    { label: "Gia Hạn Tổng", key: "giaHan",    color: "text-purple-300", bg: "bg-purple-500/10", border: "border-purple-500/20", lb: "border-l-2 border-purple-400",  bold: true },
+                    { label: "— HN",          key: "ghHn",      color: "text-purple-400", bg: "bg-purple-500/5",  border: "border-purple-500/10", lb: "border-l-2 border-purple-600 pl-5", bold: false },
+                    { label: "— HCM",         key: "ghHcm",     color: "text-violet-400", bg: "bg-violet-500/5",  border: "border-violet-500/10", lb: "border-l-2 border-violet-600 pl-5", bold: false },
+                  ];
+                  return (
+                    <>
+                      <thead>
+                        <tr className="bg-slate-800/80">
+                          <td className="py-2 px-3 font-semibold text-slate-300 border-b border-slate-700/50 min-w-[150px]">Chi tiết Doanh số</td>
+                          {months2026.map(r => <td key={r.month} className="py-2 px-3 text-right font-semibold text-slate-400 border-b border-slate-700/50 min-w-[60px]">{r.month}</td>)}
+                          <td className="py-2 px-3 text-right font-bold text-white border-b border-slate-700/50">Tổng</td>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row) => {
+                          const vals = months2026.map(r => (r as any)[row.key] as number);
+                          const tot = vals.reduce((s, v) => s + v, 0);
+                          return (
+                            <tr key={`${row.label}-${row.key}`} className={`${row.bg} border-b ${row.border}`}>
+                              <td className={`py-2 px-3 ${row.bold ? "font-semibold" : "font-medium"} ${row.color} ${row.lb}`}>{row.label}</td>
+                              {vals.map((v, i) => (
+                                <td key={i} className={`py-2 px-3 text-right tabular-nums ${row.color}`}>{v.toFixed(3)}</td>
+                              ))}
+                              <td className={`py-2 px-3 text-right font-bold tabular-nums ${row.color}`}>{tot.toFixed(3)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </>
+                  );
+                })()}
               </table>
             </div>
           </CardContent>
