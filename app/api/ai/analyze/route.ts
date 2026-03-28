@@ -65,7 +65,8 @@ export async function POST(req: NextRequest) {
     const json = await res.json();
     if (!res.ok) throw new Error(json.error?.message || "Gemini API error");
 
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const parts = json.candidates?.[0]?.content?.parts ?? [];
+    const text = parts.filter((p: any) => !p.thought).map((p: any) => p.text ?? "").join("");
     return NextResponse.json({ analysis: text });
   } catch (err: any) {
     console.error("AI analyze error:", err);

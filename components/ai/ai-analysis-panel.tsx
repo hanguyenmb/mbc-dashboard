@@ -122,7 +122,7 @@ export function AiAnalysisPanel({ context, data, onClose }: AiAnalysisPanelProps
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-700 flex items-center gap-2">
           <Sparkles size={12} className="text-purple-400" />
-          <span className="text-xs text-slate-500">Powered by Claude Sonnet 4.6</span>
+          <span className="text-xs text-slate-500">Powered by Gemini 2.5 Flash</span>
         </div>
       </div>
     </div>
