@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
 function buildPrompt(context: string, data: any): string {
-  const basePrompt = `Bạn là chuyên gia phân tích kinh doanh cao cấp của Mắt Bão Corporation (MBC).
-Phân tích dữ liệu sau và đưa ra đánh giá chuyên sâu bằng tiếng Việt.
-Trả lời theo cấu trúc rõ ràng với các mục: 📊 Tổng Quan, ✅ Điểm Mạnh, ⚠️ Điểm Cần Cải Thiện, 💡 Đề Xuất Hành Động, 📋 Kế Hoạch Triển Khai.
-Ngắn gọn, súc tích, tập trung vào hành động thực tế.`;
+  const basePrompt = `Bạn là trợ lý phân tích kinh doanh của Mắt Bão Corporation (MBC).
+QUAN TRỌNG: Chỉ phân tích DỰA TRÊN DỮ LIỆU THỰC TẾ được cung cấp bên dưới. Không được tự thêm thông tin, số liệu, hoặc giả định ngoài dữ liệu đã cho. Nếu thiếu dữ liệu để nhận xét một điểm nào đó, hãy bỏ qua điểm đó.
+Trả lời bằng tiếng Việt, ngắn gọn, súc tích theo cấu trúc: 📊 Tổng Quan, ✅ Điểm Mạnh, ⚠️ Điểm Cần Cải Thiện, 💡 Đề Xuất Hành Động.
+Mỗi mục chỉ nêu những gì có căn cứ từ số liệu thực tế.`;
 
   if (context === "overview") {
     return `${basePrompt}
