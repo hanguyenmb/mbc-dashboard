@@ -126,7 +126,7 @@ export function Sidebar({ role, userName, userAvatar }: SidebarProps) {
             </div>
           </div>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => signOut({ callbackUrl: "https://dashboard.ha.com.vn/login" })}
             className="text-slate-500 hover:text-red-400 transition-colors p-1"
             title="Đăng xuất"
           >

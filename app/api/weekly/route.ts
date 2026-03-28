@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await auth();
   const user = session?.user as any;
-  if (!session || user?.role !== "manager")
+  if (!session || user?.role !== "admin")
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
@@ -71,11 +71,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true, id });
 }
 
-// PUT /api/weekly — cập nhật task (manager only)
+// PUT /api/weekly — cập nhật task (admin only)
 export async function PUT(req: NextRequest) {
   const session = await auth();
   const user = session?.user as any;
-  if (!session || user?.role !== "manager")
+  if (!session || user?.role !== "admin")
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
@@ -95,11 +95,11 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
-// DELETE /api/weekly?id=xxx (manager only)
+// DELETE /api/weekly?id=xxx (admin only)
 export async function DELETE(req: NextRequest) {
   const session = await auth();
   const user = session?.user as any;
-  if (!session || user?.role !== "manager")
+  if (!session || user?.role !== "admin")
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const id = req.nextUrl.searchParams.get("id");
