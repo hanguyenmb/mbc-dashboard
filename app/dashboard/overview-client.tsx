@@ -364,122 +364,155 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
           </Card>
         )}
 
-        {/* ── CHART: Đăng ký mới/Gia hạn ── */}
+        {/* ── CHART: Doanh số so sánh 2025 vs 2026 (HN/HCM) ── */}
+        {(() => {
+          // Tính curr_hn / curr_hcm cho 2026 từ dữ liệu hiện có
+          const chartData = REVENUE_TYPE.map(r => ({
+            ...r,
+            curr_hn:  r.dkHn  + r.ghHn,
+            curr_hcm: r.dkHcm + r.ghHcm,
+          }));
+          const hasData2026 = (r: typeof chartData[0]) => r.curr_hn + r.curr_hcm > 0;
+          return (
         <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Doanh Số Chi Tiết Theo Tháng (tỷ VNĐ)</CardTitle>
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="flex items-center gap-1.5 text-xs text-sky-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#0ea5e9"}} />ĐK Mới 2026</span>
-                <span className="flex items-center gap-1.5 text-xs text-purple-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#a855f7"}} />Gia Hạn 2026</span>
-                <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block opacity-60" style={{background:"#38bdf8"}} />ĐK Mới 2025</span>
-                <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block opacity-60" style={{background:"#c084fc"}} />Gia Hạn 2025</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <ComposedChart data={REVENUE_TYPE} margin={{ top: 28, right: 16, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}`} />
-                  <Tooltip {...TOOLTIP_STYLE}
-                    formatter={(v: any, name: any) => {
-                      const m: Record<string, string> = { dangKyMoi: "ĐK Mới 2026", giaHan: "Gia Hạn 2026", prev_dk: "ĐK Mới 2025", prev_gh: "Gia Hạn 2025" };
-                      return [`${Number(v).toFixed(3)} tỷ`, m[String(name)] ?? name] as [string, string];
-                    }}
-                  />
-                  {/* Năm trước (2025) — stacked bar nhạt, bên trái */}
-                  <Bar dataKey="prev_dk" name="prev_dk" stackId="b" fill="#38bdf8" opacity={0.45} maxBarSize={40} />
-                  <Bar dataKey="prev_gh" name="prev_gh" stackId="b" fill="#c084fc" opacity={0.45} maxBarSize={40} radius={[3,3,0,0]}>
-                    <LabelList dataKey="prev_gh" content={(props: any) => {
-                      const { x, y, width, value, index } = props;
-                      const entry = REVENUE_TYPE[index];
-                      const total = entry.prev_dk + entry.prev_gh;
-                      if (!total) return null;
-                      return (
+          <CardHeader>
+            <CardTitle>Doanh Số Tổng Hợp Theo Tháng — So Sánh 2025 vs 2026 (tỷ VNĐ)</CardTitle>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="flex items-center gap-1.5 text-xs text-blue-400"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-blue-500" />HN 2026</span>
+              <span className="flex items-center gap-1.5 text-xs text-cyan-400"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-cyan-400" />HCM 2026</span>
+              <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block opacity-60" style={{background:"#3b82f6"}} />HN 2025</span>
+              <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block opacity-60" style={{background:"#22d3ee"}} />HCM 2025</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={320}>
+              <ComposedChart data={chartData} margin={{ top: 28, right: 16, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}`} />
+                <Tooltip {...TOOLTIP_STYLE}
+                  formatter={(v: any, name: any) => {
+                    const m: Record<string, string> = { curr_hn: "HN 2026", curr_hcm: "HCM 2026", prev_hn: "HN 2025", prev_hcm: "HCM 2025" };
+                    return [`${Number(v).toFixed(3)} tỷ`, m[String(name)] ?? name] as [string, string];
+                  }}
+                />
+                {/* 2025 — HN (dưới, mờ) */}
+                <Bar dataKey="prev_hn" name="prev_hn" stackId="prev" fill="#3b82f6" opacity={0.45} maxBarSize={36}>
+                  <LabelList dataKey="prev_hn" content={(props: any) => {
+                    const { x, y, width, height, value, index } = props;
+                    if (!height || height < 18) return null;
+                    const entry = chartData[index];
+                    const total = entry.prev_hn + entry.prev_hcm;
+                    const pct = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
+                    return (
+                      <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={9} fontWeight={600}>
+                        HN {pct}%
+                      </text>
+                    );
+                  }} />
+                </Bar>
+                {/* 2025 — HCM (trên, mờ) + tổng trên đỉnh */}
+                <Bar dataKey="prev_hcm" name="prev_hcm" stackId="prev" fill="#22d3ee" opacity={0.45} maxBarSize={36} radius={[3,3,0,0]}>
+                  <LabelList dataKey="prev_hcm" content={(props: any) => {
+                    const { x, y, width, height, value, index } = props;
+                    if (!height) return null;
+                    const entry = chartData[index];
+                    const total = entry.prev_hn + entry.prev_hcm;
+                    const pct = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
+                    return (
+                      <g>
+                        {height >= 18 && (
+                          <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={9} fontWeight={600}>
+                            HCM {pct}%
+                          </text>
+                        )}
                         <text x={x + width / 2} y={y - 7} textAnchor="middle" dominantBaseline="auto" fill="#94a3b8" fontSize={10} fontWeight={600}>
                           {total.toFixed(2)}
                         </text>
-                      );
-                    }} />
-                  </Bar>
-                  {/* Đăng ký mới 2026 — label % bên trong */}
-                  <Bar dataKey="dangKyMoi" name="dangKyMoi" stackId="a" fill="#0ea5e9" maxBarSize={40}>
-                    <LabelList dataKey="dangKyMoi" content={(props: any) => {
-                      const { x, y, width, height, value, index } = props;
-                      if (!height || height < 22) return null;
-                      const entry = REVENUE_TYPE[index];
-                      const total = entry.dangKyMoi + entry.giaHan;
-                      const pct = ((value / total) * 100).toFixed(0);
-                      return (
-                        <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={11} fontWeight={600}>
-                          {pct}%
-                        </text>
-                      );
-                    }} />
-                  </Bar>
-                  {/* Gia hạn 2026 — label % bên trong + tổng tháng trên đỉnh */}
-                  <Bar dataKey="giaHan" name="giaHan" stackId="a" fill="#a855f7" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                    <LabelList dataKey="giaHan" content={(props: any) => {
-                      const { x, y, width, height, value, index } = props;
-                      if (!height) return null;
-                      const entry = REVENUE_TYPE[index];
-                      const total = entry.dangKyMoi + entry.giaHan;
-                      const pct = ((value / total) * 100).toFixed(0);
-                      return (
-                        <g>
-                          {/* % gia hạn bên trong bar */}
-                          {height >= 22 && (
-                            <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={11} fontWeight={600}>
-                              {pct}%
-                            </text>
-                          )}
-                          {/* Tổng DS tháng trên đỉnh */}
-                          <text x={x + width / 2} y={y - 8} textAnchor="middle" dominantBaseline="auto" fill="#e2e8f0" fontSize={11} fontWeight={700}>
-                            {total.toFixed(2)} tỷ
+                      </g>
+                    );
+                  }} />
+                </Bar>
+                {/* 2026 — HN (dưới, sáng) */}
+                <Bar dataKey="curr_hn" name="curr_hn" stackId="curr" fill="#2563eb" maxBarSize={36}>
+                  <LabelList dataKey="curr_hn" content={(props: any) => {
+                    const { x, y, width, height, value, index } = props;
+                    if (!height || height < 18) return null;
+                    const entry = chartData[index];
+                    if (!hasData2026(entry)) return null;
+                    const total = entry.curr_hn + entry.curr_hcm;
+                    const pct = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
+                    return (
+                      <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={9} fontWeight={600}>
+                        HN {pct}%
+                      </text>
+                    );
+                  }} />
+                </Bar>
+                {/* 2026 — HCM (trên, sáng) + tổng trên đỉnh */}
+                <Bar dataKey="curr_hcm" name="curr_hcm" stackId="curr" fill="#06b6d4" maxBarSize={36} radius={[3,3,0,0]}>
+                  <LabelList dataKey="curr_hcm" content={(props: any) => {
+                    const { x, y, width, height, value, index } = props;
+                    if (!height) return null;
+                    const entry = chartData[index];
+                    if (!hasData2026(entry)) return null;
+                    const total = entry.curr_hn + entry.curr_hcm;
+                    const pct = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
+                    return (
+                      <g>
+                        {height >= 18 && (
+                          <text x={x + width / 2} y={y + height / 2} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={9} fontWeight={600}>
+                            HCM {pct}%
                           </text>
-                        </g>
-                      );
-                    }} />
-                  </Bar>
-                </ComposedChart>
-              </ResponsiveContainer>
+                        )}
+                        <text x={x + width / 2} y={y - 7} textAnchor="middle" dominantBaseline="auto" fill="#e2e8f0" fontSize={11} fontWeight={700}>
+                          {total.toFixed(2)}
+                        </text>
+                      </g>
+                    );
+                  }} />
+                </Bar>
+              </ComposedChart>
+            </ResponsiveContainer>
 
-              {/* Summary table HN/HCM */}
-              <div className="mt-4 overflow-x-auto rounded-lg border border-slate-700/50">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-800/80">
-                      <td className="py-2 px-3 font-semibold text-slate-400 border-b border-slate-700/50">Chỉ tiêu</td>
-                      {REVENUE_TYPE.map(r => <td key={r.month} className="py-2 px-3 text-right font-semibold text-slate-400 border-b border-slate-700/50">{r.month}</td>)}
-                      <td className="py-2 px-3 text-right font-bold text-white border-b border-slate-700/50">Tổng</td>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { label: "ĐK Mới Tổng", key: "dangKyMoi", color: "text-sky-300",    bg: "bg-sky-500/10",    border: "border-sky-500/20",    lb: "border-l-2 border-sky-400" },
-                      { label: "— HN",         key: "dkHn",      color: "text-sky-400",    bg: "bg-sky-500/5",     border: "border-sky-500/10",    lb: "border-l-2 border-sky-600 pl-5" },
-                      { label: "— HCM",        key: "dkHcm",     color: "text-cyan-400",   bg: "bg-cyan-500/5",    border: "border-cyan-500/10",   lb: "border-l-2 border-cyan-600 pl-5" },
-                      { label: "Gia Hạn Tổng", key: "giaHan",   color: "text-purple-300", bg: "bg-purple-500/10", border: "border-purple-500/20", lb: "border-l-2 border-purple-400" },
-                      { label: "— HN",         key: "ghHn",      color: "text-purple-400", bg: "bg-purple-500/5",  border: "border-purple-500/10", lb: "border-l-2 border-purple-600 pl-5" },
-                      { label: "— HCM",        key: "ghHcm",     color: "text-violet-400", bg: "bg-violet-500/5",  border: "border-violet-500/10", lb: "border-l-2 border-violet-600 pl-5" },
-                    ].map((row) => {
-                      const vals = REVENUE_TYPE.map(r => (r as any)[row.key] as number);
-                      const total = vals.reduce((s, v) => s + v, 0);
-                      return (
-                        <tr key={`${row.label}-${row.key}`} className={`${row.bg} border-b ${row.border}`}>
-                          <td className={`py-1.5 px-3 font-medium ${row.color} ${row.lb}`}>{row.label}</td>
-                          {vals.map((v, i) => (
-                            <td key={i} className={`py-1.5 px-3 text-right tabular-nums ${row.color}`}>{v.toFixed(3)}</td>
-                          ))}
-                          <td className={`py-1.5 px-3 text-right font-bold tabular-nums ${row.color}`}>{total.toFixed(3)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Bảng so sánh tóm tắt */}
+            <div className="mt-4 overflow-x-auto rounded-lg border border-slate-700/50">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-800/80">
+                    <td className="py-2 px-3 font-semibold text-slate-400 border-b border-slate-700/50 min-w-[110px]">Chỉ tiêu</td>
+                    {REVENUE_TYPE.map(r => <td key={r.month} className="py-2 px-2 text-right font-semibold text-slate-400 border-b border-slate-700/50 min-w-[44px]">{r.month}</td>)}
+                    <td className="py-2 px-3 text-right font-bold text-white border-b border-slate-700/50">Tổng</td>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { label: "HN 2026",   fn: (r: typeof chartData[0]) => r.dkHn + r.ghHn,     color: "text-blue-300",  bg: "bg-blue-500/10",   border: "border-blue-500/20",  lb: "border-l-2 border-blue-400" },
+                    { label: "HCM 2026",  fn: (r: typeof chartData[0]) => r.dkHcm + r.ghHcm,   color: "text-cyan-300",  bg: "bg-cyan-500/10",   border: "border-cyan-500/20",  lb: "border-l-2 border-cyan-400" },
+                    { label: "HN 2025",   fn: (r: typeof chartData[0]) => r.prev_hn,            color: "text-blue-400",  bg: "bg-slate-700/20",  border: "border-slate-600/30", lb: "border-l-2 border-blue-700" },
+                    { label: "HCM 2025",  fn: (r: typeof chartData[0]) => r.prev_hcm,           color: "text-cyan-400",  bg: "bg-slate-700/10",  border: "border-slate-600/20", lb: "border-l-2 border-cyan-700" },
+                  ].map((row) => {
+                    const vals = chartData.map(r => row.fn(r));
+                    const tot = vals.filter(v => v > 0).reduce((s, v) => s + v, 0);
+                    return (
+                      <tr key={row.label} className={`${row.bg} border-b ${row.border}`}>
+                        <td className={`py-1.5 px-3 font-semibold ${row.color} ${row.lb}`}>{row.label}</td>
+                        {vals.map((v, i) => (
+                          <td key={i} className={`py-1.5 px-2 text-right tabular-nums ${v > 0 ? row.color : "text-slate-700"}`}>
+                            {v > 0 ? v.toFixed(2) : "—"}
+                          </td>
+                        ))}
+                        <td className={`py-1.5 px-3 text-right font-bold tabular-nums ${row.color}`}>{tot.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+          );
+        })()}
 
         {/* ── CHART: Tỉ trọng 6 nhóm dịch vụ ── */}
         <Card className="mb-4">
