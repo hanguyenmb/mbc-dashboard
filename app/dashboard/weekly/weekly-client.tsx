@@ -343,7 +343,7 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
             <Plus size={14} /> Thêm Tác Vụ
           </Button>
         )}
-        <Button variant="ghost" size="sm" onClick={() => setShowAI(true)}><Sparkles size={14} /> Phân Tích AI</Button>
+        <Button variant="ghost" size="sm" onClick={() => setShowAI(true)}><Sparkles size={14} /> Trợ Lý AI</Button>
         <Button variant="ghost" size="sm" onClick={() => window.print()}><Printer size={14} /> In</Button>
       </Header>
 

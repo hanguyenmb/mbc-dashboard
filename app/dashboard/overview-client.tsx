@@ -13,6 +13,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { OVERVIEW_KPIs, QUARTERLY_DATA, MONTHLY_DATA, SERVICE_MONTHLY, REVENUE_TYPE } from "@/lib/mock-data";
 import { Sparkles, History, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
+import { AiHistoryPanel } from "@/components/ai/ai-history-panel";
 
 interface OverviewClientProps {
   userName: string;
@@ -61,6 +62,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   const SERVICE_MONTHLY = serviceMonthly;
   const REVENUE_TYPE = revenueType;
   const [showAI, setShowAI] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [view, setView] = useState<"thang" | "quy">("thang");
   // Mặc định tháng hiện tại theo thời gian thực, giới hạn theo số tháng có dữ liệu
   const dataMonths = monthlyData.filter(m => m.hn != null);
@@ -111,11 +113,11 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   return (
     <div>
       <Header title="Tổng Quan">
-        <Button variant="ghost" size="sm" onClick={() => setShowAI(true)}>
+        <Button variant="ghost" size="sm" onClick={() => setShowHistory(true)}>
           <History size={14} /> Lịch Sử AI
         </Button>
         <Button variant="primary" size="sm" onClick={() => setShowAI(true)}>
-          <Sparkles size={14} /> Phân Tích AI
+          <Sparkles size={14} /> Trợ Lý AI
         </Button>
       </Header>
 
@@ -757,6 +759,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
       </div>
 
       {showAI && <AiAnalysisPanel context="overview" data={kpi} onClose={() => setShowAI(false)} />}
+      {showHistory && <AiHistoryPanel onClose={() => setShowHistory(false)} />}
     </div>
   );
 }

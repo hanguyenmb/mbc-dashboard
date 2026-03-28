@@ -83,7 +83,7 @@ export function TeamsClient({ role, teamId }: TeamsClientProps) {
           </div>
         )}
         <Button variant="primary" size="sm" onClick={() => setShowAI(true)}>
-          <Sparkles size={14} /> Phân Tích AI
+          <Sparkles size={14} /> Trợ Lý AI
         </Button>
       </Header>
 

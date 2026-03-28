@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Sparkles, Loader2, RefreshCw, Copy, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { saveHistory } from "@/components/ai/ai-history-panel";
 
 interface AiAnalysisPanelProps {
   context: "overview" | "teams" | "personal" | "weekly";
@@ -10,7 +11,7 @@ interface AiAnalysisPanelProps {
   onClose: () => void;
 }
 
-const CONTEXT_LABELS = {
+const CONTEXT_LABELS: Record<string, string> = {
   overview: "Tổng Quan Công Ty",
   teams: "Báo Cáo Nhóm",
   personal: "Cá Nhân",
@@ -36,6 +37,7 @@ export function AiAnalysisPanel({ context, data, onClose }: AiAnalysisPanelProps
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Lỗi AI");
       setAnalysis(json.analysis);
+      saveHistory({ id: `${Date.now()}`, timestamp: Date.now(), contextLabel: CONTEXT_LABELS[context] ?? context, analysis: json.analysis });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -68,7 +70,7 @@ export function AiAnalysisPanel({ context, data, onClose }: AiAnalysisPanelProps
               <Sparkles size={14} className="text-purple-400" />
             </div>
             <div>
-              <div className="text-white font-semibold text-sm">Phân Tích AI</div>
+              <div className="text-white font-semibold text-sm">Trợ Lý AI</div>
               <div className="text-xs text-slate-400">{CONTEXT_LABELS[context]}</div>
             </div>
           </div>

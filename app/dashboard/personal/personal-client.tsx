@@ -84,7 +84,7 @@ export function PersonalClient({ userId, userName, role, teamId }: PersonalClien
     <div>
       <Header title="Báo Cáo Cá Nhân">
         <Button variant="primary" size="sm" onClick={() => setShowAI(true)}>
-          <Sparkles size={14} /> Phân Tích AI
+          <Sparkles size={14} /> Trợ Lý AI
         </Button>
       </Header>
 
