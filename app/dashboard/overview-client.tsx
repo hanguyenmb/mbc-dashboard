@@ -301,8 +301,8 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             <CardHeader>
               <CardTitle>Doanh Số Chi Tiết Theo Tháng (tỷ VNĐ)</CardTitle>
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1.5 text-xs text-blue-400"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" />Đăng ký mới</span>
-                <span className="flex items-center gap-1.5 text-xs text-emerald-400"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />Gia hạn</span>
+                <span className="flex items-center gap-1.5 text-xs text-sky-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#0ea5e9"}} />Đăng ký mới</span>
+                <span className="flex items-center gap-1.5 text-xs text-purple-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#a855f7"}} />Gia hạn</span>
               </div>
             </CardHeader>
             <CardContent>
