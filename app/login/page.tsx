@@ -108,9 +108,8 @@ export default function LoginPage() {
             <p className="text-xs text-slate-500 mb-3 font-medium">Tài khoản demo:</p>
             <div className="space-y-1.5">
               {[
-                { label: "Manager", email: "admin@matbao.net", pw: "admin123" },
-                { label: "Leader", email: "phuc.leader@matbao.net", pw: "leader123" },
-                { label: "Nhân viên", email: "tuan@matbao.net", pw: "emp123" },
+                { label: "Manager", email: "admin",  pw: "123456@abc" },
+                { label: "Leader",  email: "leader", pw: "matbao123" },
               ].map((acc) => (
                 <button
                   key={acc.email}
