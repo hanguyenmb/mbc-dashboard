@@ -371,8 +371,8 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             <div className="flex items-center gap-3 flex-wrap">
               <span className="flex items-center gap-1.5 text-xs text-sky-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#0ea5e9"}} />ĐK Mới 2026</span>
               <span className="flex items-center gap-1.5 text-xs text-purple-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#a855f7"}} />Gia Hạn 2026</span>
-              <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block opacity-55" style={{background:"#0ea5e9"}} />ĐK Mới 2025</span>
-              <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block opacity-55" style={{background:"#a855f7"}} />Gia Hạn 2025</span>
+              <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#0369a1"}} />ĐK Mới 2025</span>
+              <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#6b21a8"}} />Gia Hạn 2025</span>
             </div>
           </CardHeader>
           <CardContent>
@@ -387,8 +387,8 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                     return [`${Number(v).toFixed(3)} tỷ`, m[String(name)] ?? name] as [string, string];
                   }}
                 />
-                {/* 2025 — ĐK Mới (mờ) */}
-                <Bar dataKey="prev_dk" name="prev_dk" stackId="prev" fill="#0ea5e9" opacity={0.4} maxBarSize={36}>
+                {/* 2025 — ĐK Mới (tối hơn) */}
+                <Bar dataKey="prev_dk" name="prev_dk" stackId="prev" fill="#0369a1" maxBarSize={36}>
                   <LabelList dataKey="prev_dk" content={(props: any) => {
                     const { x, y, width, height, value, index } = props;
                     if (!height || height < 18) return null;
@@ -402,8 +402,8 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                     );
                   }} />
                 </Bar>
-                {/* 2025 — Gia Hạn (mờ) + tổng trên đỉnh */}
-                <Bar dataKey="prev_gh" name="prev_gh" stackId="prev" fill="#a855f7" opacity={0.4} maxBarSize={36} radius={[3,3,0,0]}>
+                {/* 2025 — Gia Hạn (tối hơn) + tổng trên đỉnh */}
+                <Bar dataKey="prev_gh" name="prev_gh" stackId="prev" fill="#6b21a8" maxBarSize={36} radius={[3,3,0,0]}>
                   <LabelList dataKey="prev_gh" content={(props: any) => {
                     const { x, y, width, height, value, index } = props;
                     if (!height) return null;
