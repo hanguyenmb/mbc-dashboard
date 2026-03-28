@@ -1,13 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@/lib/auth";
-
-// Khởi tạo trong request để đảm bảo đọc đúng env var
-function getClient() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY chưa được cấu hình");
-  return new Anthropic({ apiKey });
-}
 
 function buildPrompt(context: string, data: any): string {
   const basePrompt = `Bạn là chuyên gia phân tích kinh doanh cao cấp của Mắt Bão Corporation (MBC).
@@ -51,17 +43,29 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY chưa được cấu hình" }, { status: 500 });
+
   try {
     const { context, data } = await req.json();
+    const prompt = buildPrompt(context, data);
 
-    const client = getClient();
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: buildPrompt(context, data) }],
-    });
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 1024 },
+        }),
+      }
+    );
 
-    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error?.message || "Gemini API error");
+
+    const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     return NextResponse.json({ analysis: text });
   } catch (err: any) {
     console.error("AI analyze error:", err);
