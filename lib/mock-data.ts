@@ -100,20 +100,19 @@ export const QUARTERLY_DATA = [
 
 // ── ĐĂNG KÝ MỚI vs GIA HẠN theo tháng (tỷ VNĐ) ────────────────────────────
 export const REVENUE_TYPE = [
-  // prev_hn/prev_hcm = tổng DS 2025 theo khu vực (ĐK+GH), tỷ VNĐ
-  // dangKyMoi/giaHan/dkHn/dkHcm/ghHn/ghHcm = dữ liệu 2026 (chỉ T1–T3)
-  { month: "T1",  dangKyMoi: 6.059, giaHan: 10.630, dkHn: 2.656, dkHcm: 3.403, ghHn: 3.797, ghHcm:  6.833, prev_hn: 3.116, prev_hcm:  7.226 },
-  { month: "T2",  dangKyMoi: 3.675, giaHan: 10.358, dkHn: 1.689, dkHcm: 1.986, ghHn: 3.406, ghHcm:  6.952, prev_hn: 5.920, prev_hcm: 10.410 },
-  { month: "T3",  dangKyMoi: 8.607, giaHan: 16.250, dkHn: 3.802, dkHcm: 4.805, ghHn: 5.261, ghHcm: 10.989, prev_hn: 8.818, prev_hcm: 15.353 },
-  { month: "T4",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_hn: 8.634, prev_hcm: 12.572 },
-  { month: "T5",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_hn: 7.889, prev_hcm: 13.761 },
-  { month: "T6",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_hn: 8.919, prev_hcm: 14.002 },
-  { month: "T7",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_hn: 8.123, prev_hcm: 13.133 },
-  { month: "T8",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_hn: 8.282, prev_hcm: 14.847 },
-  { month: "T9",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_hn: 8.004, prev_hcm: 12.896 },
-  { month: "T10", dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_hn: 6.532, prev_hcm: 13.842 },
-  { month: "T11", dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_hn: 7.947, prev_hcm: 12.232 },
-  { month: "T12", dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_hn: 7.801, prev_hcm: 15.692 },
+  // dangKyMoi/giaHan = DS 2026 (T1–T3), prev_dk/prev_gh = DS 2025 cùng loại, tỷ VNĐ
+  { month: "T1",  dangKyMoi: 6.059, giaHan: 10.630, dkHn: 2.656, dkHcm: 3.403, ghHn: 3.797, ghHcm:  6.833, prev_dk:  3.328, prev_gh:  7.014 },
+  { month: "T2",  dangKyMoi: 3.675, giaHan: 10.358, dkHn: 1.689, dkHcm: 1.986, ghHn: 3.406, ghHcm:  6.952, prev_dk:  5.174, prev_gh: 11.156 },
+  { month: "T3",  dangKyMoi: 8.607, giaHan: 16.250, dkHn: 3.802, dkHcm: 4.805, ghHn: 5.261, ghHcm: 10.989, prev_dk:  8.684, prev_gh: 15.487 },
+  { month: "T4",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_dk:  6.983, prev_gh: 14.223 },
+  { month: "T5",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_dk:  6.875, prev_gh: 14.775 },
+  { month: "T6",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_dk:  7.299, prev_gh: 15.622 },
+  { month: "T7",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_dk:  7.094, prev_gh: 14.162 },
+  { month: "T8",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_dk:  8.063, prev_gh: 15.066 },
+  { month: "T9",  dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_dk:  6.914, prev_gh: 13.986 },
+  { month: "T10", dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_dk:  7.263, prev_gh: 13.111 },
+  { month: "T11", dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_dk:  7.759, prev_gh: 12.420 },
+  { month: "T12", dangKyMoi: 0,     giaHan: 0,      dkHn: 0,     dkHcm: 0,     ghHn: 0,     ghHcm:  0,     prev_dk:  9.702, prev_gh: 13.791 },
 ];
 
 // ── 6 NHÓM DỊCH VỤ — dữ liệu theo tháng (Triệu VNĐ) ────────────────────────
