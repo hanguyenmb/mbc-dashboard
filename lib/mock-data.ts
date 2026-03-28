@@ -3,7 +3,7 @@ import { User, Team, KPIRecord, TeamKPI, ImportLog, WeeklyTask, WeeklyCategory }
 // ── USERS ──────────────────────────────────────────────────────────────────
 export const USERS: User[] = [
   { id: "u1", name: "Admin",        email: "admin",           password: "123456@abc", role: "admin",  teamId: null, avatar: "A" },
-  { id: "u2", name: "Nguyễn Hà",   email: "ha@matbao.net",   password: "matbao123",  role: "viewer", teamId: null, avatar: "H" },
+  { id: "u2", name: "Viewer",       email: "viewer",          password: "matbao123",  role: "viewer", teamId: null, avatar: "V" },
 ];
 
 // ── TEAMS ──────────────────────────────────────────────────────────────────

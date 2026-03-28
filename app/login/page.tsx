@@ -108,16 +108,17 @@ export default function LoginPage() {
             <p className="text-xs text-slate-500 mb-3 font-medium">Tài khoản demo:</p>
             <div className="space-y-1.5">
               {[
-                { label: "Quản Trị", email: "admin",          pw: "123456@abc" },
-                { label: "Xem",      email: "ha@matbao.net", pw: "matbao123" },
+                { label: "Quản Trị", email: "admin"  },
+                { label: "Viewer",   email: "viewer" },
               ].map((acc) => (
                 <button
                   key={acc.email}
-                  onClick={() => { setEmail(acc.email); setPassword(acc.pw); }}
+                  onClick={() => { setEmail(acc.email); setPassword(""); }}
                   className="w-full text-left px-3 py-2 rounded-lg bg-slate-700/30 hover:bg-slate-700/60 transition-colors text-xs"
                 >
                   <span className="text-blue-400 font-medium">{acc.label}:</span>{" "}
                   <span className="text-slate-400">{acc.email}</span>
+                  <span className="text-slate-600 ml-auto text-xs">nhập mật khẩu</span>
                 </button>
               ))}
             </div>
@@ -125,7 +126,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-600 mt-6">
-          © 2025 Mắt Bão Corporation. All rights reserved.
+          © 2026 MBC Dashboard
         </p>
       </div>
     </div>
