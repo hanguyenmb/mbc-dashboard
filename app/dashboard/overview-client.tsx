@@ -10,7 +10,7 @@ import { Header, PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { OVERVIEW_KPIs, QUARTERLY_DATA, MONTHLY_DATA, SERVICE_MONTHLY, REVENUE_TYPE } from "@/lib/mock-data";
+import { QUARTERLY_DATA, MONTHLY_DATA, SERVICE_MONTHLY, REVENUE_TYPE } from "@/lib/mock-data";
 import { Sparkles, History, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 import { AiHistoryPanel } from "@/components/ai/ai-history-panel";
@@ -56,7 +56,6 @@ function RateBadge({ value, label }: { value: number; label: string }) {
 }
 
 export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueType }: OverviewClientProps) {
-  const kpi = OVERVIEW_KPIs;
   // Dùng prop (từ DB) thay vì import mock
   const MONTHLY_DATA = monthlyData;
   const SERVICE_MONTHLY = serviceMonthly;
@@ -758,7 +757,10 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
         </Card>
       </div>
 
-      {showAI && <AiAnalysisPanel context="overview" data={kpi} onClose={() => setShowAI(false)} />}
+      {showAI && <AiAnalysisPanel context="overview" data={{
+        revenueType: REVENUE_TYPE.filter(m => m.dangKyMoi > 0 || m.giaHan > 0),
+        serviceMonthly: SERVICE_MONTHLY,
+      }} onClose={() => setShowAI(false)} />}
       {showHistory && <AiHistoryPanel onClose={() => setShowHistory(false)} />}
     </div>
   );
