@@ -365,6 +365,14 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
         )}
 
         {/* ── CHART: Doanh số chi tiết so sánh 2025 vs 2026 ── */}
+        {(() => {
+          const totalDk25  = REVENUE_TYPE.reduce((s, r) => s + r.prev_dk, 0);
+          const totalGh25  = REVENUE_TYPE.reduce((s, r) => s + r.prev_gh, 0);
+          const tlDkMoi25  = totalDk25 + totalGh25 > 0 ? ((totalDk25 / (totalDk25 + totalGh25)) * 100).toFixed(1) : "0";
+          const totalDk26  = REVENUE_TYPE.reduce((s, r) => s + r.dangKyMoi, 0);
+          const totalGh26  = REVENUE_TYPE.reduce((s, r) => s + r.giaHan, 0);
+          const tlDkMoi26  = totalDk26 + totalGh26 > 0 ? ((totalDk26 / (totalDk26 + totalGh26)) * 100).toFixed(1) : "0";
+          return (
         <Card className="mb-4">
           <CardHeader>
             <CardTitle>Doanh Số Chi Tiết Theo Tháng — So Sánh 2025 vs 2026 (tỷ VNĐ)</CardTitle>
@@ -373,6 +381,16 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
               <span className="flex items-center gap-1.5 text-xs text-purple-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#a855f7"}} />Gia Hạn 2026</span>
               <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block opacity-60" style={{background:"#4ade80"}} />ĐK Mới 2025</span>
               <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block opacity-60" style={{background:"#facc15"}} />Gia Hạn 2025</span>
+              <span className="ml-auto flex items-center gap-4">
+                <span className="text-xs text-slate-400">
+                  Tỉ lệ ĐK Mới TB <span className="text-green-400 font-semibold">2025: {tlDkMoi25}%</span>
+                </span>
+                {totalDk26 + totalGh26 > 0 && (
+                  <span className="text-xs text-slate-400">
+                    <span className="text-sky-400 font-semibold">2026: {tlDkMoi26}%</span>
+                  </span>
+                )}
+              </span>
             </div>
           </CardHeader>
           <CardContent>
@@ -502,6 +520,8 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             </div>
           </CardContent>
         </Card>
+          );
+        })()}
 
         {/* ── CHART: Tỉ trọng 6 nhóm dịch vụ ── */}
         <Card className="mb-4">
