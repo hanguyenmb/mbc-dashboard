@@ -550,13 +550,26 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                         label={({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
                           if (percent < 0.02) return null;
                           const RADIAN = Math.PI / 180;
-                          const r = outerRadius + 32;
+                          const r = outerRadius + 36;
                           const x = cx + r * Math.cos(-midAngle * RADIAN);
                           const y = cy + r * Math.sin(-midAngle * RADIAN);
-                          const shortName = name.split("/")[0].split(" ")[0];
+                          const anchor = x > cx ? "start" : "end";
+                          const nameMap: Record<string, string[]> = {
+                            "Hosting/Email":      ["Host/Mail"],
+                            "MS/GWS":             ["MS/GWS"],
+                            "Tên miền + DV khác": ["Tên miền"],
+                            "Transfer GWS":       ["Transfer", "GWS"],
+                            "Sale AI":            ["Sale AI"],
+                            "Elastic":            ["Elastic"],
+                          };
+                          const lines = nameMap[name] ?? [name];
+                          const pct = `${(percent * 100).toFixed(1)}%`;
                           return (
-                            <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fill="#cbd5e1" fontSize={11} fontWeight={600}>
-                              {shortName} {(percent * 100).toFixed(1)}%
+                            <text textAnchor={anchor} fill="#cbd5e1" fontSize={11} fontWeight={600}>
+                              {lines.map((line, i) => (
+                                <tspan key={i} x={x} dy={i === 0 ? y - (lines.length - 1) * 7 : 14}>{line}</tspan>
+                              ))}
+                              <tspan x={x} dy={14} fill="#94a3b8" fontSize={10}>{pct}</tspan>
                             </text>
                           );
                         }}
