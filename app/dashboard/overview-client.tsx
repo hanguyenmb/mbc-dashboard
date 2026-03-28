@@ -62,6 +62,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   const REVENUE_TYPE = revenueType;
   const [showAI, setShowAI] = useState(false);
   const [view, setView] = useState<"thang" | "quy">("thang");
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState(2); // mặc định T3 (tháng gần nhất)
   const [svcView, setSvcView] = useState<"stacked" | "grouped">("stacked");
   const [regionTab, setRegionTab] = useState<"hn" | "hcm">("hn");
 
@@ -91,11 +92,17 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
     q1: SERVICE_MONTHLY.reduce((sum, m) => sum + ((m as any)[s.key] as number), 0),
   }));
 
-  // Tổng kết quả thực tế tháng có data
+  // KPI theo tháng được chọn
+  const selMonth = MONTHLY_DATA[selectedMonthIdx];
+  const selThucHien = selMonth ? (selMonth.hn ?? 0) + (selMonth.hcm ?? 0) : 0;
+  const selTlMt8  = selMonth?.mt8  > 0 ? (selThucHien / selMonth.mt8)  * 100 : 0;
+  const selTlMt10 = selMonth?.mt10 > 0 ? (selThucHien / selMonth.mt10) * 100 : 0;
+
+  // KPI Q1 tổng
   const tongThucHien = MONTHLY_DATA.reduce((s, m) => s + ((m.hn ?? 0) + (m.hcm ?? 0)), 0);
-  const tongMt8 = MONTHLY_DATA.slice(0, 3).reduce((s, m) => s + m.mt8, 0);
+  const tongMt8  = MONTHLY_DATA.slice(0, 3).reduce((s, m) => s + m.mt8,  0);
   const tongMt10 = MONTHLY_DATA.slice(0, 3).reduce((s, m) => s + m.mt10, 0);
-  const tlMt8 = tongMt8 > 0 ? (tongThucHien / tongMt8) * 100 : 0;
+  const tlMt8  = tongMt8  > 0 ? (tongThucHien / tongMt8)  * 100 : 0;
   const tlMt10 = tongMt10 > 0 ? (tongThucHien / tongMt10) * 100 : 0;
 
   return (
@@ -123,17 +130,35 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                 {v === "thang" ? "Theo Tháng" : "Theo Quý"}
               </button>
             ))}
+            {/* Chọn tháng khi ở view tháng */}
+            {view === "thang" && (
+              <div className="flex items-center gap-1 ml-2 bg-slate-800/60 rounded-lg p-0.5">
+                {MONTHLY_DATA.filter(m => m.hn != null).map((m, i) => (
+                  <button key={m.month} onClick={() => setSelectedMonthIdx(i)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                      selectedMonthIdx === i ? "bg-blue-500 text-white" : "text-slate-400 hover:text-white"
+                    }`}>
+                    {m.month}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </PageHeader>
 
         {/* ── Summary KPI strip ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-          {[
-            { label: "Tổng thực hiện (3T)", value: `${tongThucHien.toFixed(2)} tỷ`, sub: "HN + HCM", color: "border-blue-500/20 text-blue-400" },
-            { label: "Mục tiêu 8% (3T)",    value: `${tongMt8.toFixed(2)} tỷ`,       sub: `Đạt ${tlMt8.toFixed(1)}%`,  color: tlMt8 >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
-            { label: "Mục tiêu 10% (3T)",   value: `${tongMt10.toFixed(2)} tỷ`,      sub: `Đạt ${tlMt10.toFixed(1)}%`, color: tlMt10 >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
-            { label: "Tăng trưởng Q1",      value: "109.49%",                        sub: "So với 2025",               color: "border-green-500/20 text-green-400" },
-          ].map((item) => (
+          {(view === "thang" ? [
+            { label: `Thực hiện ${selMonth?.month ?? ""}`,   value: `${selThucHien.toFixed(2)} tỷ`,            sub: "HN + HCM",              color: "border-blue-500/20 text-blue-400" },
+            { label: `Mục tiêu 8% ${selMonth?.month ?? ""}`, value: `${(selMonth?.mt8  ?? 0).toFixed(2)} tỷ`,  sub: `Đạt ${selTlMt8.toFixed(1)}%`,  color: selTlMt8  >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
+            { label: `Mục tiêu 10% ${selMonth?.month ?? ""}`,value: `${(selMonth?.mt10 ?? 0).toFixed(2)} tỷ`,  sub: `Đạt ${selTlMt10.toFixed(1)}%`, color: selTlMt10 >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
+            { label: "HN / HCM", value: `${(selMonth?.hn ?? 0).toFixed(2)} / ${(selMonth?.hcm ?? 0).toFixed(2)}`, sub: "tỷ VNĐ", color: "border-slate-500/20 text-slate-300" },
+          ] : [
+            { label: "Tổng thực hiện (Q1)", value: `${tongThucHien.toFixed(2)} tỷ`, sub: "HN + HCM", color: "border-blue-500/20 text-blue-400" },
+            { label: "Mục tiêu 8% (Q1)",    value: `${tongMt8.toFixed(2)} tỷ`,      sub: `Đạt ${tlMt8.toFixed(1)}%`,  color: tlMt8  >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
+            { label: "Mục tiêu 10% (Q1)",   value: `${tongMt10.toFixed(2)} tỷ`,     sub: `Đạt ${tlMt10.toFixed(1)}%`, color: tlMt10 >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
+            { label: "Tăng trưởng Q1",      value: "109.49%",                       sub: "So với 2025",               color: "border-green-500/20 text-green-400" },
+          ]).map((item) => (
             <div key={item.label} className={`bg-slate-800/60 rounded-xl border p-4 ${item.color.split(" ")[0]}`}>
               <div className="text-xs text-slate-400 mb-1">{item.label}</div>
               <div className={`text-xl font-bold ${item.color.split(" ")[1]}`}>{item.value}</div>
