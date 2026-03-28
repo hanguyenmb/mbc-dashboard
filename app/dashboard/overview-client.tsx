@@ -534,28 +534,28 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
         {/* ── CHART: Tỉ trọng 6 nhóm dịch vụ ── */}
         <Card className="mb-4">
             <CardHeader>
-              <CardTitle>Tỉ Trọng Dịch Vụ Đăng Ký Mới</CardTitle>
+              <CardTitle>Tỉ Trọng Dịch Vụ Đăng Ký Mới Năm 2026</CardTitle>
               <Badge variant="brand">6 nhóm</Badge>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col lg:flex-row gap-6 items-center">
-                {/* Donut chart */}
-                <div className="flex-shrink-0 w-full lg:w-[320px]">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
+              <div className="flex flex-col lg:flex-row gap-4 items-center">
+                {/* Donut chart — rộng hơn để label không bị cắt */}
+                <div className="flex-shrink-0 w-full lg:w-[420px]">
+                  <ResponsiveContainer width="100%" height={320}>
+                    <PieChart margin={{ top: 20, right: 40, bottom: 20, left: 40 }}>
                       <Pie
                         data={svcQ1} cx="50%" cy="50%"
-                        innerRadius={68} outerRadius={105}
+                        innerRadius={75} outerRadius={110}
                         paddingAngle={2} dataKey="value" nameKey="name"
                         label={({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
-                          if (percent < 0.03) return null;
+                          if (percent < 0.02) return null;
                           const RADIAN = Math.PI / 180;
-                          const r = outerRadius + 28;
+                          const r = outerRadius + 32;
                           const x = cx + r * Math.cos(-midAngle * RADIAN);
                           const y = cy + r * Math.sin(-midAngle * RADIAN);
                           const shortName = name.split("/")[0].split(" ")[0];
                           return (
-                            <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fill="#cbd5e1" fontSize={11} fontWeight={500}>
+                            <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fill="#cbd5e1" fontSize={11} fontWeight={600}>
                               {shortName} {(percent * 100).toFixed(1)}%
                             </text>
                           );
@@ -575,24 +575,23 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                   </ResponsiveContainer>
                 </div>
 
-                {/* Stats bên phải */}
-                <div className="flex-1 w-full space-y-2">
+                {/* Stats bên phải — compact hơn */}
+                <div className="flex-1 w-full space-y-1.5">
                   {svcQ1.map((g) => {
                     const pctVal = ((g.value / totalService) * 100);
                     return (
-                      <div key={g.name} className="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-slate-800/40">
-                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: g.color }} />
-                        <span className="text-xs text-slate-300 flex-1 min-w-0">{g.name}</span>
-                        {/* Progress bar */}
-                        <div className="w-24 h-2 rounded-full bg-slate-700/60 overflow-hidden flex-shrink-0">
+                      <div key={g.name} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/40">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: g.color }} />
+                        <span className="text-xs text-slate-300 w-36 flex-shrink-0">{g.name}</span>
+                        <div className="flex-1 h-1.5 rounded-full bg-slate-700/60 overflow-hidden">
                           <div className="h-full rounded-full" style={{ width: `${pctVal}%`, background: g.color }} />
                         </div>
-                        <span className="text-xs font-bold text-white w-20 text-right tabular-nums">{g.value.toLocaleString()}M</span>
-                        <span className="text-xs font-semibold w-12 text-right tabular-nums" style={{ color: g.color }}>{pctVal.toFixed(1)}%</span>
+                        <span className="text-xs font-bold text-white w-20 text-right tabular-nums flex-shrink-0">{g.value.toLocaleString()}M</span>
+                        <span className="text-xs font-bold w-11 text-right tabular-nums flex-shrink-0" style={{ color: g.color }}>{pctVal.toFixed(1)}%</span>
                       </div>
                     );
                   })}
-                  <div className="border-t border-slate-700/50 pt-2.5 mt-1 flex justify-between items-center px-2">
+                  <div className="border-t border-slate-700/50 pt-2 mt-1 flex justify-between items-center px-3">
                     <span className="text-sm text-slate-400 font-medium">Tổng cộng</span>
                     <span className="text-base text-white font-bold">{totalService.toLocaleString()}M</span>
                   </div>
