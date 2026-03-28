@@ -256,7 +256,7 @@ function TaskCard({ task, isManager, onEdit, onDelete, onProgressChange }: {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export function WeeklyClient({ userName, role }: WeeklyClientProps) {
-  const isManager = role === "manager";
+  const isManager = role === "admin";
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeTab, setActiveTab] = useState<"current" | "next" | "manage">("current");
   const [showAI, setShowAI] = useState(false);

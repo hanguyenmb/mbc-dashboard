@@ -34,7 +34,7 @@ export function TeamsClient({ role, teamId }: TeamsClientProps) {
 
   // Leader can only see own team
   const visibleTeams =
-    role === "manager"
+    role === "admin"
       ? TEAM_KPIs
       : TEAM_KPIs.filter((t) => t.teamId === teamId);
 
@@ -65,7 +65,7 @@ export function TeamsClient({ role, teamId }: TeamsClientProps) {
   return (
     <div>
       <Header title="Báo Cáo Nhóm">
-        {role === "manager" && (
+        {role === "admin" && (
           <div className="flex gap-1">
             {[{ id: "all", label: "MBI" }, ...TEAMS.map((t) => ({ id: t.id, label: t.name }))].map((item) => (
               <button
@@ -94,7 +94,7 @@ export function TeamsClient({ role, teamId }: TeamsClientProps) {
         />
 
         {/* Summary KPIs */}
-        {role === "manager" && (
+        {role === "admin" && (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <KpiCard
               title="Tổng Doanh Số Net"
@@ -124,7 +124,7 @@ export function TeamsClient({ role, teamId }: TeamsClientProps) {
         )}
 
         {/* Team Comparison Chart */}
-        {role === "manager" && (
+        {role === "admin" && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Doanh Số Net — Theo Team</CardTitle>

@@ -2,69 +2,8 @@ import { User, Team, KPIRecord, TeamKPI, ImportLog, WeeklyTask, WeeklyCategory }
 
 // ── USERS ──────────────────────────────────────────────────────────────────
 export const USERS: User[] = [
-  {
-    id: "u1",
-    name: "Admin",
-    email: "admin",
-    password: "123456@abc",
-    role: "manager",
-    teamId: null,
-    avatar: "A",
-  },
-  {
-    id: "u2",
-    name: "Leader",
-    email: "leader",
-    password: "matbao123",
-    role: "leader",
-    teamId: "t1",
-    avatar: "L",
-  },
-  {
-    id: "u3",
-    name: "",
-    email: "",
-    password: "",
-    role: "employee",
-    teamId: "t2",
-    avatar: "",
-  },
-  {
-    id: "u4",
-    name: "",
-    email: "",
-    password: "",
-    role: "employee",
-    teamId: "t1",
-    avatar: "",
-  },
-  {
-    id: "u5",
-    name: "",
-    email: "",
-    password: "",
-    role: "employee",
-    teamId: "t1",
-    avatar: "",
-  },
-  {
-    id: "u6",
-    name: "",
-    email: "",
-    password: "",
-    role: "employee",
-    teamId: "t2",
-    avatar: "N",
-  },
-  {
-    id: "u7",
-    name: "Vũ Thị Mai",
-    email: "mai@matbao.net",
-    password: "emp123",
-    role: "employee",
-    teamId: "t2",
-    avatar: "M",
-  },
+  { id: "u1", name: "Admin",        email: "admin",           password: "123456@abc", role: "admin",  teamId: null, avatar: "A" },
+  { id: "u2", name: "Nguyễn Hà",   email: "ha@matbao.net",   password: "matbao123",  role: "viewer", teamId: null, avatar: "H" },
 ];
 
 // ── TEAMS ──────────────────────────────────────────────────────────────────

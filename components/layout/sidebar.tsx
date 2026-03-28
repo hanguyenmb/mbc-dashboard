@@ -26,12 +26,12 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Tổng Quan", icon: LayoutDashboard, roles: ["manager"] },
-  { href: "/dashboard/teams", label: "Chi Tiết Doanh Số", icon: Users, roles: ["manager", "leader"] },
-  { href: "/dashboard/weekly", label: "Báo Cáo Tuần", icon: BarChart3, roles: ["manager", "leader"] },
-  { href: "/dashboard/ranking", label: "Bảng Xếp Hạng", icon: Trophy, roles: ["manager", "leader"] },
-  { href: "/dashboard/import", label: "Nhập Dữ Liệu", icon: Upload, roles: ["manager"] },
-  { href: "/dashboard/users", label: "Quản Lý User", icon: Settings, roles: ["manager"] },
+  { href: "/dashboard",         label: "Tổng Quan",        icon: LayoutDashboard, roles: ["admin", "viewer"] },
+  { href: "/dashboard/teams",   label: "Chi Tiết Doanh Số",icon: Users,           roles: ["admin", "viewer"] },
+  { href: "/dashboard/weekly",  label: "Báo Cáo Tuần",     icon: BarChart3,       roles: ["admin", "viewer"] },
+  { href: "/dashboard/ranking", label: "Bảng Xếp Hạng",    icon: Trophy,          roles: ["admin"] },
+  { href: "/dashboard/import",  label: "Nhập Dữ Liệu",     icon: Upload,          roles: ["admin"] },
+  { href: "/dashboard/users",   label: "Quản Lý User",     icon: Settings,        roles: ["admin"] },
 ];
 
 // Phase 2 - Odoo API (not yet active)
@@ -89,7 +89,7 @@ export function Sidebar({ role, userName, userAvatar }: SidebarProps) {
         })}
 
         {/* Phase 2 section */}
-        {role === "manager" && (
+        {role === "admin" && (
           <>
             <div className="text-xs font-semibold text-slate-600 uppercase tracking-wider px-2 mt-5 mb-2">
               Giai Đoạn 2
@@ -122,7 +122,7 @@ export function Sidebar({ role, userName, userAvatar }: SidebarProps) {
           <div className="flex-1 min-w-0">
             <div className="text-white text-xs font-medium truncate">{userName}</div>
             <div className="text-slate-400 text-xs capitalize">
-              {role === "manager" ? "Quản trị" : role === "leader" ? "Leader" : "Nhân viên"}
+              {role === "admin" ? "Quản trị" : "Xem"}
             </div>
           </div>
           <button

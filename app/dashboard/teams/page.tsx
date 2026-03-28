@@ -6,6 +6,6 @@ export default async function TeamsPage() {
   const session = await auth();
   if (!session) redirect("/login");
   const user = session.user as any;
-  if (user.role === "employee") redirect("/dashboard/personal");
+  if (user.role !== "admin" && user.role !== "viewer") redirect("/dashboard");
   return <TeamsClient role={user.role} teamId={user.teamId} />;
 }
