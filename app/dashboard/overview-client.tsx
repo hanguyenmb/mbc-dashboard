@@ -62,7 +62,10 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   const REVENUE_TYPE = revenueType;
   const [showAI, setShowAI] = useState(false);
   const [view, setView] = useState<"thang" | "quy">("thang");
-  const [selectedMonthIdx, setSelectedMonthIdx] = useState(2); // mặc định T3 (tháng gần nhất)
+  // Mặc định tháng hiện tại theo thời gian thực, giới hạn theo số tháng có dữ liệu
+  const dataMonths = monthlyData.filter(m => m.hn != null);
+  const realMonthIdx = Math.min(new Date().getMonth(), dataMonths.length - 1);
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState(realMonthIdx);
   const [svcView, setSvcView] = useState<"stacked" | "grouped">("stacked");
   const [regionTab, setRegionTab] = useState<"hn" | "hcm">("hn");
 
@@ -152,7 +155,10 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             { label: `Thực hiện ${selMonth?.month ?? ""}`,   value: `${selThucHien.toFixed(2)} tỷ`,            sub: "HN + HCM",              color: "border-blue-500/20 text-blue-400" },
             { label: `Mục tiêu 8% ${selMonth?.month ?? ""}`, value: `${(selMonth?.mt8  ?? 0).toFixed(2)} tỷ`,  sub: `Đạt ${selTlMt8.toFixed(1)}%`,  color: selTlMt8  >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
             { label: `Mục tiêu 10% ${selMonth?.month ?? ""}`,value: `${(selMonth?.mt10 ?? 0).toFixed(2)} tỷ`,  sub: `Đạt ${selTlMt10.toFixed(1)}%`, color: selTlMt10 >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
-            { label: "HN / HCM", value: `${(selMonth?.hn ?? 0).toFixed(2)} / ${(selMonth?.hcm ?? 0).toFixed(2)}`, sub: "tỷ VNĐ", color: "border-slate-500/20 text-slate-300" },
+            { label: "HN / HCM",
+              value: `${(selMonth?.hn ?? 0).toFixed(2)} / ${(selMonth?.hcm ?? 0).toFixed(2)}`,
+              sub: selThucHien > 0 ? `HN ${((selMonth?.hn??0)/selThucHien*100).toFixed(0)}% · HCM ${((selMonth?.hcm??0)/selThucHien*100).toFixed(0)}%` : "tỷ VNĐ",
+              color: "border-slate-500/20 text-slate-300" },
           ] : [
             { label: "Tổng thực hiện (Q1)", value: `${tongThucHien.toFixed(2)} tỷ`, sub: "HN + HCM", color: "border-blue-500/20 text-blue-400" },
             { label: "Mục tiêu 8% (Q1)",    value: `${tongMt8.toFixed(2)} tỷ`,      sub: `Đạt ${tlMt8.toFixed(1)}%`,  color: tlMt8  >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
@@ -196,7 +202,21 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                   <Tooltip {...TOOLTIP_STYLE} formatter={fmtTip} />
                   {/* Stacked bars: HN + HCM */}
                   <Bar dataKey="hn"  name="hn"  stackId="kq" fill="#2563eb" radius={[0,0,0,0]} maxBarSize={32} />
-                  <Bar dataKey="hcm" name="hcm" stackId="kq" fill="#06b6d4" radius={[4,4,0,0]} maxBarSize={32} />
+                  <Bar dataKey="hcm" name="hcm" stackId="kq" fill="#06b6d4" radius={[4,4,0,0]} maxBarSize={32}>
+                    <LabelList content={(props: any) => {
+                      const { x, y, width, value, index } = props;
+                      const m = MONTHLY_DATA[index];
+                      if (!m || m.hn == null || !m.mt10) return null;
+                      const total = (m.hn ?? 0) + (value ?? 0);
+                      const pct = ((total / m.mt10) * 100).toFixed(0);
+                      const color = total >= m.mt10 ? "#4ade80" : total >= m.mt8 ? "#fbbf24" : "#f87171";
+                      return (
+                        <text x={x + width / 2} y={y - 6} textAnchor="middle" fill={color} fontSize={11} fontWeight={700}>
+                          {pct}%
+                        </text>
+                      );
+                    }} />
+                  </Bar>
                   {/* KQ 2025: nét liền, xám, dot tròn nhỏ */}
                   <Line type="monotone" dataKey="cumKy" name="cumKy" stroke="#94a3b8" strokeWidth={2} dot={{ fill: "#94a3b8", r: 3, strokeWidth: 0 }} />
                   {/* MT 10%: chấm bi (2 3), xanh lá */}
