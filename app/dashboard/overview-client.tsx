@@ -220,8 +220,10 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                       const { x, y, width, height, value, index } = props;
                       const m = MONTHLY_DATA[index];
                       if (!m || m.hn == null) return null;
-                      const total = (m.hn ?? 0) + (value ?? 0);
-                      const hcmPct = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
+                      // value trong recharts stacked = tổng cộng (hn+hcm), không phải riêng hcm
+                      const total = value ?? 0;
+                      const hcmVal = m.hcm ?? 0;
+                      const hcmPct = total > 0 ? ((hcmVal / total) * 100).toFixed(0) : "0";
                       const achPct = m.mt10 > 0 ? ((total / m.mt10) * 100).toFixed(0) : "0";
                       const achColor = total >= m.mt10 ? "#4ade80" : total >= m.mt8 ? "#fbbf24" : "#f87171";
                       return (
