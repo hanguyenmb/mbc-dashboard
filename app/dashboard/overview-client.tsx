@@ -364,15 +364,15 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
           </Card>
         )}
 
-        {/* ── CHARTS: Đăng ký mới/Gia hạn + Tỉ trọng DV ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          {/* Đăng ký mới vs Gia hạn */}
-          <Card>
+        {/* ── CHART: Đăng ký mới/Gia hạn ── */}
+        <Card className="mb-4">
             <CardHeader>
               <CardTitle>Doanh Số Chi Tiết Theo Tháng (tỷ VNĐ)</CardTitle>
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1.5 text-xs text-sky-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#0ea5e9"}} />Đăng ký mới</span>
-                <span className="flex items-center gap-1.5 text-xs text-purple-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#a855f7"}} />Gia hạn</span>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="flex items-center gap-1.5 text-xs text-sky-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#0ea5e9"}} />ĐK Mới 2026</span>
+                <span className="flex items-center gap-1.5 text-xs text-purple-400"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:"#a855f7"}} />Gia Hạn 2026</span>
+                <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block opacity-60" style={{background:"#38bdf8"}} />ĐK Mới 2025</span>
+                <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-2.5 h-2.5 rounded-sm inline-block opacity-60" style={{background:"#c084fc"}} />Gia Hạn 2025</span>
               </div>
             </CardHeader>
             <CardContent>
@@ -383,12 +383,27 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                   <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}`} />
                   <Tooltip {...TOOLTIP_STYLE}
                     formatter={(v: any, name: any) => {
-                      const m: Record<string, string> = { dangKyMoi: "Đăng ký mới", giaHan: "Gia hạn" };
+                      const m: Record<string, string> = { dangKyMoi: "ĐK Mới 2026", giaHan: "Gia Hạn 2026", prev_dk: "ĐK Mới 2025", prev_gh: "Gia Hạn 2025" };
                       return [`${Number(v).toFixed(3)} tỷ`, m[String(name)] ?? name] as [string, string];
                     }}
                   />
-                  {/* Đăng ký mới — label % bên trong */}
-                  <Bar dataKey="dangKyMoi" name="dangKyMoi" stackId="a" fill="#0ea5e9" maxBarSize={64}>
+                  {/* Năm trước (2025) — stacked bar nhạt, bên trái */}
+                  <Bar dataKey="prev_dk" name="prev_dk" stackId="b" fill="#38bdf8" opacity={0.45} maxBarSize={40} />
+                  <Bar dataKey="prev_gh" name="prev_gh" stackId="b" fill="#c084fc" opacity={0.45} maxBarSize={40} radius={[3,3,0,0]}>
+                    <LabelList dataKey="prev_gh" content={(props: any) => {
+                      const { x, y, width, value, index } = props;
+                      const entry = REVENUE_TYPE[index];
+                      const total = entry.prev_dk + entry.prev_gh;
+                      if (!total) return null;
+                      return (
+                        <text x={x + width / 2} y={y - 7} textAnchor="middle" dominantBaseline="auto" fill="#94a3b8" fontSize={10} fontWeight={600}>
+                          {total.toFixed(2)}
+                        </text>
+                      );
+                    }} />
+                  </Bar>
+                  {/* Đăng ký mới 2026 — label % bên trong */}
+                  <Bar dataKey="dangKyMoi" name="dangKyMoi" stackId="a" fill="#0ea5e9" maxBarSize={40}>
                     <LabelList dataKey="dangKyMoi" content={(props: any) => {
                       const { x, y, width, height, value, index } = props;
                       if (!height || height < 22) return null;
@@ -402,8 +417,8 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                       );
                     }} />
                   </Bar>
-                  {/* Gia hạn — label % bên trong + tổng tháng trên đỉnh */}
-                  <Bar dataKey="giaHan" name="giaHan" stackId="a" fill="#a855f7" radius={[4, 4, 0, 0]} maxBarSize={64}>
+                  {/* Gia hạn 2026 — label % bên trong + tổng tháng trên đỉnh */}
+                  <Bar dataKey="giaHan" name="giaHan" stackId="a" fill="#a855f7" radius={[4, 4, 0, 0]} maxBarSize={40}>
                     <LabelList dataKey="giaHan" content={(props: any) => {
                       const { x, y, width, height, value, index } = props;
                       if (!height) return null;
@@ -466,74 +481,75 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             </CardContent>
           </Card>
 
-          {/* Tỉ trọng 6 nhóm dịch vụ */}
-          <Card>
+        {/* ── CHART: Tỉ trọng 6 nhóm dịch vụ ── */}
+        <Card className="mb-4">
             <CardHeader>
               <CardTitle>Tỉ Trọng Dịch Vụ Đăng Ký Mới</CardTitle>
               <Badge variant="brand">6 nhóm</Badge>
             </CardHeader>
             <CardContent>
-              {/* Donut chart — label trên từng phần */}
-              <div className="flex justify-center">
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={svcQ1} cx="50%" cy="50%"
-                      innerRadius={68} outerRadius={105}
-                      paddingAngle={2} dataKey="value" nameKey="name"
-                      label={({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
-                        if (percent < 0.03) return null;
-                        const RADIAN = Math.PI / 180;
-                        const r = outerRadius + 28;
-                        const x = cx + r * Math.cos(-midAngle * RADIAN);
-                        const y = cy + r * Math.sin(-midAngle * RADIAN);
-                        const shortName = name.split("/")[0].split(" ")[0]; // "Hosting", "MS", "Tên", "Transfer"
-                        return (
-                          <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fill="#cbd5e1" fontSize={11} fontWeight={500}>
-                            {shortName} {(percent * 100).toFixed(1)}%
-                          </text>
-                        );
-                      }}
-                      labelLine={{ stroke: "#475569", strokeWidth: 1 }}
-                    >
-                      {svcQ1.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip
-                      {...TOOLTIP_STYLE}
-                      formatter={(v: any, name: any) => {
-                        const pct = ((Number(v) / totalService) * 100).toFixed(1);
-                        return [`${Number(v).toLocaleString()}M (${pct}%)`, name] as [string, string];
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <div className="flex flex-col lg:flex-row gap-6 items-center">
+                {/* Donut chart */}
+                <div className="flex-shrink-0 w-full lg:w-[320px]">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={svcQ1} cx="50%" cy="50%"
+                        innerRadius={68} outerRadius={105}
+                        paddingAngle={2} dataKey="value" nameKey="name"
+                        label={({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
+                          if (percent < 0.03) return null;
+                          const RADIAN = Math.PI / 180;
+                          const r = outerRadius + 28;
+                          const x = cx + r * Math.cos(-midAngle * RADIAN);
+                          const y = cy + r * Math.sin(-midAngle * RADIAN);
+                          const shortName = name.split("/")[0].split(" ")[0];
+                          return (
+                            <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fill="#cbd5e1" fontSize={11} fontWeight={500}>
+                              {shortName} {(percent * 100).toFixed(1)}%
+                            </text>
+                          );
+                        }}
+                        labelLine={{ stroke: "#475569", strokeWidth: 1 }}
+                      >
+                        {svcQ1.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip
+                        {...TOOLTIP_STYLE}
+                        formatter={(v: any, name: any) => {
+                          const pct = ((Number(v) / totalService) * 100).toFixed(1);
+                          return [`${Number(v).toLocaleString()}M (${pct}%)`, name] as [string, string];
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
 
-              {/* Legend list — dọc bên dưới */}
-              <div className="mt-2 space-y-1.5">
-                {svcQ1.map((g) => {
-                  const pctVal = ((g.value / totalService) * 100).toFixed(1);
-                  return (
-                    <div key={g.name} className="flex items-center gap-2.5 px-1">
-                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: g.color }} />
-                      <span className="text-xs text-slate-300 flex-1">{g.name}</span>
-                      {/* Mini progress bar */}
-                      <div className="w-20 h-1.5 rounded-full bg-slate-700/50 overflow-hidden flex-shrink-0">
-                        <div className="h-full rounded-full" style={{ width: `${pctVal}%`, background: g.color }} />
+                {/* Stats bên phải */}
+                <div className="flex-1 w-full space-y-2">
+                  {svcQ1.map((g) => {
+                    const pctVal = ((g.value / totalService) * 100);
+                    return (
+                      <div key={g.name} className="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-slate-800/40">
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: g.color }} />
+                        <span className="text-xs text-slate-300 flex-1 min-w-0">{g.name}</span>
+                        {/* Progress bar */}
+                        <div className="w-24 h-2 rounded-full bg-slate-700/60 overflow-hidden flex-shrink-0">
+                          <div className="h-full rounded-full" style={{ width: `${pctVal}%`, background: g.color }} />
+                        </div>
+                        <span className="text-xs font-bold text-white w-20 text-right tabular-nums">{g.value.toLocaleString()}M</span>
+                        <span className="text-xs font-semibold w-12 text-right tabular-nums" style={{ color: g.color }}>{pctVal.toFixed(1)}%</span>
                       </div>
-                      <span className="text-xs font-semibold text-white w-20 text-right tabular-nums">{g.value.toLocaleString()}M</span>
-                      <span className="text-xs text-slate-400 w-10 text-right tabular-nums">{pctVal}%</span>
-                    </div>
-                  );
-                })}
-                <div className="border-t border-slate-700/50 pt-2 mt-2 flex justify-between text-xs px-1">
-                  <span className="text-slate-400 font-medium">Tổng cộng</span>
-                  <span className="text-white font-bold">{totalService.toLocaleString()}M</span>
+                    );
+                  })}
+                  <div className="border-t border-slate-700/50 pt-2.5 mt-1 flex justify-between items-center px-2">
+                    <span className="text-sm text-slate-400 font-medium">Tổng cộng</span>
+                    <span className="text-base text-white font-bold">{totalService.toLocaleString()}M</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
 
         {/* ── CHART 3: Doanh số theo nhóm dịch vụ ── */}
         <Card className="mt-4">

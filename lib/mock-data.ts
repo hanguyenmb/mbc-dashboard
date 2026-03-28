@@ -100,9 +100,10 @@ export const QUARTERLY_DATA = [
 
 // ── ĐĂNG KÝ MỚI vs GIA HẠN theo tháng (tỷ VNĐ) ────────────────────────────
 export const REVENUE_TYPE = [
-  { month: "T1", dangKyMoi: 6.059, giaHan: 10.630, dkHn: 2.656, dkHcm: 3.403, ghHn: 3.797, ghHcm: 6.833 },
-  { month: "T2", dangKyMoi: 3.675, giaHan: 10.358, dkHn: 1.689, dkHcm: 1.986, ghHn: 3.406, ghHcm: 6.952 },
-  { month: "T3", dangKyMoi: 8.607, giaHan: 16.250, dkHn: 3.802, dkHcm: 4.805, ghHn: 5.261, ghHcm: 10.989 },
+  // prev_dk / prev_gh = Đăng ký mới / Gia hạn năm trước (chờ cập nhật)
+  { month: "T1", dangKyMoi: 6.059, giaHan: 10.630, dkHn: 2.656, dkHcm: 3.403, ghHn: 3.797, ghHcm: 6.833, prev_dk: 0, prev_gh: 0 },
+  { month: "T2", dangKyMoi: 3.675, giaHan: 10.358, dkHn: 1.689, dkHcm: 1.986, ghHn: 3.406, ghHcm: 6.952, prev_dk: 0, prev_gh: 0 },
+  { month: "T3", dangKyMoi: 8.607, giaHan: 16.250, dkHn: 3.802, dkHcm: 4.805, ghHn: 5.261, ghHcm: 10.989, prev_dk: 0, prev_gh: 0 },
 ];
 
 // ── 6 NHÓM DỊCH VỤ — dữ liệu theo tháng (Triệu VNĐ) ────────────────────────

@@ -51,12 +51,12 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Email</label>
+              <label className="block text-sm text-slate-400 mb-1.5">Tài khoản</label>
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@matbao.net"
+                placeholder="admin / leader"
                 required
                 className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
               />
