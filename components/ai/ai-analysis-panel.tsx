@@ -98,7 +98,7 @@ export function AiAnalysisPanel({ context, data, onClose }: AiAnalysisPanelProps
                 <div className="w-12 h-12 border-2 border-purple-500/30 rounded-full" />
                 <Loader2 size={24} className="absolute inset-0 m-auto animate-spin text-purple-400" />
               </div>
-              <div className="text-sm">Claude đang phân tích dữ liệu...</div>
+              <div className="text-sm">Gemini đang phân tích dữ liệu...</div>
               <div className="text-xs text-slate-600">Vui lòng chờ vài giây</div>
             </div>
           )}
