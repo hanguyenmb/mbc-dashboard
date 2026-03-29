@@ -70,14 +70,49 @@ function RegionCard({ label, teams }: { label: string; teams: TeamServiceRecord[
 export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps) {
   const [showAI, setShowAI] = useState(false);
   const [region, setRegion] = useState<"all" | "HN" | "HCM">("all");
+  const [view, setView] = useState<"month" | "quarter">("month");
   const [selectedMonth, setSelectedMonth] = useState("T3");
+  const [selectedQuarter, setSelectedQuarter] = useState(1);
+  const [openDropdown, setOpenDropdown] = useState<"month" | "quarter" | null>(null);
 
   const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
-  const currentMonthTeams = allMonths.find(m => m.month === selectedMonth)?.teams ?? [];
-  const allTeams = currentMonthTeams.length > 0 ? currentMonthTeams : (TEAM_SERVICE_DATA.find(m => m.month === selectedMonth)?.teams ?? []);
+
+  // Aggregate teams cho 1 tháng hoặc 1 quý
+  function getTeamsForMonths(monthKeys: string[]) {
+    const map: Record<string, import("@/lib/types").TeamServiceRecord> = {};
+    for (const mk of monthKeys) {
+      const teams = allMonths.find(m => m.month === mk)?.teams ?? [];
+      for (const t of teams) {
+        if (!map[t.teamId]) {
+          map[t.teamId] = { ...t, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
+        }
+        map[t.teamId].revenue     += t.revenue;
+        map[t.teamId].target      += t.target;
+        map[t.teamId].hostMail    += t.hostMail;
+        map[t.teamId].msgws       += t.msgws;
+        map[t.teamId].tenMien     += t.tenMien;
+        map[t.teamId].transferGws += t.transferGws;
+        map[t.teamId].saleAi      += t.saleAi;
+        map[t.teamId].elastic     += t.elastic;
+      }
+    }
+    return Object.values(map);
+  }
+
+  const QUARTER_MONTHS: Record<number, string[]> = {
+    1: ["T1","T2","T3"], 2: ["T4","T5","T6"],
+    3: ["T7","T8","T9"], 4: ["T10","T11","T12"],
+  };
+
+  const allTeams = view === "month"
+    ? getTeamsForMonths([selectedMonth])
+    : getTeamsForMonths(QUARTER_MONTHS[selectedQuarter]);
+
   const hnTeams  = allTeams.filter(t => t.region === "HN");
   const hcmTeams = allTeams.filter(t => t.region === "HCM");
   const displayed = region === "all" ? allTeams : allTeams.filter(t => t.region === region);
+
+  const filterLabel = view === "month" ? selectedMonth : `Q${selectedQuarter}`;
 
   // Ranking chart data
   const rankingData = [...displayed]
@@ -120,17 +155,44 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
   return (
     <div>
       <Header title="Chi Tiết Doanh Số">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Tháng:</span>
-          <div className="flex gap-1 flex-wrap">
-            {Array.from({ length: 12 }, (_, i) => `T${i + 1}`).map(m => (
-              <button key={m} onClick={() => setSelectedMonth(m)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${selectedMonth === m ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-400 hover:text-white"}`}>
-                {m}
-              </button>
-            ))}
-          </div>
+        {/* Dropdown Tháng */}
+        <div className="relative">
+          <button onClick={() => setOpenDropdown(d => d === "month" ? null : "month")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${view === "month" ? "bg-blue-600 border-blue-500 text-white" : "bg-slate-700 border-slate-600 text-slate-400 hover:text-white"}`}>
+            Tháng: {view === "month" ? selectedMonth : "—"}
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5l3 3 3-3"/></svg>
+          </button>
+          {openDropdown === "month" && (
+            <div className="absolute top-full mt-1 right-0 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-2 grid grid-cols-4 gap-1 w-44">
+              {Array.from({ length: 12 }, (_, i) => `T${i + 1}`).map(m => (
+                <button key={m} onClick={() => { setSelectedMonth(m); setView("month"); setOpenDropdown(null); }}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${view === "month" && selectedMonth === m ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-700 hover:text-white"}`}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Dropdown Quý */}
+        <div className="relative">
+          <button onClick={() => setOpenDropdown(d => d === "quarter" ? null : "quarter")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${view === "quarter" ? "bg-purple-600 border-purple-500 text-white" : "bg-slate-700 border-slate-600 text-slate-400 hover:text-white"}`}>
+            Quý: {view === "quarter" ? `Q${selectedQuarter}` : "—"}
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5l3 3 3-3"/></svg>
+          </button>
+          {openDropdown === "quarter" && (
+            <div className="absolute top-full mt-1 right-0 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-2 flex flex-col gap-1 w-36">
+              {[1,2,3,4].map(q => (
+                <button key={q} onClick={() => { setSelectedQuarter(q); setView("quarter"); setOpenDropdown(null); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium text-left transition-colors ${view === "quarter" && selectedQuarter === q ? "bg-purple-600 text-white" : "text-slate-400 hover:bg-slate-700 hover:text-white"}`}>
+                  Q{q} ({["T1-T3","T4-T6","T7-T9","T10-T12"][q-1]})
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="flex gap-1">
           {(["all","HN","HCM"] as const).map(r => (
             <button key={r} onClick={() => setRegion(r)}
@@ -144,8 +206,13 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
         </Button>
       </Header>
 
+      {openDropdown && (
+        <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
+      )}
+
       <div className="p-6 space-y-5">
-        <PageHeader title="Chi Tiết Doanh Số theo Team" subtitle="So sánh hiệu suất và cơ cấu dịch vụ giữa các team HN & HCM" />
+        <PageHeader title="Chi Tiết Doanh Số theo Team"
+          subtitle={`So sánh hiệu suất và cơ cấu dịch vụ giữa các team HN & HCM — ${view === "month" ? selectedMonth : `Quý ${selectedQuarter} (${QUARTER_MONTHS[selectedQuarter].join(", ")})`}`} />
 
         {!hasData && (
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-amber-400 text-sm">
