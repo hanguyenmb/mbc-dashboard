@@ -92,6 +92,20 @@ export interface WeeklyCategory {
   color: string;
 }
 
+export interface TeamServiceRecord {
+  teamId: string;
+  teamName: string;
+  region: "HN" | "HCM";
+  revenue: number;   // tổng DS (triệu VNĐ)
+  target: number;    // mục tiêu tổng
+  hostMail: number;
+  msgws: number;
+  tenMien: number;
+  transferGws: number;
+  saleAi: number;
+  elastic: number;
+}
+
 export interface AIAnalysis {
   summary: string;
   strengths: string[];

@@ -5,9 +5,10 @@ import { Header, PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Loader2, Save, RefreshCw } from "lucide-react";
-import { MONTHLY_DATA, REVENUE_TYPE, SERVICE_MONTHLY } from "@/lib/mock-data";
+import { MONTHLY_DATA, REVENUE_TYPE, SERVICE_MONTHLY, TEAM_SERVICE_DATA } from "@/lib/mock-data";
+import type { TeamServiceRecord } from "@/lib/types";
 
-type Tab = "monthly" | "revenue" | "service";
+type Tab = "monthly" | "revenue" | "service" | "team";
 
 function NumInput({
   value, onChange, className = "",
@@ -29,6 +30,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
   const [monthlyData, setMonthlyData] = useState<typeof MONTHLY_DATA>([...MONTHLY_DATA]);
   const [revenueData, setRevenueData] = useState<typeof REVENUE_TYPE>([...REVENUE_TYPE]);
   const [serviceData, setServiceData] = useState<typeof SERVICE_MONTHLY>([...SERVICE_MONTHLY]);
+  const [teamData, setTeamData] = useState<TeamServiceRecord[]>([...TEAM_SERVICE_DATA]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -41,9 +43,11 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
         fetch("/api/data?key=revenue_type").then(r => r.json()),
         fetch("/api/data?key=service_monthly").then(r => r.json()),
       ]);
+      const r4 = await fetch("/api/data?key=team_service").then(r => r.json());
       if (r1.data) setMonthlyData(r1.data);
       if (r2.data) setRevenueData(r2.data);
       if (r3.data) setServiceData(r3.data);
+      if (r4.data) setTeamData(r4.data);
     } finally {
       setLoading(false);
     }
@@ -58,6 +62,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
         monthly: { key: "monthly_data",    data: monthlyData },
         revenue: { key: "revenue_type",    data: revenueData },
         service: { key: "service_monthly", data: serviceData },
+        team:    { key: "team_service",    data: teamData },
       };
       const { key, data } = keyMap[tab];
       const res = await fetch("/api/data", {
@@ -77,6 +82,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
     { key: "monthly", label: "Doanh Số Tháng" },
     { key: "revenue", label: "ĐK Mới & Gia Hạn" },
     { key: "service", label: "Dịch Vụ" },
+    { key: "team",    label: "Doanh Số Team" },
   ];
 
   return (
@@ -199,6 +205,61 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                     ))}
                   </tbody>
                 </table>
+              )}
+
+              {/* Tab 4: Doanh Số Team */}
+              {tab === "team" && (
+                <div className="space-y-4">
+                  {/* Quản lý danh sách team */}
+                  <div className="flex justify-end">
+                    <button onClick={() => setTeamData(d => [...d, { teamId: `team_${Date.now()}`, teamName: "Team mới", region: "HN", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 }])}
+                      className="text-xs text-blue-400 hover:text-blue-300 px-3 py-1.5 rounded-lg border border-blue-500/30 hover:bg-blue-500/10 transition-colors">
+                      + Thêm Team
+                    </button>
+                  </div>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-700">
+                        <th className="text-left py-2 px-3 text-slate-400">Tên Team</th>
+                        <th className="text-center py-2 px-2 text-slate-400">Vùng</th>
+                        <th className="text-right py-2 px-2 text-slate-400">Tổng DS</th>
+                        <th className="text-right py-2 px-2 text-slate-400">Mục tiêu</th>
+                        <th className="text-right py-2 px-2 text-blue-400">Host/Mail</th>
+                        <th className="text-right py-2 px-2 text-green-400">MS/GWS</th>
+                        <th className="text-right py-2 px-2 text-amber-400">Tên miền</th>
+                        <th className="text-right py-2 px-2 text-purple-400">Transfer</th>
+                        <th className="text-right py-2 px-2 text-red-400">Sale AI</th>
+                        <th className="text-right py-2 px-2 text-cyan-400">Elastic</th>
+                        <th className="py-2 px-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teamData.map((row, i) => (
+                        <tr key={row.teamId} className="border-b border-slate-800 hover:bg-slate-800/30">
+                          <td className="py-1 px-3">
+                            <input value={row.teamName} onChange={e => setTeamData(d => d.map((r, j) => j === i ? { ...r, teamName: e.target.value } : r))}
+                              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500" />
+                          </td>
+                          <td className="py-1 px-2 text-center">
+                            <select value={row.region} onChange={e => setTeamData(d => d.map((r, j) => j === i ? { ...r, region: e.target.value as "HN"|"HCM" } : r))}
+                              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500">
+                              <option value="HN">HN</option>
+                              <option value="HCM">HCM</option>
+                            </select>
+                          </td>
+                          {(["revenue","target","hostMail","msgws","tenMien","transferGws","saleAi","elastic"] as const).map(field => (
+                            <td key={field} className="py-1 px-2">
+                              <NumInput value={(row as any)[field]} onChange={v => setTeamData(d => d.map((r, j) => j === i ? { ...r, [field]: v ?? 0 } : r))} />
+                            </td>
+                          ))}
+                          <td className="py-1 px-2">
+                            <button onClick={() => setTeamData(d => d.filter((_, j) => j !== i))} className="text-slate-600 hover:text-red-400 transition-colors">✕</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
 
             </CardContent>

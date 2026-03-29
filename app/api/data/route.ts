@@ -5,13 +5,15 @@ import {
   SERVICE_MONTHLY,
   REVENUE_TYPE,
   SERVICE_GROUPS,
+  TEAM_SERVICE_DATA,
 } from "@/lib/mock-data";
 
 const FALLBACKS: Record<DataKey, unknown> = {
-  monthly_data:   MONTHLY_DATA,
+  monthly_data:    MONTHLY_DATA,
   service_monthly: SERVICE_MONTHLY,
-  revenue_type:   REVENUE_TYPE,
-  service_groups: SERVICE_GROUPS,
+  revenue_type:    REVENUE_TYPE,
+  service_groups:  SERVICE_GROUPS,
+  team_service:    TEAM_SERVICE_DATA,
 };
 
 // GET /api/data?key=monthly_data

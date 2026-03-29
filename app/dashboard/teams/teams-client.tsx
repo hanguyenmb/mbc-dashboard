@@ -3,242 +3,280 @@
 import { useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell,
+  ResponsiveContainer, Cell, RadarChart, Radar, PolarGrid,
+  PolarAngleAxis, PolarRadiusAxis, Legend,
 } from "recharts";
 import { Header, PageHeader } from "@/components/layout/header";
-import { KpiCard } from "@/components/layout/kpi-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { formatVND } from "@/lib/utils";
-import { TEAM_KPIs, TEAMS } from "@/lib/mock-data";
-import { Users, DollarSign, ShoppingCart, UserCircle, Sparkles, Trophy } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, MapPin } from "lucide-react";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
+import { TEAM_SERVICE_DATA } from "@/lib/mock-data";
 import type { UserRole } from "@/lib/types";
+import type { TeamServiceRecord } from "@/lib/types";
 
 interface TeamsClientProps {
   role: UserRole;
   teamId: string | null;
+  teamServiceData: TeamServiceRecord[];
 }
 
-function pct(v: number, t: number) {
-  return Math.round((v / t) * 100);
+const SVC_KEYS: { key: keyof TeamServiceRecord; label: string; color: string }[] = [
+  { key: "hostMail",    label: "Host/Mail",   color: "#0066CC" },
+  { key: "msgws",       label: "MS/GWS",      color: "#10B981" },
+  { key: "tenMien",     label: "Tên miền",    color: "#F59E0B" },
+  { key: "transferGws", label: "Transfer GWS",color: "#8B5CF6" },
+  { key: "saleAi",      label: "Sale AI",     color: "#EF4444" },
+  { key: "elastic",     label: "Elastic",     color: "#06B6D4" },
+];
+
+const TOOLTIP_STYLE = {
+  contentStyle: { background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#f1f5f9", fontSize: 12 },
+};
+
+function pct(v: number, t: number) { return t > 0 ? Math.round((v / t) * 100) : 0; }
+
+function thresholdColor(p: number) {
+  if (p >= 100) return "text-green-400";
+  if (p >= 80)  return "text-amber-400";
+  if (p >= 60)  return "text-orange-400";
+  return "text-red-400";
 }
 
-const TEAM_COLORS = ["#0066CC", "#10B981", "#F59E0B", "#8B5CF6"];
-
-export function TeamsClient({ role, teamId }: TeamsClientProps) {
-  const [showAI, setShowAI] = useState(false);
-  const [activeTeam, setActiveTeam] = useState<string>("all");
-
-  // Leader can only see own team
-  const visibleTeams =
-    role === "admin"
-      ? TEAM_KPIs
-      : TEAM_KPIs.filter((t) => t.teamId === teamId);
-
-  const displayTeams =
-    activeTeam === "all" ? visibleTeams : visibleTeams.filter((t) => t.teamId === activeTeam);
-
-  // Summary totals for manager
-  const totals = visibleTeams.reduce(
-    (acc, t) => ({
-      revenue: acc.revenue + t.revenue,
-      orders: acc.orders + t.orders,
-      customers: acc.customers + t.customers,
-      targetRevenue: acc.targetRevenue + t.target.revenue,
-      targetOrders: acc.targetOrders + t.target.orders,
-      targetCustomers: acc.targetCustomers + t.target.customers,
-    }),
-    { revenue: 0, orders: 0, customers: 0, targetRevenue: 0, targetOrders: 0, targetCustomers: 0 }
+function RegionCard({ label, teams }: { label: string; teams: TeamServiceRecord[] }) {
+  const totalRev = teams.reduce((s, t) => s + t.revenue, 0);
+  const totalTarget = teams.reduce((s, t) => s + t.target, 0);
+  const p = pct(totalRev, totalTarget);
+  const isHN = label === "HN";
+  return (
+    <div className={`rounded-xl border p-4 ${isHN ? "border-blue-500/30 bg-blue-500/5" : "border-orange-500/30 bg-orange-500/5"}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <MapPin size={14} className={isHN ? "text-blue-400" : "text-orange-400"} />
+        <span className="text-sm font-semibold text-white">Khu vực {label}</span>
+        <Badge variant="neutral">{teams.length} team</Badge>
+      </div>
+      <div className={`text-2xl font-bold ${isHN ? "text-blue-400" : "text-orange-400"}`}>
+        {totalRev.toLocaleString()}M
+      </div>
+      <div className="text-xs text-slate-400 mt-1">Mục tiêu: {totalTarget.toLocaleString()}M</div>
+      <div className="flex items-center gap-1.5 mt-2">
+        {p >= 100 ? <TrendingUp size={12} className="text-green-400" /> : <TrendingDown size={12} className="text-red-400" />}
+        <span className={`text-xs font-semibold ${thresholdColor(p)}`}>Đạt {p}% mục tiêu</span>
+      </div>
+    </div>
   );
+}
 
-  // Comparison chart data
-  const comparisonData = visibleTeams.map((t, i) => ({
-    name: t.teamName,
-    doanh_so: Math.round(t.revenue / 1_000_000),
-    muc_tieu: Math.round(t.target.revenue / 1_000_000),
-    color: TEAM_COLORS[i % TEAM_COLORS.length],
+export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps) {
+  const [showAI, setShowAI] = useState(false);
+  const [region, setRegion] = useState<"all" | "HN" | "HCM">("all");
+
+  const allTeams = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
+  const hnTeams  = allTeams.filter(t => t.region === "HN");
+  const hcmTeams = allTeams.filter(t => t.region === "HCM");
+  const displayed = region === "all" ? allTeams : allTeams.filter(t => t.region === region);
+
+  // Ranking chart data
+  const rankingData = [...displayed]
+    .sort((a, b) => b.revenue - a.revenue)
+    .map(t => ({
+      name: t.teamName,
+      revenue: t.revenue,
+      target: t.target,
+      pct: pct(t.revenue, t.target),
+      color: t.region === "HN" ? "#3b82f6" : "#f97316",
+    }));
+
+  // Heatmap: team × service
+  const hasData = allTeams.some(t => t.revenue > 0);
+
+  // Grouped bar: each group = 1 service, bars = teams
+  const serviceCompareData = SVC_KEYS.map(s => {
+    const entry: Record<string, any> = { service: s.label };
+    displayed.forEach(t => { entry[t.teamName] = (t as any)[s.key] ?? 0; });
+    return entry;
+  });
+
+  // Radar chart per region
+  const radarHN = SVC_KEYS.map(s => ({
+    subject: s.label,
+    value: hnTeams.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0),
   }));
+  const radarHCM = SVC_KEYS.map(s => ({
+    subject: s.label,
+    value: hcmTeams.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0),
+  }));
+  const radarData = SVC_KEYS.map((s, i) => ({
+    subject: s.label,
+    HN:  radarHN[i].value,
+    HCM: radarHCM[i].value,
+  }));
+
+  const TEAM_COLORS = ["#3b82f6","#10b981","#f59e0b","#8b5cf6","#ef4444","#06b6d4","#f97316","#ec4899"];
 
   return (
     <div>
-      <Header title="Báo Cáo Nhóm">
-        {role === "admin" && (
-          <div className="flex gap-1">
-            {[{ id: "all", label: "MBI" }, ...TEAMS.map((t) => ({ id: t.id, label: t.name }))].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTeam(item.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  activeTeam === item.id
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-700 text-slate-400 hover:text-white"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        )}
+      <Header title="Chi Tiết Doanh Số">
+        <div className="flex gap-1">
+          {(["all","HN","HCM"] as const).map(r => (
+            <button key={r} onClick={() => setRegion(r)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${region === r ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-400 hover:text-white"}`}>
+              {r === "all" ? "Tất cả" : `Khu vực ${r}`}
+            </button>
+          ))}
+        </div>
         <Button variant="primary" size="sm" onClick={() => setShowAI(true)}>
           <Sparkles size={14} /> Trợ Lý AI
         </Button>
       </Header>
 
-      <div className="p-6">
-        <PageHeader
-          title="Báo Cáo Nhóm"
-          subtitle="Phân tích 5 chỉ số hiệu suất — Tổng hợp toàn MBC"
-        />
+      <div className="p-6 space-y-5">
+        <PageHeader title="Chi Tiết Doanh Số theo Team" subtitle="So sánh hiệu suất và cơ cấu dịch vụ giữa các team HN & HCM" />
 
-        {/* Summary KPIs */}
-        {role === "admin" && (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <KpiCard
-              title="Tổng Doanh Số Net"
-              value={formatVND(totals.revenue)}
-              target={formatVND(totals.targetRevenue)}
-              percent={pct(totals.revenue, totals.targetRevenue)}
-              icon={DollarSign}
-              iconColor="text-green-400"
-            />
-            <KpiCard
-              title="Số Đơn Hàng"
-              value={totals.orders.toLocaleString()}
-              target={totals.targetOrders.toLocaleString()}
-              percent={pct(totals.orders, totals.targetOrders)}
-              icon={ShoppingCart}
-              iconColor="text-orange-400"
-            />
-            <KpiCard
-              title="Số Khách Hàng"
-              value={totals.customers.toLocaleString()}
-              target={totals.targetCustomers.toLocaleString()}
-              percent={pct(totals.customers, totals.targetCustomers)}
-              icon={Users}
-              iconColor="text-blue-400"
-            />
+        {!hasData && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-amber-400 text-sm">
+            ⚠️ Chưa có dữ liệu team — Anh vào <strong>Nhập Dữ Liệu → Tab Doanh Số Team</strong> để nhập số liệu thực tế.
           </div>
         )}
 
-        {/* Team Comparison Chart */}
-        {role === "admin" && (
-          <Card className="mb-6">
+        {/* Phần 1: KPI Vùng */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <RegionCard label="HN" teams={hnTeams} />
+          <RegionCard label="HCM" teams={hcmTeams} />
+        </div>
+
+        {/* Phần 2: Bảng xếp hạng team */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Xếp Hạng Doanh Số Các Team</CardTitle>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-blue-500 inline-block"/>HN</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-orange-500 inline-block"/>HCM</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {rankingData.length === 0 || !hasData ? (
+              <div className="text-center text-slate-500 py-10 text-sm">Chưa có dữ liệu</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(200, rankingData.length * 52)}>
+                <BarChart data={rankingData} layout="vertical" margin={{ left: 16, right: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+                  <XAxis type="number" tick={{ fill: "#94a3b8", fontSize: 11 }} tickFormatter={v => `${v.toLocaleString()}M`} />
+                  <YAxis type="category" dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} width={90} />
+                  <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`, "Doanh số"]} />
+                  <Bar dataKey="revenue" radius={[0, 6, 6, 0]} label={{ position: "right", formatter: (v: any, e: any) => `${e?.pct ?? 0}%`, fill: "#94a3b8", fontSize: 11 }}>
+                    {rankingData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Phần 3: Heatmap team × dịch vụ */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ma Trận Doanh Số: Team × Dịch Vụ (triệu VNĐ)</CardTitle>
+            <Badge variant="neutral">Màu đậm = doanh số cao</Badge>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="text-left py-2 px-3 text-slate-400 w-28">Team</th>
+                  <th className="text-center py-2 px-2 text-slate-400">Vùng</th>
+                  {SVC_KEYS.map(s => (
+                    <th key={s.key} className="text-right py-2 px-3 text-slate-400 font-medium">{s.label}</th>
+                  ))}
+                  <th className="text-right py-2 px-3 text-slate-400 font-medium">Tổng</th>
+                  <th className="text-right py-2 px-3 text-slate-400 font-medium">MT</th>
+                  <th className="text-right py-2 px-3 text-slate-400 font-medium">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const maxSvc: Record<string, number> = {};
+                  SVC_KEYS.forEach(s => {
+                    maxSvc[s.key] = Math.max(...displayed.map(t => (t as any)[s.key] ?? 0), 1);
+                  });
+                  return displayed.map((team, i) => {
+                    const p = pct(team.revenue, team.target);
+                    return (
+                      <tr key={team.teamId} className="border-b border-slate-800 hover:bg-slate-800/30">
+                        <td className="py-2 px-3 text-white font-medium">{team.teamName}</td>
+                        <td className="py-2 px-2 text-center">
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${team.region === "HN" ? "bg-blue-500/20 text-blue-400" : "bg-orange-500/20 text-orange-400"}`}>
+                            {team.region}
+                          </span>
+                        </td>
+                        {SVC_KEYS.map(s => {
+                          const val = (team as any)[s.key] ?? 0;
+                          const intensity = maxSvc[s.key] > 0 ? val / maxSvc[s.key] : 0;
+                          return (
+                            <td key={s.key} className="py-2 px-3 text-right font-mono"
+                              style={{ color: `rgba(${s.color.startsWith("#0") ? "0,102,204" : s.color.startsWith("#1") ? "16,185,129" : s.color.startsWith("#F5") ? "245,158,11" : s.color.startsWith("#8") ? "139,92,246" : s.color.startsWith("#E") ? "239,68,68" : "6,182,212"},${0.4 + intensity * 0.6})` }}>
+                              {val > 0 ? val.toLocaleString() : "—"}
+                            </td>
+                          );
+                        })}
+                        <td className="py-2 px-3 text-right font-semibold text-white">{team.revenue.toLocaleString()}</td>
+                        <td className="py-2 px-3 text-right text-slate-400">{team.target.toLocaleString()}</td>
+                        <td className={`py-2 px-3 text-right font-bold ${thresholdColor(p)}`}>{p}%</td>
+                      </tr>
+                    );
+                  });
+                })()}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        {/* Phần 4: Radar HN vs HCM + Grouped bar */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
             <CardHeader>
-              <CardTitle>Doanh Số Net — Theo Team</CardTitle>
-              <Badge variant="neutral">Net mode</Badge>
+              <CardTitle>Radar: Thế Mạnh Dịch Vụ HN vs HCM</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={comparisonData} barGap={8}>
+              <ResponsiveContainer width="100%" height={280}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="#334155" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                  <PolarRadiusAxis tick={{ fill: "#475569", fontSize: 9 }} />
+                  <Radar name="HN" dataKey="HN" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                  <Radar name="HCM" dataKey="HCM" stroke="#f97316" fill="#f97316" fillOpacity={0.3} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`]} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>So Sánh Dịch Vụ Giữa Các Team</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={serviceCompareData} margin={{ bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}M`} />
-                  <Tooltip
-                    contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#f1f5f9" }}
-                    formatter={(v) => [`${v}M VNĐ`]}
-                  />
-                  <Bar dataKey="doanh_so" radius={[4, 4, 0, 0]} name="Doanh Số" opacity={0.5}>
-                    {comparisonData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Bar>
-                  <Bar dataKey="muc_tieu" radius={[4, 4, 0, 0]} fill="#475569" name="Mục Tiêu" opacity={0.4} />
+                  <XAxis dataKey="service" tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                  <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} tickFormatter={v => `${v}M`} />
+                  <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`]} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  {displayed.map((t, i) => (
+                    <Bar key={t.teamId} dataKey={t.teamName} fill={TEAM_COLORS[i % TEAM_COLORS.length]} radius={[3,3,0,0]} />
+                  ))}
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        )}
-
-        {/* Team Detail Cards */}
-        <div className="space-y-6">
-          {displayTeams.map((team, ti) => {
-            const revPct = pct(team.revenue, team.target.revenue);
-            return (
-              <Card key={team.teamId}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ background: TEAM_COLORS[ti % TEAM_COLORS.length] }}
-                    />
-                    <CardTitle className="text-white text-base font-semibold">{team.teamName}</CardTitle>
-                  </div>
-                  <Badge variant={revPct >= 100 ? "success" : revPct >= 75 ? "brand" : revPct >= 50 ? "warning" : "danger"}>
-                    {revPct}% chỉ tiêu
-                  </Badge>
-                </CardHeader>
-                <CardContent>
-                  {/* Team summary */}
-                  <div className="grid grid-cols-3 gap-4 mb-5">
-                    {[
-                      { label: "Doanh Số", val: formatVND(team.revenue), tgt: formatVND(team.target.revenue), pct: revPct },
-                      { label: "Đơn Hàng", val: team.orders, tgt: team.target.orders, pct: pct(team.orders, team.target.orders) },
-                      { label: "Khách Hàng", val: team.customers, tgt: team.target.customers, pct: pct(team.customers, team.target.customers) },
-                    ].map((item) => (
-                      <div key={item.label} className="bg-slate-900/50 rounded-lg p-3">
-                        <div className="text-xs text-slate-400 mb-1">{item.label}</div>
-                        <div className="text-lg font-bold text-white">{item.val}</div>
-                        <div className="text-xs text-slate-500 mb-2">/ {item.tgt}</div>
-                        <Progress value={item.pct} />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Members table */}
-                  <div>
-                    <div className="text-xs text-slate-500 font-medium mb-3 flex items-center gap-2">
-                      <Trophy size={12} />
-                      Bảng thành tích thành viên
-                    </div>
-                    <div className="space-y-2">
-                      {[...team.members]
-                        .sort((a, b) => b.revenue - a.revenue)
-                        .map((member, mi) => {
-                          const mRevPct = pct(member.revenue, member.target.revenue);
-                          return (
-                            <div
-                              key={member.userId}
-                              className="flex items-center gap-3 bg-slate-900/40 rounded-lg px-4 py-3 hover:bg-slate-900/60 transition-colors"
-                            >
-                              <span className="text-sm font-bold text-slate-500 w-5">#{mi + 1}</span>
-                              <div className="w-7 h-7 bg-slate-700 rounded-full flex items-center justify-center text-xs text-slate-300 font-medium flex-shrink-0">
-                                {member.name[0]}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm text-white font-medium truncate">{member.name}</div>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <Progress value={mRevPct} className="w-24" />
-                                  <span className="text-xs text-slate-400">{mRevPct}%</span>
-                                </div>
-                              </div>
-                              <div className="text-right flex-shrink-0">
-                                <div className="text-sm font-semibold text-white">{formatVND(member.revenue)}</div>
-                                <div className="text-xs text-slate-500">{member.orders} đơn · {member.customers} KH</div>
-                              </div>
-                              <Badge variant={mRevPct >= 100 ? "success" : mRevPct >= 75 ? "brand" : mRevPct >= 50 ? "warning" : "danger"}>
-                                {mRevPct}%
-                              </Badge>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
         </div>
       </div>
 
       {showAI && (
-        <AiAnalysisPanel
-          context="teams"
-          data={displayTeams}
-          onClose={() => setShowAI(false)}
-        />
+        <AiAnalysisPanel context="teams" data={allTeams} onClose={() => setShowAI(false)} />
       )}
     </div>
   );

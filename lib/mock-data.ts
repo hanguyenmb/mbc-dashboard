@@ -212,6 +212,17 @@ export const SOURCE_DATA = [
   { name: "Đại lý", value: 7, color: "#4ADE80" },
 ];
 
+// ── TEAM SERVICE BREAKDOWN (triệu VNĐ) ──────────────────────────────────────
+// Anh nhập dữ liệu thật vào trang Nhập Dữ Liệu → tab Doanh Số Team
+export const TEAM_SERVICE_DATA: import("./types").TeamServiceRecord[] = [
+  { teamId: "hn1", teamName: "Team HN 1", region: "HN", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hn2", teamName: "Team HN 2", region: "HN", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hn3", teamName: "Team HN 3", region: "HN", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hcm1", teamName: "Team HCM 1", region: "HCM", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hcm2", teamName: "Team HCM 2", region: "HCM", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hcm3", teamName: "Team HCM 3", region: "HCM", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+];
+
 // ── WEEKLY CATEGORIES ────────────────────────────────────────────────────────
 export const WEEKLY_CATEGORIES: WeeklyCategory[] = [
   { id: "doanh-so",     name: "Doanh số",             color: "#3b82f6" },
