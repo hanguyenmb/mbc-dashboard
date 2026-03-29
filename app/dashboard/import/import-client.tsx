@@ -315,7 +315,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
           </Card>
         )}
 
-        <p className="text-xs text-slate-500 mt-3">Đơn vị: tỷ VNĐ cho Doanh Số Tháng & ĐK/GH · Triệu VNĐ cho Dịch Vụ · Sau khi lưu, Dashboard cập nhật ngay khi reload trang.</p>
+        <p className="text-xs text-slate-500 mt-3">Đơn vị: <strong className="text-slate-400">Tỷ VNĐ</strong> cho Doanh Số Tháng & ĐK/GH · <strong className="text-slate-400">Triệu VNĐ</strong> cho Dịch Vụ & Doanh Số Team · Sau khi lưu, Dashboard cập nhật ngay khi reload trang.</p>
       </div>
     </div>
   );
