@@ -190,7 +190,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
         {/* Phần 3: Heatmap team × dịch vụ */}
         <Card>
           <CardHeader>
-            <CardTitle>Ma Trận Doanh Số: Team × Dịch Vụ (triệu VNĐ)</CardTitle>
+            <CardTitle>Ma Trận Doanh Số Đăng Ký Mới theo Loại Dịch Vụ (triệu VNĐ)</CardTitle>
             <Badge variant="neutral">Màu đậm = doanh số cao</Badge>
           </CardHeader>
           <CardContent className="overflow-x-auto">
@@ -202,9 +202,8 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                   {SVC_KEYS.map(s => (
                     <th key={s.key} className="text-right py-2 px-3 text-slate-400 font-medium">{s.label}</th>
                   ))}
-                  <th className="text-right py-2 px-3 text-slate-400 font-medium">Tổng</th>
-                  <th className="text-right py-2 px-3 text-slate-400 font-medium">MT</th>
-                  <th className="text-right py-2 px-3 text-slate-400 font-medium">%</th>
+                  <th className="text-right py-2 px-3 text-slate-400 font-medium">Tổng ĐKM</th>
+                  <th className="text-right py-2 px-3 text-slate-400 font-medium">Tỉ lệ ĐKM/Tổng DS</th>
                 </tr>
               </thead>
               <tbody>
@@ -213,8 +212,9 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                   SVC_KEYS.forEach(s => {
                     maxSvc[s.key] = Math.max(...displayed.map(t => (t as any)[s.key] ?? 0), 1);
                   });
-                  return displayed.map((team, i) => {
-                    const p = pct(team.revenue, team.target);
+                  return displayed.map((team) => {
+                    const svcTotal = SVC_KEYS.reduce((sum, s) => sum + ((team as any)[s.key] ?? 0), 0);
+                    const ratio = team.revenue > 0 ? Math.round((svcTotal / team.revenue) * 100) : 0;
                     return (
                       <tr key={team.teamId} className="border-b border-slate-800 hover:bg-slate-800/30">
                         <td className="py-2 px-3 text-white font-medium">{team.teamName}</td>
@@ -233,9 +233,10 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                             </td>
                           );
                         })}
-                        <td className="py-2 px-3 text-right font-semibold text-white">{team.revenue.toLocaleString()}</td>
-                        <td className="py-2 px-3 text-right text-slate-400">{team.target.toLocaleString()}</td>
-                        <td className={`py-2 px-3 text-right font-bold ${thresholdColor(p)}`}>{p}%</td>
+                        <td className="py-2 px-3 text-right font-semibold text-white">{svcTotal > 0 ? svcTotal.toLocaleString() : "—"}</td>
+                        <td className={`py-2 px-3 text-right font-bold ${thresholdColor(ratio)}`}>
+                          {team.revenue > 0 ? `${ratio}%` : "—"}
+                        </td>
                       </tr>
                     );
                   });
