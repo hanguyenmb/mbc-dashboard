@@ -30,6 +30,11 @@ const SVC_KEYS: { key: string; label: string; color: string }[] = [
   { key: "elastic",     label: "Elastic",     color: "#06B6D4" },
 ];
 
+const QUARTER_MONTHS: Record<number, string[]> = {
+  1: ["T1","T2","T3"], 2: ["T4","T5","T6"],
+  3: ["T7","T8","T9"], 4: ["T10","T11","T12"],
+};
+
 const TOOLTIP_STYLE = {
   contentStyle: { background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#f1f5f9", fontSize: 12 },
 };
@@ -99,11 +104,6 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
     return Object.values(map);
   }
 
-  const QUARTER_MONTHS: Record<number, string[]> = {
-    1: ["T1","T2","T3"], 2: ["T4","T5","T6"],
-    3: ["T7","T8","T9"], 4: ["T10","T11","T12"],
-  };
-
   const allTeams = view === "month"
     ? getTeamsForMonths([selectedMonth])
     : getTeamsForMonths(QUARTER_MONTHS[selectedQuarter]);
@@ -159,7 +159,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
         <div className="relative">
           <button onClick={() => setOpenDropdown(d => d === "month" ? null : "month")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${view === "month" ? "bg-blue-600 border-blue-500 text-white" : "bg-slate-700 border-slate-600 text-slate-400 hover:text-white"}`}>
-            Tháng: {view === "month" ? selectedMonth : "—"}
+            {view === "month" ? `Tháng: ${selectedMonth}` : "Tháng"}
             <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5l3 3 3-3"/></svg>
           </button>
           {openDropdown === "month" && (
@@ -178,7 +178,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
         <div className="relative">
           <button onClick={() => setOpenDropdown(d => d === "quarter" ? null : "quarter")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${view === "quarter" ? "bg-purple-600 border-purple-500 text-white" : "bg-slate-700 border-slate-600 text-slate-400 hover:text-white"}`}>
-            Quý: {view === "quarter" ? `Q${selectedQuarter}` : "—"}
+            {view === "quarter" ? `Quý: Q${selectedQuarter}` : "Quý"}
             <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5l3 3 3-3"/></svg>
           </button>
           {openDropdown === "quarter" && (
