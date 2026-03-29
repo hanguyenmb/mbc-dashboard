@@ -22,12 +22,12 @@ interface TeamsClientProps {
 }
 
 const SVC_KEYS: { key: string; label: string; color: string }[] = [
-  { key: "hostMail",    label: "Host/Mail",   color: "#0066CC" },
-  { key: "msgws",       label: "MS/GWS",      color: "#10B981" },
-  { key: "tenMien",     label: "Tên miền",    color: "#F59E0B" },
-  { key: "transferGws", label: "Transfer GWS",color: "#8B5CF6" },
-  { key: "saleAi",      label: "Sale AI",     color: "#EF4444" },
-  { key: "elastic",     label: "Elastic",     color: "#06B6D4" },
+  { key: "hostMail",    label: "Host/Mail",   color: "#60A5FA" },
+  { key: "msgws",       label: "MS/GWS",      color: "#34D399" },
+  { key: "tenMien",     label: "Tên miền",    color: "#FCD34D" },
+  { key: "transferGws", label: "Transfer GWS",color: "#C084FC" },
+  { key: "saleAi",      label: "Sale AI",     color: "#F87171" },
+  { key: "elastic",     label: "Elastic",     color: "#38BDF8" },
 ];
 
 const QUARTER_MONTHS: Record<number, string[]> = {
@@ -273,7 +273,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
         <Card>
           <CardHeader>
             <CardTitle>Ma Trận Doanh Số Đăng Ký Mới theo Loại Dịch Vụ (triệu VNĐ)</CardTitle>
-            <Badge variant="neutral">Màu đậm = doanh số cao</Badge>
+            <Badge variant="neutral">Màu càng sáng = doanh số càng cao</Badge>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -308,9 +308,12 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                         {SVC_KEYS.map(s => {
                           const val = (team as any)[s.key] ?? 0;
                           const intensity = maxSvc[s.key] > 0 ? val / maxSvc[s.key] : 0;
+                          const r = parseInt(s.color.slice(1,3),16);
+                          const g = parseInt(s.color.slice(3,5),16);
+                          const b = parseInt(s.color.slice(5,7),16);
                           return (
                             <td key={s.key} className="py-2 px-3 text-right font-mono"
-                              style={{ color: `rgba(${s.color.startsWith("#0") ? "0,102,204" : s.color.startsWith("#1") ? "16,185,129" : s.color.startsWith("#F5") ? "245,158,11" : s.color.startsWith("#8") ? "139,92,246" : s.color.startsWith("#E") ? "239,68,68" : "6,182,212"},${0.4 + intensity * 0.6})` }}>
+                              style={{ color: `rgba(${r},${g},${b},${0.45 + intensity * 0.55})` }}>
                               {val > 0 ? val.toLocaleString() : "—"}
                             </td>
                           );
