@@ -11,6 +11,27 @@ body {
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
 
+/* Light mode — đảo ngược slate palette */
+html.light {
+  --color-slate-950: #f8fafc;
+  --color-slate-900: #f1f5f9;
+  --color-slate-800: #e2e8f0;
+  --color-slate-700: #cbd5e1;
+  --color-slate-600: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-400: #475569;
+  --color-slate-300: #334155;
+  --color-slate-200: #1e293b;
+  --color-slate-100: #0f172a;
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+}
+
+html.light body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #1e293b; }
