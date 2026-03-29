@@ -294,6 +294,8 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
           const prevHcmRev  = prevTeams.filter(t => t.region === "HCM").reduce((s, t) => s + t.revenue, 0);
           const hnMom       = prevHnRev > 0 ? ((hnRev - prevHnRev) / prevHnRev * 100) : null;
           const hcmMom      = prevHcmRev > 0 ? ((hcmRev - prevHcmRev) / prevHcmRev * 100) : null;
+          const hnYoy       = prevYearHnRev != null && prevYearHnRev > 0 ? ((hnRev - prevYearHnRev) / prevYearHnRev * 100) : null;
+          const hcmYoy      = prevYearHcmRev != null && prevYearHcmRev > 0 ? ((hcmRev - prevYearHcmRev) / prevYearHcmRev * 100) : null;
           return (
             <div className="rounded-xl border border-slate-600/50 bg-slate-800/40 p-5">
               <div className="flex items-start justify-between mb-4">
@@ -354,11 +356,17 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
                     <span className="text-xs font-semibold text-blue-400">Khu vực HN</span>
                     <span className="ml-auto text-xs text-slate-500">{hnShare}% tổng</span>
                   </div>
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex items-baseline gap-2 flex-wrap">
                     <div className="text-xl font-bold text-white">{hnRev.toLocaleString()}<span className="text-sm text-slate-400 ml-1">M</span></div>
                     {hnMom !== null && prevLabel && (
                       <span className={`text-xs font-semibold ${hnMom >= 0 ? "text-green-400" : "text-red-400"}`} title={`So với ${prevLabel}`}>
                         {hnMom >= 0 ? "+" : ""}{hnMom.toFixed(1)}% vs {prevLabel}
+                      </span>
+                    )}
+                    {hnYoy !== null && (
+                      <span className={`flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full ${hnYoy >= 0 ? "bg-blue-500/15 text-blue-300" : "bg-red-500/15 text-red-400"}`}>
+                        {hnYoy >= 0 ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+                        {hnYoy >= 0 ? "+" : ""}{hnYoy.toFixed(1)}% CK25
                       </span>
                     )}
                   </div>
@@ -378,11 +386,17 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
                     <span className="text-xs font-semibold text-orange-400">Khu vực HCM</span>
                     <span className="ml-auto text-xs text-slate-500">{hcmShare}% tổng</span>
                   </div>
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex items-baseline gap-2 flex-wrap">
                     <div className="text-xl font-bold text-white">{hcmRev.toLocaleString()}<span className="text-sm text-slate-400 ml-1">M</span></div>
                     {hcmMom !== null && prevLabel && (
                       <span className={`text-xs font-semibold ${hcmMom >= 0 ? "text-green-400" : "text-red-400"}`} title={`So với ${prevLabel}`}>
                         {hcmMom >= 0 ? "+" : ""}{hcmMom.toFixed(1)}% vs {prevLabel}
+                      </span>
+                    )}
+                    {hcmYoy !== null && (
+                      <span className={`flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full ${hcmYoy >= 0 ? "bg-blue-500/15 text-blue-300" : "bg-red-500/15 text-red-400"}`}>
+                        {hcmYoy >= 0 ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+                        {hcmYoy >= 0 ? "+" : ""}{hcmYoy.toFixed(1)}% CK25
                       </span>
                     )}
                   </div>
