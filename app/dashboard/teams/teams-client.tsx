@@ -13,16 +13,15 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Sparkles, TrendingUp, TrendingDown, MapPin } from "lucide-react";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 import { TEAM_SERVICE_DATA } from "@/lib/mock-data";
-import type { UserRole } from "@/lib/types";
-import type { TeamServiceRecord } from "@/lib/types";
+import type { UserRole, TeamMonthlyData, TeamServiceRecord } from "@/lib/types";
 
 interface TeamsClientProps {
   role: UserRole;
   teamId: string | null;
-  teamServiceData: TeamServiceRecord[];
+  teamServiceData: TeamMonthlyData;
 }
 
-const SVC_KEYS: { key: keyof TeamServiceRecord; label: string; color: string }[] = [
+const SVC_KEYS: { key: string; label: string; color: string }[] = [
   { key: "hostMail",    label: "Host/Mail",   color: "#0066CC" },
   { key: "msgws",       label: "MS/GWS",      color: "#10B981" },
   { key: "tenMien",     label: "Tên miền",    color: "#F59E0B" },
@@ -71,8 +70,11 @@ function RegionCard({ label, teams }: { label: string; teams: TeamServiceRecord[
 export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps) {
   const [showAI, setShowAI] = useState(false);
   const [region, setRegion] = useState<"all" | "HN" | "HCM">("all");
+  const [selectedMonth, setSelectedMonth] = useState("T3");
 
-  const allTeams = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
+  const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
+  const currentMonthTeams = allMonths.find(m => m.month === selectedMonth)?.teams ?? [];
+  const allTeams = currentMonthTeams.length > 0 ? currentMonthTeams : (TEAM_SERVICE_DATA.find(m => m.month === selectedMonth)?.teams ?? []);
   const hnTeams  = allTeams.filter(t => t.region === "HN");
   const hcmTeams = allTeams.filter(t => t.region === "HCM");
   const displayed = region === "all" ? allTeams : allTeams.filter(t => t.region === region);
@@ -118,6 +120,17 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
   return (
     <div>
       <Header title="Chi Tiết Doanh Số">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400">Tháng:</span>
+          <div className="flex gap-1 flex-wrap">
+            {Array.from({ length: 12 }, (_, i) => `T${i + 1}`).map(m => (
+              <button key={m} onClick={() => setSelectedMonth(m)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${selectedMonth === m ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-400 hover:text-white"}`}>
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex gap-1">
           {(["all","HN","HCM"] as const).map(r => (
             <button key={r} onClick={() => setRegion(r)}

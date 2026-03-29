@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { TeamsClient } from "./teams-client";
 import { getData } from "@/lib/db";
 import { TEAM_SERVICE_DATA } from "@/lib/mock-data";
-import type { TeamServiceRecord } from "@/lib/types";
+import type { TeamMonthlyData } from "@/lib/types";
 
 export default async function TeamsPage() {
   const session = await auth();
@@ -11,7 +11,7 @@ export default async function TeamsPage() {
   const user = session.user as any;
   if (user.role !== "admin" && user.role !== "viewer") redirect("/dashboard");
 
-  const teamServiceData = await getData<TeamServiceRecord[]>("team_service")
+  const teamServiceData = await getData<TeamMonthlyData>("team_service")
     .then(d => d ?? TEAM_SERVICE_DATA)
     .catch(() => TEAM_SERVICE_DATA);
 
