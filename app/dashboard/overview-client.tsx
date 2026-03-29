@@ -228,9 +228,12 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
               <div key="thuc-hien" className="bg-slate-800/60 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4">
                 <div className="text-xs text-slate-400 mb-1">Thực hiện {selMonth?.month}</div>
                 <div className="text-xl font-bold text-blue-400">{selThucHien.toFixed(2)} tỷ</div>
-                <div className="flex items-center gap-2 mt-1.5">
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                   <span className="text-xs text-slate-500">HN + HCM</span>
                   {prevThucHien > 0 && <TrendBadge pct={trendThang} label="vs tháng trước" />}
+                  {selMonth?.cumKy != null && selMonth.cumKy > 0 && (
+                    <TrendBadge pct={(selThucHien - selMonth.cumKy) / selMonth.cumKy * 100} label="so CK 2025" />
+                  )}
                 </div>
               </div>,
               <div key="mt8" className={`rounded-xl border p-4 ${c8.border} ${c8.bg}`}>
@@ -248,10 +251,18 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                 </div>
               </div>,
               <div key="hn-hcm" className="bg-slate-800/60 rounded-xl border border-slate-500/20 p-4">
-                <div className="text-xs text-slate-400 mb-1">HN / HCM</div>
-                <div className="text-xl font-bold text-slate-300">{(selMonth?.hn ?? 0).toFixed(2)} / {(selMonth?.hcm ?? 0).toFixed(2)}</div>
+                <div className="text-xs text-slate-400 mb-1">Tỉ trọng HN và HCM</div>
+                <div className="text-lg font-bold text-slate-300">
+                  <span className="text-blue-400">{(selMonth?.hn ?? 0).toFixed(2)}</span>
+                  <span className="text-slate-500 text-sm font-normal"> tỷ</span>
+                  <span className="text-slate-500 mx-1">/</span>
+                  <span className="text-orange-400">{(selMonth?.hcm ?? 0).toFixed(2)}</span>
+                  <span className="text-slate-500 text-sm font-normal"> tỷ</span>
+                </div>
                 <div className="text-xs text-slate-500 mt-1.5">
-                  {selThucHien > 0 ? `HN ${((selMonth?.hn??0)/selThucHien*100).toFixed(0)}% · HCM ${((selMonth?.hcm??0)/selThucHien*100).toFixed(0)}%` : "tỷ VNĐ"}
+                  {selThucHien > 0
+                    ? <><span className="text-blue-400 font-medium">HN {((selMonth?.hn??0)/selThucHien*100).toFixed(0)}%</span> · <span className="text-orange-400 font-medium">HCM {((selMonth?.hcm??0)/selThucHien*100).toFixed(0)}%</span></>
+                    : "tỷ VNĐ"}
                 </div>
               </div>,
             ];
