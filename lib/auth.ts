@@ -51,6 +51,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
   },
+  events: {
+    async signIn({ user }) {
+      try {
+        const { createClient } = await import("@supabase/supabase-js");
+        const sb = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+        await sb.from("login_logs").insert({
+          user_email: user.email,
+          logged_in_at: new Date().toISOString(),
+        });
+      } catch {}
+    },
+  },
   pages: {
     signIn: "/login",
   },

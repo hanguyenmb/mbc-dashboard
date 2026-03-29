@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { USERS } from "@/lib/mock-data";
 import type { User, UserRole } from "@/lib/types";
-import { UserPlus, Edit2, Trash2, Search, Shield, Eye, X, Check } from "lucide-react";
+import { UserPlus, Edit2, Trash2, Search, Shield, Eye, X, Check, Clock } from "lucide-react";
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin:  "Quản Trị",
@@ -24,7 +24,19 @@ const ROLE_ICON: Record<UserRole, React.ElementType> = {
 
 const emptyForm = { name: "", email: "", password: "", role: "viewer" as UserRole };
 
-export function UsersClient() {
+function formatLastLogin(iso: string | undefined): string {
+  if (!iso) return "Chưa đăng nhập";
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (diff < 60)  return "Vừa xong";
+  if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)} ngày trước`;
+  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+export function UsersClient({ lastLoginMap }: { lastLoginMap: Record<string, string> }) {
   const [users, setUsers] = useState<User[]>(USERS.filter(u => u.name && u.email));
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState<UserRole | "all">("all");
@@ -162,6 +174,10 @@ export function UsersClient() {
                         </Badge>
                       </div>
                       <div className="text-xs text-slate-500 mt-0.5">{user.email}</div>
+                    </div>
+                    <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 min-w-fit">
+                      <Clock size={11} className="text-slate-600" />
+                      <span>{formatLastLogin(lastLoginMap[user.email])}</span>
                     </div>
 
                     {/* Actions */}

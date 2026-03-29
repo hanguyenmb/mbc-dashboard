@@ -34,3 +34,28 @@ CREATE POLICY "Allow all for service role" ON weekly_tasks FOR ALL USING (true);
 
 -- Index để query nhanh theo tuần
 CREATE INDEX IF NOT EXISTS idx_weekly_tasks_week_key ON weekly_tasks(week_key);
+
+-- Bảng lịch sử đăng nhập
+CREATE TABLE IF NOT EXISTS login_logs (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_email    TEXT NOT NULL,
+  logged_in_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE login_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for service role" ON login_logs FOR ALL USING (true);
+
+CREATE INDEX IF NOT EXISTS idx_login_logs_email ON login_logs(user_email);
+CREATE INDEX IF NOT EXISTS idx_login_logs_time  ON login_logs(logged_in_at DESC);
+
+-- Bảng lịch sử AI (nếu chưa có)
+CREATE TABLE IF NOT EXISTS ai_history (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id       TEXT NOT NULL,
+  context_label TEXT NOT NULL,
+  analysis      TEXT NOT NULL,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE ai_history ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for service role" ON ai_history FOR ALL USING (true);
