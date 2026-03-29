@@ -34,10 +34,33 @@ ${svcRows || "Không có dữ liệu"}`;
   }
 
   if (context === "teams") {
-    const teamSummary = Array.isArray(data)
-      ? data.map((t: any) => `Team ${t.teamName}: DS ${(t.revenue / 1e6).toFixed(0)}M / ${(t.target.revenue / 1e6).toFixed(0)}M (${Math.round(t.revenue / t.target.revenue * 100)}%), ${t.orders} đơn, ${t.customers} KH`).join("\n")
-      : JSON.stringify(data);
-    return `${basePrompt}\n\nDỮ LIỆU CÁC TEAM:\n${teamSummary}`;
+    const { period, teams, totalRev, totalTarget, prevRev, prevLabel, prevYearRev, hnRev, hcmRev } = data ?? {};
+    const teamList = Array.isArray(teams) ? teams : [];
+    const teamRows = teamList.map((t: any) => {
+      const pct = t.target > 0 ? Math.round(t.revenue / t.target * 100) : 0;
+      const svc = [
+        t.hostMail > 0 ? `Host/Mail ${t.hostMail.toFixed(0)}M` : "",
+        t.msgws    > 0 ? `MSGWS ${t.msgws.toFixed(0)}M` : "",
+        t.tenMien  > 0 ? `Tên miền ${t.tenMien.toFixed(0)}M` : "",
+        t.transferGws > 0 ? `Transfer GWS ${t.transferGws.toFixed(0)}M` : "",
+        t.saleAi   > 0 ? `Sale AI ${t.saleAi.toFixed(0)}M` : "",
+        t.elastic  > 0 ? `Elastic ${t.elastic.toFixed(0)}M` : "",
+      ].filter(Boolean).join(", ");
+      return `  [${t.region}] ${t.teamName}: DS ${t.revenue.toFixed(0)}M / MT ${t.target.toFixed(0)}M (${pct}%) — ${svc || "chưa có dữ liệu dịch vụ"}`;
+    }).join("\n");
+    const totalPct  = totalTarget > 0 ? Math.round(totalRev / totalTarget * 100) : 0;
+    const momLine   = prevRev > 0 ? `- So với ${prevLabel}: ${prevRev.toFixed(0)}M (${((totalRev - prevRev) / prevRev * 100).toFixed(1)}%)` : "";
+    const yoyLine   = prevYearRev > 0 ? `- Cùng kỳ 2025: ${prevYearRev.toFixed(0)}M (${((totalRev - prevYearRev) / prevYearRev * 100).toFixed(1)}%)` : "";
+    return `${basePrompt}
+
+DỮ LIỆU CHI TIẾT DOANH SỐ KỲ ${period ?? ""} (đơn vị: triệu VNĐ):
+- Tổng Doanh Số: ${(totalRev ?? 0).toFixed(0)}M / Mục tiêu: ${(totalTarget ?? 0).toFixed(0)}M (đạt ${totalPct}%)
+- Khu vực HN: ${(hnRev ?? 0).toFixed(0)}M | Khu vực HCM: ${(hcmRev ?? 0).toFixed(0)}M
+${momLine}
+${yoyLine}
+
+CHI TIẾT TỪNG TEAM:
+${teamRows || "Không có dữ liệu team"}`;
   }
 
   if (context === "personal") {

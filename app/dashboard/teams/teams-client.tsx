@@ -654,7 +654,17 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
       </div>
 
       {showAI && (
-        <AiAnalysisPanel context="teams" data={allTeams} onClose={() => setShowAI(false)} />
+        <AiAnalysisPanel context="teams" data={{
+          period: filterLabel,
+          teams: allTeams,
+          totalRev: allTeams.reduce((s, t) => s + t.revenue, 0),
+          totalTarget: allTeams.reduce((s, t) => s + t.target, 0),
+          hnRev: hnTeams.reduce((s, t) => s + t.revenue, 0),
+          hcmRev: hcmTeams.reduce((s, t) => s + t.revenue, 0),
+          prevRev: prevTeams.reduce((s, t) => s + t.revenue, 0),
+          prevLabel,
+          prevYearRev,
+        }} onClose={() => setShowAI(false)} />
       )}
     </div>
   );
