@@ -155,64 +155,77 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
   return (
     <div>
       <Header title="Chi Tiết Doanh Số">
-        {/* Dropdown Tháng */}
-        <div className="relative">
-          <button onClick={() => setOpenDropdown(d => d === "month" ? null : "month")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${view === "month" ? "bg-blue-600 border-blue-500 text-white" : "bg-slate-700 border-slate-600 text-slate-400 hover:text-white"}`}>
-            {view === "month" ? `Tháng: ${selectedMonth}` : "Tháng"}
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5l3 3 3-3"/></svg>
-          </button>
-          {openDropdown === "month" && (
-            <div className="absolute top-full mt-1 right-0 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-2 grid grid-cols-4 gap-1 w-44">
-              {Array.from({ length: 12 }, (_, i) => `T${i + 1}`).map(m => (
-                <button key={m} onClick={() => { setSelectedMonth(m); setView("month"); setOpenDropdown(null); }}
-                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${view === "month" && selectedMonth === m ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-700 hover:text-white"}`}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Dropdown Quý */}
-        <div className="relative">
-          <button onClick={() => setOpenDropdown(d => d === "quarter" ? null : "quarter")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${view === "quarter" ? "bg-purple-600 border-purple-500 text-white" : "bg-slate-700 border-slate-600 text-slate-400 hover:text-white"}`}>
-            {view === "quarter" ? `Quý: Q${selectedQuarter}` : "Quý"}
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5l3 3 3-3"/></svg>
-          </button>
-          {openDropdown === "quarter" && (
-            <div className="absolute top-full mt-1 right-0 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-2 flex flex-col gap-1 w-36">
-              {[1,2,3,4].map(q => (
-                <button key={q} onClick={() => { setSelectedQuarter(q); setView("quarter"); setOpenDropdown(null); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium text-left transition-colors ${view === "quarter" && selectedQuarter === q ? "bg-purple-600 text-white" : "text-slate-400 hover:bg-slate-700 hover:text-white"}`}>
-                  Q{q} ({["T1-T3","T4-T6","T7-T9","T10-T12"][q-1]})
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-1">
-          {(["all","HN","HCM"] as const).map(r => (
-            <button key={r} onClick={() => setRegion(r)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${region === r ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-400 hover:text-white"}`}>
-              {r === "all" ? "Tất cả" : `Khu vực ${r}`}
-            </button>
-          ))}
-        </div>
         <Button variant="primary" size="sm" onClick={() => setShowAI(true)}>
           <Sparkles size={14} /> Trợ Lý AI
         </Button>
       </Header>
 
-      {openDropdown && (
-        <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
-      )}
-
       <div className="p-6 space-y-5">
+        {/* Filter bar */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs text-slate-400 font-medium">Bộ lọc:</span>
+
+          {/* Dropdown Tháng */}
+          <div className="relative">
+            <button onClick={() => setOpenDropdown(d => d === "month" ? null : "month")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${view === "month" ? "bg-blue-600 border-blue-500 text-white" : "bg-slate-700 border-slate-600 text-slate-400 hover:text-white"}`}>
+              {view === "month" ? `Tháng: ${selectedMonth}` : "Tháng"}
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 3.5l3 3 3-3"/></svg>
+            </button>
+            {openDropdown === "month" && (
+              <div className="absolute top-full mt-1 left-0 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-2 grid grid-cols-4 gap-1 w-44">
+                {Array.from({ length: 12 }, (_, i) => `T${i + 1}`).map(m => (
+                  <button key={m} onClick={() => { setSelectedMonth(m); setView("month"); setOpenDropdown(null); }}
+                    className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${view === "month" && selectedMonth === m ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-700 hover:text-white"}`}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Dropdown Quý */}
+          <div className="relative">
+            <button onClick={() => setOpenDropdown(d => d === "quarter" ? null : "quarter")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${view === "quarter" ? "bg-purple-600 border-purple-500 text-white" : "bg-slate-700 border-slate-600 text-slate-400 hover:text-white"}`}>
+              {view === "quarter" ? `Quý: Q${selectedQuarter}` : "Quý"}
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 3.5l3 3 3-3"/></svg>
+            </button>
+            {openDropdown === "quarter" && (
+              <div className="absolute top-full mt-1 left-0 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-2 flex flex-col gap-1 w-36">
+                {[1,2,3,4].map(q => (
+                  <button key={q} onClick={() => { setSelectedQuarter(q); setView("quarter"); setOpenDropdown(null); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium text-left transition-colors ${view === "quarter" && selectedQuarter === q ? "bg-purple-600 text-white" : "text-slate-400 hover:bg-slate-700 hover:text-white"}`}>
+                    Q{q} ({["T1-T3","T4-T6","T7-T9","T10-T12"][q-1]})
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="h-4 w-px bg-slate-700" />
+
+          {/* Region filter */}
+          <div className="flex gap-1">
+            {(["all","HN","HCM"] as const).map(r => (
+              <button key={r} onClick={() => setRegion(r)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${region === r ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-400 hover:text-white"}`}>
+                {r === "all" ? "Tất cả" : `Khu vực ${r}`}
+              </button>
+            ))}
+          </div>
+
+          <span className="text-xs text-slate-500 ml-auto">
+            {view === "month" ? selectedMonth : `Q${selectedQuarter} (${QUARTER_MONTHS[selectedQuarter].join(", ")})`}
+          </span>
+        </div>
+
+        {openDropdown && (
+          <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
+        )}
+
         <PageHeader title="Chi Tiết Doanh Số theo Team"
-          subtitle={`So sánh hiệu suất và cơ cấu dịch vụ giữa các team HN & HCM — ${view === "month" ? selectedMonth : `Quý ${selectedQuarter} (${QUARTER_MONTHS[selectedQuarter].join(", ")})`}`} />
+          subtitle={`So sánh hiệu suất và cơ cấu dịch vụ giữa các team HN & HCM`} />
 
         {!hasData && (
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-amber-400 text-sm">
