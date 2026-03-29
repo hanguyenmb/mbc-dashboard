@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { TeamsClient } from "./teams-client";
 import { getData } from "@/lib/db";
-import { TEAM_SERVICE_DATA } from "@/lib/mock-data";
+import { TEAM_SERVICE_DATA, MONTHLY_DATA } from "@/lib/mock-data";
 import type { TeamMonthlyData } from "@/lib/types";
 
 export default async function TeamsPage() {
@@ -22,5 +22,9 @@ export default async function TeamsPage() {
     teamServiceData = raw as TeamMonthlyData;
   }
 
-  return <TeamsClient role={user.role} teamId={user.teamId} teamServiceData={teamServiceData} />;
+  const monthlyData = await getData<typeof MONTHLY_DATA>("monthly_data")
+    .then(d => d ?? MONTHLY_DATA)
+    .catch(() => MONTHLY_DATA);
+
+  return <TeamsClient role={user.role} teamId={user.teamId} teamServiceData={teamServiceData} monthlyData={monthlyData} />;
 }

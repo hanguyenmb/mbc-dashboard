@@ -140,6 +140,8 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                       <th className="text-right py-2 px-2 text-slate-400 font-medium">HN (tỷ)</th>
                       <th className="text-right py-2 px-2 text-slate-400 font-medium">HCM (tỷ)</th>
                       <th className="text-right py-2 px-2 text-slate-400 font-medium">Cùng kỳ 2025</th>
+                      <th className="text-right py-2 px-2 text-blue-400/70 font-medium">HN 2025 (tỷ)</th>
+                      <th className="text-right py-2 px-2 text-orange-400/70 font-medium">HCM 2025 (tỷ)</th>
                       <th className="text-right py-2 px-2 text-slate-400 font-medium">MT 8% (tỷ)</th>
                       <th className="text-right py-2 px-2 text-slate-400 font-medium">MT 10% (tỷ)</th>
                     </tr>
@@ -151,6 +153,8 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                         <td className="py-1 px-2"><NumInput value={row.hn ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hn: v } as any : r))} /></td>
                         <td className="py-1 px-2"><NumInput value={row.hcm ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hcm: v } as any : r))} /></td>
                         <td className="py-1 px-2"><NumInput value={row.cumKy} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, cumKy: v ?? 0 } : r))} /></td>
+                        <td className="py-1 px-2"><NumInput value={(row as any).hnPrev ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hnPrev: v } as any : r))} /></td>
+                        <td className="py-1 px-2"><NumInput value={(row as any).hcmPrev ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hcmPrev: v } as any : r))} /></td>
                         <td className="py-1 px-2"><NumInput value={row.mt8} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, mt8: v ?? 0 } : r))} /></td>
                         <td className="py-1 px-2"><NumInput value={row.mt10} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, mt10: v ?? 0 } : r))} /></td>
                       </tr>
@@ -263,17 +267,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2">
-                      <span className="text-xs text-slate-400">DS cùng kỳ 2025 ({teamMonth}):</span>
-                      <NumInput
-                        value={teamData.find(m => m.month === teamMonth)?.prevYearRevenue ?? null}
-                        onChange={v => setTeamData(d => d.map(m => m.month === teamMonth ? { ...m, prevYearRevenue: v ?? undefined } : m))}
-                        className="w-32"
-                      />
-                      <span className="text-xs text-slate-500">triệu VNĐ · để so sánh YoY trên Dashboard</span>
-                    </div>
-
-                    <p className="text-xs text-slate-500">Tên team & vùng áp dụng cho tất cả tháng · Doanh số nhập riêng từng tháng</p>
+                    <p className="text-xs text-slate-500">Tên team & vùng áp dụng cho tất cả tháng · Doanh số nhập riêng từng tháng · Cùng kỳ 2025 nhập ở tab Doanh Số Tháng</p>
 
                     <table className="w-full text-xs">
                       <thead>

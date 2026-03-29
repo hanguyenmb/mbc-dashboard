@@ -15,18 +15,18 @@ export const TEAMS: Team[] = [
 // ── MONTHLY DATA (tỷ VNĐ) ───────────────────────────────────────────────────
 // HN + HCM = Kết quả chung | null = chưa có dữ liệu
 export const MONTHLY_DATA = [
-  { month: "T1",  cumKy: 10.23, mt8: 16.03, mt10: 16.50, hn: 6.45,  hcm: 10.24 },
-  { month: "T2",  cumKy: 16.32, mt8: 12.60, mt10: 12.70, hn: 5.10,  hcm: 8.93  },
-  { month: "T3",  cumKy: 24.16, mt8: 26.06, mt10: 26.58, hn: 9.05,  hcm: 15.75 },
-  { month: "T4",  cumKy: 21.19, mt8: 22.86, mt10: 23.31, hn: null,  hcm: null  },
-  { month: "T5",  cumKy: 21.65, mt8: 23.35, mt10: 23.82, hn: null,  hcm: null  },
-  { month: "T6",  cumKy: 22.92, mt8: 24.72, mt10: 25.21, hn: null,  hcm: null  },
-  { month: "T7",  cumKy: 21.25, mt8: 22.92, mt10: 23.38, hn: null,  hcm: null  },
-  { month: "T8",  cumKy: 23.09, mt8: 24.90, mt10: 25.39, hn: null,  hcm: null  },
-  { month: "T9",  cumKy: 20.93, mt8: 22.58, mt10: 23.03, hn: null,  hcm: null  },
-  { month: "T10", cumKy: 20.37, mt8: 21.97, mt10: 22.41, hn: null,  hcm: null  },
-  { month: "T11", cumKy: 20.18, mt8: 21.76, mt10: 22.20, hn: null,  hcm: null  },
-  { month: "T12", cumKy: 23.49, mt8: 25.34, mt10: 25.84, hn: null,  hcm: null  },
+  { month: "T1",  cumKy: 10.23, mt8: 16.03, mt10: 16.50, hn: 6.45,  hcm: 10.24, hnPrev: null, hcmPrev: null },
+  { month: "T2",  cumKy: 16.32, mt8: 12.60, mt10: 12.70, hn: 5.10,  hcm: 8.93,  hnPrev: null, hcmPrev: null },
+  { month: "T3",  cumKy: 24.16, mt8: 26.06, mt10: 26.58, hn: 9.05,  hcm: 15.75, hnPrev: null, hcmPrev: null },
+  { month: "T4",  cumKy: 21.19, mt8: 22.86, mt10: 23.31, hn: null,  hcm: null,  hnPrev: null, hcmPrev: null },
+  { month: "T5",  cumKy: 21.65, mt8: 23.35, mt10: 23.82, hn: null,  hcm: null,  hnPrev: null, hcmPrev: null },
+  { month: "T6",  cumKy: 22.92, mt8: 24.72, mt10: 25.21, hn: null,  hcm: null,  hnPrev: null, hcmPrev: null },
+  { month: "T7",  cumKy: 21.25, mt8: 22.92, mt10: 23.38, hn: null,  hcm: null,  hnPrev: null, hcmPrev: null },
+  { month: "T8",  cumKy: 23.09, mt8: 24.90, mt10: 25.39, hn: null,  hcm: null,  hnPrev: null, hcmPrev: null },
+  { month: "T9",  cumKy: 20.93, mt8: 22.58, mt10: 23.03, hn: null,  hcm: null,  hnPrev: null, hcmPrev: null },
+  { month: "T10", cumKy: 20.37, mt8: 21.97, mt10: 22.41, hn: null,  hcm: null,  hnPrev: null, hcmPrev: null },
+  { month: "T11", cumKy: 20.18, mt8: 21.76, mt10: 22.20, hn: null,  hcm: null,  hnPrev: null, hcmPrev: null },
+  { month: "T12", cumKy: 23.49, mt8: 25.34, mt10: 25.84, hn: null,  hcm: null,  hnPrev: null, hcmPrev: null },
 ];
 
 // ── QUARTERLY DATA ───────────────────────────────────────────────────────────

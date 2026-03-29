@@ -15,10 +15,13 @@ import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 import { TEAM_SERVICE_DATA } from "@/lib/mock-data";
 import type { UserRole, TeamMonthlyData, TeamServiceRecord } from "@/lib/types";
 
+interface MonthlyRow { month: string; cumKy: number; hn: number | null; hcm: number | null; hnPrev?: number | null; hcmPrev?: number | null; [k: string]: any; }
+
 interface TeamsClientProps {
   role: UserRole;
   teamId: string | null;
   teamServiceData: TeamMonthlyData;
+  monthlyData: MonthlyRow[];
 }
 
 const SVC_KEYS: { key: string; label: string; color: string }[] = [
@@ -74,7 +77,7 @@ function RegionCard({ label, teams }: { label: string; teams: TeamServiceRecord[
   );
 }
 
-export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps) {
+export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: TeamsClientProps) {
   const [showAI, setShowAI] = useState(false);
   const [region, setRegion] = useState<"all" | "HN" | "HCM">("all");
   const [view, setView] = useState<"month" | "quarter">("month");
@@ -111,13 +114,26 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
     ? getTeamsForMonths([selectedMonth])
     : getTeamsForMonths(QUARTER_MONTHS[selectedQuarter]);
 
-  // Cùng kỳ năm trước (do anh nhập thủ công)
+  // Cùng kỳ 2025 từ monthly_data (tỷ → triệu *1000)
+  const getMonthRow = (mk: string) => monthlyData.find(m => m.month === mk);
   const prevYearRev = view === "month"
-    ? (allMonths.find(m => m.month === selectedMonth)?.prevYearRevenue ?? null)
-    : QUARTER_MONTHS[selectedQuarter].reduce((sum, mk) => {
-        const v = allMonths.find(m => m.month === mk)?.prevYearRevenue;
-        return v != null ? sum + v : sum;
-      }, 0) || null;
+    ? ((getMonthRow(selectedMonth)?.cumKy ?? null) !== null ? (getMonthRow(selectedMonth)!.cumKy * 1000) : null)
+    : (() => {
+        const sum = QUARTER_MONTHS[selectedQuarter].reduce((s, mk) => s + (getMonthRow(mk)?.cumKy ?? 0), 0);
+        return sum > 0 ? sum * 1000 : null;
+      })();
+  const prevYearHnRev = view === "month"
+    ? ((getMonthRow(selectedMonth)?.hnPrev ?? null) !== null ? ((getMonthRow(selectedMonth)!.hnPrev ?? 0) * 1000) : null)
+    : (() => {
+        const sum = QUARTER_MONTHS[selectedQuarter].reduce((s, mk) => s + (getMonthRow(mk)?.hnPrev ?? 0), 0);
+        return sum > 0 ? sum * 1000 : null;
+      })();
+  const prevYearHcmRev = view === "month"
+    ? ((getMonthRow(selectedMonth)?.hcmPrev ?? null) !== null ? ((getMonthRow(selectedMonth)!.hcmPrev ?? 0) * 1000) : null)
+    : (() => {
+        const sum = QUARTER_MONTHS[selectedQuarter].reduce((s, mk) => s + (getMonthRow(mk)?.hcmPrev ?? 0), 0);
+        return sum > 0 ? sum * 1000 : null;
+      })();
 
   // Kỳ trước để so sánh
   const prevTeams = (() => {
