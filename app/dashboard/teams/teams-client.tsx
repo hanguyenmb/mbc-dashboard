@@ -130,10 +130,11 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
   // Heatmap: team × service
   const hasData = allTeams.some(t => t.revenue > 0);
 
-  // Grouped bar: each group = 1 service, bars = teams
+  // Grouped bar: each group = 1 service, bars = teams — sort by teamId để đúng thứ tự nhập
+  const displayedSorted = [...displayed].sort((a, b) => a.teamId.localeCompare(b.teamId));
   const serviceCompareData = SVC_KEYS.map(s => {
     const entry: Record<string, any> = { service: s.label };
-    displayed.forEach(t => { entry[t.teamName] = (t as any)[s.key] ?? 0; });
+    displayedSorted.forEach(t => { entry[t.teamName] = (t as any)[s.key] ?? 0; });
     return entry;
   });
 
@@ -407,7 +408,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
         {/* Phần 5: So sánh dịch vụ giữa các team */}
         <Card>
           <CardHeader>
-            <CardTitle>So Sánh Dịch Vụ Giữa Các Team</CardTitle>
+            <CardTitle>So Sánh Doanh Số Đăng Ký Mới Các Team</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={320}>
@@ -417,7 +418,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                 <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} tickFormatter={v => `${v}M`} />
                 <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`]} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                {displayed.map((t, i) => (
+                {displayedSorted.map((t, i) => (
                   <Bar key={t.teamId} dataKey={t.teamName} fill={TEAM_COLORS[i % TEAM_COLORS.length]} radius={[3,3,0,0]} />
                 ))}
               </BarChart>
