@@ -98,11 +98,25 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
     { key: "elastic",     label: "Elastic",            color: "#06B6D4" },
   ] as const;
 
-  // Tính động Q1 từ SERVICE_MONTHLY — tự cập nhật khi thêm tháng mới
+  // Donut: lọc theo bộ lọc đang chọn
+  const svcFilteredMonths = (() => {
+    if (view === "thang") {
+      const m = SERVICE_MONTHLY[selectedMonthIdx];
+      return m ? [m] : SERVICE_MONTHLY;
+    }
+    // Quý: lấy các tháng trong quý có data
+    const start = (selectedQuarter - 1) * 3;
+    return SERVICE_MONTHLY.filter((_, i) => i >= start && i < start + 3);
+  })();
+
+  const svcLabel = view === "thang"
+    ? (SERVICE_MONTHLY[selectedMonthIdx]?.month ?? "Tổng")
+    : `Q${selectedQuarter}`;
+
   const svcQ1 = SVC_KEYS.map((s) => ({
     name: s.label,
     color: s.color,
-    value: SERVICE_MONTHLY.reduce((sum, m) => sum + ((m as any)[s.key] as number), 0),
+    value: svcFilteredMonths.reduce((sum, m) => sum + ((m as any)[s.key] as number), 0),
   }));
 
   const totalService = svcQ1.reduce((s, g) => s + g.value, 0);
@@ -638,7 +652,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
         {/* ── CHART: Tỉ trọng 6 nhóm dịch vụ ── */}
         <Card className="mb-4">
             <CardHeader>
-              <CardTitle>Tỉ Trọng Dịch Vụ Đăng Ký Mới Năm 2026</CardTitle>
+              <CardTitle>Tỉ Trọng Dịch Vụ Đăng Ký Mới — {svcLabel}</CardTitle>
               <Badge variant="brand">6 nhóm</Badge>
             </CardHeader>
             <CardContent>
