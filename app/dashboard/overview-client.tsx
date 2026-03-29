@@ -228,11 +228,11 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
               <div key="thuc-hien" className="bg-slate-800/60 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4">
                 <div className="text-xs text-slate-400 mb-1">Thực hiện {selMonth?.month}</div>
                 <div className="text-xl font-bold text-blue-400">{selThucHien.toFixed(2)} tỷ</div>
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <span className="text-xs text-slate-500">HN + HCM</span>
-                  {prevThucHien > 0 && <TrendBadge pct={trendThang} label="vs tháng trước" />}
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <span className="text-xs text-slate-500 shrink-0">Toàn Quốc</span>
+                  {prevThucHien > 0 && <TrendBadge pct={trendThang} label={`so ${prevMonth?.month ?? "T trước"}`} />}
                   {selMonth?.cumKy != null && selMonth.cumKy > 0 && (
-                    <TrendBadge pct={(selThucHien - selMonth.cumKy) / selMonth.cumKy * 100} label="so CK 2025" />
+                    <TrendBadge pct={(selThucHien - selMonth.cumKy) / selMonth.cumKy * 100} label="CK 2025" />
                   )}
                 </div>
               </div>,
