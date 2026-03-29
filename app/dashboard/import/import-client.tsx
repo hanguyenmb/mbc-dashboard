@@ -136,8 +136,8 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                     {monthlyData.map((row, i) => (
                       <tr key={row.month} className="border-b border-slate-800 hover:bg-slate-800/30">
                         <td className="py-1.5 px-3 text-slate-300 font-semibold">{row.month}</td>
-                        <td className="py-1 px-2"><NumInput value={row.hn ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hn: v } : r))} /></td>
-                        <td className="py-1 px-2"><NumInput value={row.hcm ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hcm: v } : r))} /></td>
+                        <td className="py-1 px-2"><NumInput value={row.hn ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hn: v } as any : r))} /></td>
+                        <td className="py-1 px-2"><NumInput value={row.hcm ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hcm: v } as any : r))} /></td>
                         <td className="py-1 px-2"><NumInput value={row.cumKy} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, cumKy: v ?? 0 } : r))} /></td>
                         <td className="py-1 px-2"><NumInput value={row.mt8} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, mt8: v ?? 0 } : r))} /></td>
                         <td className="py-1 px-2"><NumInput value={row.mt10} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, mt10: v ?? 0 } : r))} /></td>
