@@ -52,7 +52,9 @@ function fmtTip(v: any, name: any) {
   const map: Record<string, string> = {
     hn: "Hà Nội", hcm: "HCM", cumKy: "Kết quả 2025",
     mt8: "Mục tiêu 8%", mt10: "Mục tiêu 10%",
-    nam2025: "Kết quả 2025", nam2026: "Kết quả 2026",
+    nam2025: "KQ 2025 (tổng)", nam2026: "Kết quả 2026",
+    hn2025: "HN 2025", hcm2025: "HCM 2025",
+    hn2026: "HN 2026", hcm2026: "HCM 2026",
     dangKyMoi: "Đăng ký mới", giaHan: "Gia hạn",
   };
   return [`${Number(v).toFixed(2)} tỷ`, map[String(name)] ?? name] as [string, string];
@@ -444,27 +446,57 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
         )}
 
         {/* ── CHART 2: THEO QUÝ ── */}
-        {view === "quy" && (
+        {view === "quy" && (() => {
+          // Tính dữ liệu quý từ monthly_data
+          const qChartData = [1,2,3,4].map(q => {
+            const qMs = MONTHLY_DATA.slice((q-1)*3, q*3);
+            const hasPrev   = qMs.some(m => (m as any).hnPrev != null);
+            const has2026   = qMs.some(m => m.hn != null);
+            const hn2025    = hasPrev  ? qMs.reduce((s,m) => s+((m as any).hnPrev??0), 0) : null;
+            const hcm2025   = hasPrev  ? qMs.reduce((s,m) => s+((m as any).hcmPrev??0), 0) : null;
+            const nam2025fb = !hasPrev ? (qMs.reduce((s,m) => s+(m.cumKy??0), 0) || null) : null;
+            const hn2026    = has2026  ? qMs.reduce((s,m) => s+(m.hn??0), 0) : null;
+            const hcm2026   = has2026  ? qMs.reduce((s,m) => s+(m.hcm??0), 0) : null;
+            const base      = QUARTERLY_DATA[q-1];
+            const nam2025total = qMs.reduce((s,m) => s+(m.cumKy??0), 0) || null;
+            const nam2026total = hn2026 != null ? (hn2026 + (hcm2026??0)) : (base.nam2026 ?? null);
+            return { quy: `Q${q}`, hn2025, hcm2025, nam2025: nam2025fb, hn2026, hcm2026,
+                     nam2025total, nam2026total, mt10: base.mt10,
+                     tlMt8: base.tlMt8, tlMt10: base.tlMt10, tangTruong: base.tangTruong };
+          });
+          return (
           <Card className="mb-4">
             <CardHeader>
               <CardTitle>Kết Quả & Mục Tiêu Theo Quý (tỷ VNĐ)</CardTitle>
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className="w-3 h-3 rounded-sm bg-slate-500 inline-block opacity-60" />2025</span>
-                <span className="flex items-center gap-1.5 text-xs text-blue-400"><span className="w-3 h-3 rounded-sm bg-blue-600 inline-block" />2026</span>
-                <span className="flex items-center gap-1.5 text-xs text-amber-400"><span className="w-5 border-t-2 border-dashed border-amber-400 inline-block" />MT 8%</span>
+                <span className="flex items-center gap-1 text-xs text-slate-400">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-slate-500 inline-block opacity-70" />
+                  <span className="w-2.5 h-2.5 rounded-sm bg-slate-400 inline-block opacity-50 -ml-1" />
+                  HN / HCM 2025
+                </span>
+                <span className="flex items-center gap-1 text-xs text-blue-400">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-600 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-sm bg-cyan-500 inline-block -ml-1" />
+                  HN / HCM 2026
+                </span>
                 <span className="flex items-center gap-1.5 text-xs text-green-400"><span className="w-5 border-t-2 border-dashed border-green-400 inline-block" />MT 10%</span>
               </div>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={280}>
-                <ComposedChart data={QUARTERLY_DATA} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+                <ComposedChart data={qChartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis dataKey="quy" tick={{ fill: "#94a3b8", fontSize: 12 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip {...TOOLTIP_STYLE} formatter={fmtTip} />
-                  <Bar dataKey="nam2025" name="nam2025" fill="#475569" radius={[4,4,0,0]} maxBarSize={36} opacity={0.7} />
-                  <Bar dataKey="nam2026" name="nam2026" fill="#2563eb" radius={[4,4,0,0]} maxBarSize={36} />
-                  <Line type="monotone" dataKey="mt8"  name="mt8"  stroke="#F59E0B" strokeWidth={2} strokeDasharray="5 4" dot={{ fill: "#F59E0B", r: 4 }} />
+                  {/* 2025 — fallback single bar khi chưa có hn/hcm split */}
+                  <Bar dataKey="nam2025" name="nam2025" stackId="a" fill="#475569" radius={[4,4,0,0]} maxBarSize={36} opacity={0.7} />
+                  {/* 2025 — stacked HN + HCM khi có hnPrev */}
+                  <Bar dataKey="hn2025"  name="hn2025"  stackId="a" fill="#334155" maxBarSize={36} opacity={0.85} />
+                  <Bar dataKey="hcm2025" name="hcm2025" stackId="a" fill="#57534e" radius={[4,4,0,0]} maxBarSize={36} opacity={0.85} />
+                  {/* 2026 — stacked HN + HCM */}
+                  <Bar dataKey="hn2026"  name="hn2026"  stackId="b" fill="#2563eb" maxBarSize={36} />
+                  <Bar dataKey="hcm2026" name="hcm2026" stackId="b" fill="#0891b2" radius={[4,4,0,0]} maxBarSize={36} />
                   <Line type="monotone" dataKey="mt10" name="mt10" stroke="#10B981" strokeWidth={2} strokeDasharray="5 4" dot={{ fill: "#10B981", r: 4 }} />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -475,33 +507,31 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                   <thead>
                     <tr className="text-slate-500 border-b border-slate-700/50">
                       <td className="py-2 pr-4">Chỉ tiêu</td>
-                      {QUARTERLY_DATA.map(q => <td key={q.quy} className="py-2 px-3 text-center">{q.quy}</td>)}
+                      {qChartData.map(q => <td key={q.quy} className="py-2 px-3 text-center">{q.quy}</td>)}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                    {[
-                      { label: "KQ 2025",       key: "nam2025",    color: "text-slate-400" },
-                      { label: "KQ 2026",       key: "nam2026",    color: "text-blue-400"  },
-                      { label: "Mục tiêu 8%",   key: "mt8",        color: "text-amber-400" },
-                      { label: "Mục tiêu 10%",  key: "mt10",       color: "text-green-400" },
-                      { label: "% vs MT 8%",    key: "tlMt8",      color: "text-amber-400", isRate: true },
-                      { label: "% vs MT 10%",   key: "tlMt10",     color: "text-green-400", isRate: true },
-                      { label: "Tăng trưởng",   key: "tangTruong", color: "text-cyan-400",  isRate: true },
-                    ].map(row => (
+                    {([
+                      { label: "KQ 2025",      key: "nam2025total", color: "text-slate-400" },
+                      { label: "KQ 2026",      key: "nam2026total", color: "text-blue-400"  },
+                      { label: "HN 2025",      key: "hn2025",       color: "text-slate-500" },
+                      { label: "HCM 2025",     key: "hcm2025",      color: "text-stone-400" },
+                      { label: "HN 2026",      key: "hn2026",       color: "text-blue-400"  },
+                      { label: "HCM 2026",     key: "hcm2026",      color: "text-cyan-400"  },
+                      { label: "Mục tiêu 10%", key: "mt10",         color: "text-green-400" },
+                      { label: "% vs MT 10%",  key: "tlMt10",       color: "text-green-400", isRate: true },
+                      { label: "Tăng trưởng",  key: "tangTruong",   color: "text-cyan-400",  isRate: true },
+                    ] as { label: string; key: string; color: string; isRate?: boolean }[]).map(row => (
                       <tr key={row.label}>
                         <td className={`py-1.5 pr-4 font-medium ${row.color}`}>{row.label}</td>
-                        {QUARTERLY_DATA.map(q => {
+                        {qChartData.map(q => {
                           const v = (q as any)[row.key];
-                          if (v == null) return <td key={q.quy} className="py-1.5 px-3 text-center text-slate-700">—</td>;
+                          if (v == null || v === 0 && row.isRate) return <td key={q.quy} className="py-1.5 px-3 text-center text-slate-700">—</td>;
                           if (row.isRate) {
                             const isGood = v >= 100;
-                            return (
-                              <td key={q.quy} className={`py-1.5 px-3 text-center font-semibold ${v > 0 ? (isGood ? "text-green-400" : "text-amber-400") : "text-slate-600"}`}>
-                                {v > 0 ? `${v.toFixed(2)}%` : "—"}
-                              </td>
-                            );
+                            return <td key={q.quy} className={`py-1.5 px-3 text-center font-semibold ${isGood ? "text-green-400" : "text-amber-400"}`}>{v.toFixed(2)}%</td>;
                           }
-                          return <td key={q.quy} className="py-1.5 px-3 text-center text-slate-300">{v.toFixed(2)}</td>;
+                          return <td key={q.quy} className="py-1.5 px-3 text-center text-slate-300">{(v as number).toFixed(2)}</td>;
                         })}
                       </tr>
                     ))}
@@ -510,7 +540,8 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
               </div>
             </CardContent>
           </Card>
-        )}
+          );
+        })()}
 
         {/* ── CHART: Doanh số chi tiết so sánh 2025 vs 2026 ── */}
         {(() => {
