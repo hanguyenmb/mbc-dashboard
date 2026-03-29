@@ -20,6 +20,24 @@ interface OverviewClientProps {
   monthlyData: typeof MONTHLY_DATA;
   serviceMonthly: typeof SERVICE_MONTHLY;
   revenueType: typeof REVENUE_TYPE;
+  lastUpdated?: string | null;
+}
+
+// Màu ngưỡng 4 cấp
+function thresholdColor(pct: number) {
+  if (pct >= 100) return { border: "border-green-500/30",  text: "text-green-400",  bg: "bg-green-500/5",  badge: "bg-green-500/20 text-green-300" };
+  if (pct >= 80)  return { border: "border-amber-500/30",  text: "text-amber-400",  bg: "bg-amber-500/5",  badge: "bg-amber-500/20 text-amber-300" };
+  if (pct >= 60)  return { border: "border-orange-500/30", text: "text-orange-400", bg: "bg-orange-500/5", badge: "bg-orange-500/20 text-orange-300" };
+  return           { border: "border-red-500/30",    text: "text-red-400",    bg: "bg-red-500/5",    badge: "bg-red-500/20 text-red-300" };
+}
+
+function TrendBadge({ pct, label }: { pct: number; label: string }) {
+  const up = pct >= 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${up ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+      {up ? "↑" : "↓"} {Math.abs(pct).toFixed(1)}% {label}
+    </span>
+  );
 }
 
 const TOOLTIP_STYLE = {
@@ -55,7 +73,7 @@ function RateBadge({ value, label }: { value: number; label: string }) {
   );
 }
 
-export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueType }: OverviewClientProps) {
+export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueType, lastUpdated }: OverviewClientProps) {
   // Dùng prop (từ DB) thay vì import mock
   const MONTHLY_DATA = monthlyData;
   const SERVICE_MONTHLY = serviceMonthly;
@@ -102,6 +120,10 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   const selThucHien = selMonth ? (selMonth.hn ?? 0) + (selMonth.hcm ?? 0) : 0;
   const selTlMt8  = selMonth?.mt8  > 0 ? (selThucHien / selMonth.mt8)  * 100 : 0;
   const selTlMt10 = selMonth?.mt10 > 0 ? (selThucHien / selMonth.mt10) * 100 : 0;
+  // Trend so tháng trước
+  const prevMonth = selectedMonthIdx > 0 ? MONTHLY_DATA[selectedMonthIdx - 1] : null;
+  const prevThucHien = prevMonth ? (prevMonth.hn ?? 0) + (prevMonth.hcm ?? 0) : 0;
+  const trendThang = prevThucHien > 0 ? ((selThucHien - prevThucHien) / prevThucHien) * 100 : 0;
 
   // KPI theo quý được chọn
   const qStart = (selectedQuarter - 1) * 3;
@@ -127,7 +149,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
       <div className="p-6">
         <PageHeader
           title="Tổng Quan Dashboard"
-          subtitle={`Xin chào ${userName}. Đây là tình hình kinh doanh hôm nay.`}
+          subtitle={`Xin chào ${userName}. ${lastUpdated ? `Dữ liệu cập nhật lúc: ${new Date(lastUpdated).toLocaleString("vi-VN")}` : "Dữ liệu mới nhất"}`}
         >
           <div className="flex items-center gap-2">
             {/* Dropdown Theo Tháng */}
@@ -184,26 +206,74 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
 
         {/* ── Summary KPI strip ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-          {(view === "thang" ? [
-            { label: `Thực hiện ${selMonth?.month ?? ""}`,   value: `${selThucHien.toFixed(2)} tỷ`,            sub: "HN + HCM",              color: "border-blue-500/20 text-blue-400" },
-            { label: `Mục tiêu 8% ${selMonth?.month ?? ""}`, value: `${(selMonth?.mt8  ?? 0).toFixed(2)} tỷ`,  sub: `Đạt ${selTlMt8.toFixed(1)}%`,  color: selTlMt8  >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
-            { label: `Mục tiêu 10% ${selMonth?.month ?? ""}`,value: `${(selMonth?.mt10 ?? 0).toFixed(2)} tỷ`,  sub: `Đạt ${selTlMt10.toFixed(1)}%`, color: selTlMt10 >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
-            { label: "HN / HCM",
-              value: `${(selMonth?.hn ?? 0).toFixed(2)} / ${(selMonth?.hcm ?? 0).toFixed(2)}`,
-              sub: selThucHien > 0 ? `HN ${((selMonth?.hn??0)/selThucHien*100).toFixed(0)}% · HCM ${((selMonth?.hcm??0)/selThucHien*100).toFixed(0)}%` : "tỷ VNĐ",
-              color: "border-slate-500/20 text-slate-300" },
-          ] : [
-            { label: `Thực hiện Q${selectedQuarter}`, value: `${tongThucHien.toFixed(2)} tỷ`, sub: "HN + HCM", color: "border-blue-500/20 text-blue-400" },
-            { label: `Mục tiêu 8% Q${selectedQuarter}`,  value: `${tongMt8.toFixed(2)} tỷ`,  sub: `Đạt ${tlMt8.toFixed(1)}%`,  color: tlMt8  >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
-            { label: `Mục tiêu 10% Q${selectedQuarter}`, value: `${tongMt10.toFixed(2)} tỷ`, sub: `Đạt ${tlMt10.toFixed(1)}%`, color: tlMt10 >= 100 ? "border-green-500/20 text-green-400" : "border-amber-500/20 text-amber-400" },
-            { label: `Tăng trưởng Q${selectedQuarter}`,  value: selQuy?.tangTruong > 0 ? `${selQuy.tangTruong.toFixed(2)}%` : "—", sub: "So với 2025", color: "border-green-500/20 text-green-400" },
-          ]).map((item) => (
-            <div key={item.label} className={`bg-slate-800/60 rounded-xl border p-4 ${item.color.split(" ")[0]}`}>
-              <div className="text-xs text-slate-400 mb-1">{item.label}</div>
-              <div className={`text-xl font-bold ${item.color.split(" ")[1]}`}>{item.value}</div>
-              <div className="text-xs text-slate-500 mt-0.5">{item.sub}</div>
-            </div>
-          ))}
+          {view === "thang" ? (() => {
+            const c8  = thresholdColor(selTlMt8);
+            const c10 = thresholdColor(selTlMt10);
+            return [
+              <div key="thuc-hien" className="bg-slate-800/60 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4">
+                <div className="text-xs text-slate-400 mb-1">Thực hiện {selMonth?.month}</div>
+                <div className="text-xl font-bold text-blue-400">{selThucHien.toFixed(2)} tỷ</div>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-xs text-slate-500">HN + HCM</span>
+                  {prevThucHien > 0 && <TrendBadge pct={trendThang} label="vs tháng trước" />}
+                </div>
+              </div>,
+              <div key="mt8" className={`rounded-xl border p-4 ${c8.border} ${c8.bg}`}>
+                <div className="text-xs text-slate-400 mb-1">Mục tiêu 8% {selMonth?.month}</div>
+                <div className={`text-xl font-bold ${c8.text}`}>{(selMonth?.mt8 ?? 0).toFixed(2)} tỷ</div>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${c8.badge}`}>Đạt {selTlMt8.toFixed(1)}%</span>
+                </div>
+              </div>,
+              <div key="mt10" className={`rounded-xl border p-4 ${c10.border} ${c10.bg}`}>
+                <div className="text-xs text-slate-400 mb-1">Mục tiêu 10% {selMonth?.month}</div>
+                <div className={`text-xl font-bold ${c10.text}`}>{(selMonth?.mt10 ?? 0).toFixed(2)} tỷ</div>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${c10.badge}`}>Đạt {selTlMt10.toFixed(1)}%</span>
+                </div>
+              </div>,
+              <div key="hn-hcm" className="bg-slate-800/60 rounded-xl border border-slate-500/20 p-4">
+                <div className="text-xs text-slate-400 mb-1">HN / HCM</div>
+                <div className="text-xl font-bold text-slate-300">{(selMonth?.hn ?? 0).toFixed(2)} / {(selMonth?.hcm ?? 0).toFixed(2)}</div>
+                <div className="text-xs text-slate-500 mt-1.5">
+                  {selThucHien > 0 ? `HN ${((selMonth?.hn??0)/selThucHien*100).toFixed(0)}% · HCM ${((selMonth?.hcm??0)/selThucHien*100).toFixed(0)}%` : "tỷ VNĐ"}
+                </div>
+              </div>,
+            ];
+          })() : (() => {
+            const c8  = thresholdColor(tlMt8);
+            const c10 = thresholdColor(tlMt10);
+            const trendQuy = selQuy?.tangTruong ?? 0;
+            return [
+              <div key="thuc-hien-q" className="bg-slate-800/60 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4">
+                <div className="text-xs text-slate-400 mb-1">Thực hiện Q{selectedQuarter}</div>
+                <div className="text-xl font-bold text-blue-400">{tongThucHien.toFixed(2)} tỷ</div>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-xs text-slate-500">HN + HCM</span>
+                  {trendQuy > 0 && <TrendBadge pct={trendQuy - 100} label="vs 2025" />}
+                </div>
+              </div>,
+              <div key="mt8-q" className={`rounded-xl border p-4 ${c8.border} ${c8.bg}`}>
+                <div className="text-xs text-slate-400 mb-1">Mục tiêu 8% Q{selectedQuarter}</div>
+                <div className={`text-xl font-bold ${c8.text}`}>{tongMt8.toFixed(2)} tỷ</div>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${c8.badge}`}>Đạt {tlMt8.toFixed(1)}%</span>
+                </div>
+              </div>,
+              <div key="mt10-q" className={`rounded-xl border p-4 ${c10.border} ${c10.bg}`}>
+                <div className="text-xs text-slate-400 mb-1">Mục tiêu 10% Q{selectedQuarter}</div>
+                <div className={`text-xl font-bold ${c10.text}`}>{tongMt10.toFixed(2)} tỷ</div>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${c10.badge}`}>Đạt {tlMt10.toFixed(1)}%</span>
+                </div>
+              </div>,
+              <div key="tang-truong-q" className="bg-slate-800/60 rounded-xl border border-green-500/20 bg-green-500/5 p-4">
+                <div className="text-xs text-slate-400 mb-1">Tăng trưởng Q{selectedQuarter}</div>
+                <div className="text-xl font-bold text-green-400">{trendQuy > 0 ? `${trendQuy.toFixed(2)}%` : "—"}</div>
+                <div className="text-xs text-slate-500 mt-1.5">So với cùng kỳ 2025</div>
+              </div>,
+            ];
+          })()}
         </div>
 
         {/* ── CHART 1: THEO THÁNG ── */}

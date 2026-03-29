@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { OverviewClient } from "./overview-client";
-import { getData } from "@/lib/db";
+import { getData, getLastUpdated } from "@/lib/db";
 import { MONTHLY_DATA, SERVICE_MONTHLY, REVENUE_TYPE } from "@/lib/mock-data";
 
 export default async function DashboardPage() {
@@ -10,12 +10,12 @@ export default async function DashboardPage() {
   const user = session.user as any;
   if (user.role !== "admin" && user.role !== "viewer") redirect("/login");
 
-  // Fetch từ Supabase, fallback về mock nếu chưa có
-  const [monthlyData, serviceMonthly, revenueType] = await Promise.all([
+  const [monthlyData, serviceMonthly, revenueType, lastUpdated] = await Promise.all([
     getData<typeof MONTHLY_DATA>("monthly_data").then(d => d ?? MONTHLY_DATA),
     getData<typeof SERVICE_MONTHLY>("service_monthly").then(d => d ?? SERVICE_MONTHLY),
     getData<typeof REVENUE_TYPE>("revenue_type").then(d => d ?? REVENUE_TYPE),
-  ]).catch(() => [MONTHLY_DATA, SERVICE_MONTHLY, REVENUE_TYPE]);
+    getLastUpdated("monthly_data"),
+  ]).catch(() => [MONTHLY_DATA, SERVICE_MONTHLY, REVENUE_TYPE, null]);
 
   return (
     <OverviewClient
@@ -23,6 +23,7 @@ export default async function DashboardPage() {
       monthlyData={monthlyData as typeof MONTHLY_DATA}
       serviceMonthly={serviceMonthly as typeof SERVICE_MONTHLY}
       revenueType={revenueType as typeof REVENUE_TYPE}
+      lastUpdated={lastUpdated as string | null}
     />
   );
 }
