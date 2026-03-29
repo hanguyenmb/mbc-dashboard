@@ -336,7 +336,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle>Radar: Thế Mạnh Dịch Vụ HN vs HCM</CardTitle>
+              <CardTitle>Radar: Thế Mạnh Dịch Vụ Đăng Ký Mới HN vs HCM</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={280}>
@@ -356,7 +356,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
           {/* Top team per service */}
           <Card>
             <CardHeader>
-              <CardTitle>Team Dẫn Đầu Từng Dịch Vụ</CardTitle>
+              <CardTitle>Team Dẫn Đầu Từng Dịch Vụ Đăng Ký Mới</CardTitle>
               <span className="text-xs text-slate-500">
                 {region === "all" ? "Tất cả khu vực" : `Khu vực ${region}`} · {view === "month" ? selectedMonth : `Q${selectedQuarter}`}
               </span>
