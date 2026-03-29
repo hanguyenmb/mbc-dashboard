@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, RadarChart, Radar, PolarGrid,
-  PolarAngleAxis, PolarRadiusAxis, Legend, LabelList,
+  PolarAngleAxis, PolarRadiusAxis, Legend, LabelList, ReferenceLine,
 } from "recharts";
 import { Header, PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
   const [selectedMonth, setSelectedMonth] = useState("T3");
   const [selectedQuarter, setSelectedQuarter] = useState(1);
   const [openDropdown, setOpenDropdown] = useState<"month" | "quarter" | null>(null);
+  const [benchmark, setBenchmark] = useState(40);
 
   const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
 
@@ -385,7 +386,23 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
         <Card>
           <CardHeader>
             <CardTitle>Ma Trận Doanh Số Đăng Ký Mới theo Loại Dịch Vụ (triệu VNĐ)</CardTitle>
-            <Badge variant="neutral">Màu càng sáng = doanh số càng cao</Badge>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Badge variant="neutral">Màu càng sáng = doanh số càng cao</Badge>
+              <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1">
+                <span className="text-xs text-slate-400">Benchmark tỉ lệ ĐKM:</span>
+                <input
+                  type="number" min={0} max={100} step={1}
+                  value={benchmark}
+                  onChange={e => setBenchmark(Math.max(0, Math.min(100, Number(e.target.value))))}
+                  className="w-12 bg-transparent text-xs text-white font-semibold text-right focus:outline-none"
+                />
+                <span className="text-xs text-slate-400">%</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block"/>≥ {benchmark}% đạt</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"/>{"<"} {benchmark}% chưa đạt</span>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -431,12 +448,44 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                           );
                         })}
                         <td className="py-2 px-3 text-right font-semibold text-white">{svcTotal > 0 ? svcTotal.toLocaleString() : "—"}</td>
-                        <td className={`py-2 px-3 text-right font-bold ${thresholdColor(ratio)}`}>
-                          {team.revenue > 0 ? `${ratio}%` : "—"}
+                        <td className="py-2 px-3 text-right">
+                          {team.revenue > 0 ? (
+                            <span className={`font-bold ${ratio >= benchmark ? "text-green-400" : "text-red-400"}`}>
+                              {ratio}%
+                              <span className="ml-1 text-xs font-normal opacity-70">
+                                {ratio >= benchmark ? "✓" : `↓${benchmark - ratio}%`}
+                              </span>
+                            </span>
+                          ) : "—"}
                         </td>
                       </tr>
                     );
                   });
+                })()}
+                {/* Summary row */}
+                {(() => {
+                  const totalSvc = displayed.reduce((sum, team) =>
+                    sum + SVC_KEYS.reduce((s, sk) => s + ((team as any)[sk.key] ?? 0), 0), 0);
+                  const totalDs = displayed.reduce((s, t) => s + t.revenue, 0);
+                  const avgRatio = totalDs > 0 ? Math.round((totalSvc / totalDs) * 100) : 0;
+                  return (
+                    <tr className="border-t-2 border-slate-600 bg-slate-800/50">
+                      <td className="py-2 px-3 text-slate-300 font-bold text-xs" colSpan={2}>Tổng / TB</td>
+                      {SVC_KEYS.map(s => {
+                        const colTotal = displayed.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0);
+                        return <td key={s.key} className="py-2 px-3 text-right text-xs font-semibold text-slate-300">{colTotal > 0 ? colTotal.toLocaleString() : "—"}</td>;
+                      })}
+                      <td className="py-2 px-3 text-right text-xs font-bold text-white">{totalSvc > 0 ? totalSvc.toLocaleString() : "—"}</td>
+                      <td className="py-2 px-3 text-right text-xs font-bold">
+                        <span className={avgRatio >= benchmark ? "text-green-400" : "text-red-400"}>
+                          {totalDs > 0 ? `${avgRatio}%` : "—"}
+                          <span className="ml-1 text-xs font-normal opacity-70">
+                            {totalDs > 0 ? (avgRatio >= benchmark ? "✓" : `↓${benchmark - avgRatio}%`) : ""}
+                          </span>
+                        </span>
+                      </td>
+                    </tr>
+                  );
                 })()}
               </tbody>
             </table>
