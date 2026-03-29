@@ -1,30 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, History, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { X, History, ChevronDown, ChevronUp, Trash2, Loader2 } from "lucide-react";
 
 export interface AiHistoryEntry {
   id: string;
-  timestamp: number;
-  contextLabel: string;
+  context_label: string;
   analysis: string;
-}
-
-const STORAGE_KEY = "mbc_ai_history";
-
-export function loadHistory(): AiHistoryEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-export function saveHistory(entry: AiHistoryEntry) {
-  const list = loadHistory();
-  list.unshift(entry);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 20))); // giữ tối đa 20
+  created_at: string;
 }
 
 interface AiHistoryPanelProps {
@@ -33,21 +16,24 @@ interface AiHistoryPanelProps {
 
 export function AiHistoryPanel({ onClose }: AiHistoryPanelProps) {
   const [entries, setEntries] = useState<AiHistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    setEntries(loadHistory());
+    fetch("/api/ai/history")
+      .then((r) => r.json())
+      .then((j) => setEntries(j.entries ?? []))
+      .finally(() => setLoading(false));
   }, []);
 
-  function deleteEntry(id: string) {
-    const updated = entries.filter((e) => e.id !== id);
-    setEntries(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  async function deleteEntry(id: string) {
+    await fetch(`/api/ai/history?id=${id}`, { method: "DELETE" });
+    setEntries((prev) => prev.filter((e) => e.id !== id));
   }
 
-  function clearAll() {
+  async function clearAll() {
+    await fetch("/api/ai/history", { method: "DELETE" });
     setEntries([]);
-    localStorage.removeItem(STORAGE_KEY);
   }
 
   return (
@@ -79,7 +65,12 @@ export function AiHistoryPanel({ onClose }: AiHistoryPanelProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {entries.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-full text-slate-500 gap-2">
+              <Loader2 size={16} className="animate-spin" />
+              <span className="text-sm">Đang tải...</span>
+            </div>
+          ) : entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
               <History size={32} className="opacity-30" />
               <p className="text-sm">Chưa có lịch sử phân tích</p>
@@ -92,9 +83,9 @@ export function AiHistoryPanel({ onClose }: AiHistoryPanelProps) {
                   onClick={() => setExpanded(expanded === entry.id ? null : entry.id)}
                 >
                   <div>
-                    <div className="text-sm font-medium text-white">{entry.contextLabel}</div>
+                    <div className="text-sm font-medium text-white">{entry.context_label}</div>
                     <div className="text-xs text-slate-500 mt-0.5">
-                      {new Date(entry.timestamp).toLocaleString("vi-VN")}
+                      {new Date(entry.created_at).toLocaleString("vi-VN")}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

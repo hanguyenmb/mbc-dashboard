@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { X, Sparkles, Loader2, RefreshCw, Copy, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { saveHistory } from "@/components/ai/ai-history-panel";
 
 interface AiAnalysisPanelProps {
   context: "overview" | "teams" | "personal" | "weekly";
@@ -37,7 +36,11 @@ export function AiAnalysisPanel({ context, data, onClose }: AiAnalysisPanelProps
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Lỗi AI");
       setAnalysis(json.analysis);
-      saveHistory({ id: `${Date.now()}`, timestamp: Date.now(), contextLabel: CONTEXT_LABELS[context] ?? context, analysis: json.analysis });
+      fetch("/api/ai/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contextLabel: CONTEXT_LABELS[context] ?? context, analysis: json.analysis }),
+      }).catch(() => {});
     } catch (err: any) {
       setError(err.message);
     } finally {
