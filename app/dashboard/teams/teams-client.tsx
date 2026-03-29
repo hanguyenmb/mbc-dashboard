@@ -262,7 +262,11 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                   <YAxis type="category" dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} width={90} />
                   <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`, "Doanh số"]} />
                   <Bar dataKey="revenue" radius={[0, 6, 6, 0]}>
-                    <LabelList dataKey="pct" position="right" formatter={(v: any) => `${v}%`} style={{ fill: "#94a3b8", fontSize: 11 }} />
+                    <LabelList dataKey="pct" position="right" content={(props: any) => {
+                      const { x, y, width, height, value } = props;
+                      const color = value >= 100 ? "#4ade80" : "#f87171";
+                      return <text x={x + width + 8} y={y + height / 2 + 4} fill={color} fontSize={11} fontWeight={600}>{value}%</text>;
+                    }} />
                     {rankingData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Bar>
                 </BarChart>
