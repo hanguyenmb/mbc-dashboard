@@ -263,6 +263,16 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                       </button>
                     </div>
 
+                    <div className="flex items-center gap-3 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2">
+                      <span className="text-xs text-slate-400">DS cùng kỳ 2025 ({teamMonth}):</span>
+                      <NumInput
+                        value={teamData.find(m => m.month === teamMonth)?.prevYearRevenue ?? null}
+                        onChange={v => setTeamData(d => d.map(m => m.month === teamMonth ? { ...m, prevYearRevenue: v ?? undefined } : m))}
+                        className="w-32"
+                      />
+                      <span className="text-xs text-slate-500">triệu VNĐ · để so sánh YoY trên Dashboard</span>
+                    </div>
+
                     <p className="text-xs text-slate-500">Tên team & vùng áp dụng cho tất cả tháng · Doanh số nhập riêng từng tháng</p>
 
                     <table className="w-full text-xs">

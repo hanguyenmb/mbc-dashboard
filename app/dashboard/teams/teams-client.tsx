@@ -111,6 +111,14 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
     ? getTeamsForMonths([selectedMonth])
     : getTeamsForMonths(QUARTER_MONTHS[selectedQuarter]);
 
+  // Cùng kỳ năm trước (do anh nhập thủ công)
+  const prevYearRev = view === "month"
+    ? (allMonths.find(m => m.month === selectedMonth)?.prevYearRevenue ?? null)
+    : QUARTER_MONTHS[selectedQuarter].reduce((sum, mk) => {
+        const v = allMonths.find(m => m.month === mk)?.prevYearRevenue;
+        return v != null ? sum + v : sum;
+      }, 0) || null;
+
   // Kỳ trước để so sánh
   const prevTeams = (() => {
     if (view === "month") {
@@ -261,6 +269,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
           const totalPct    = pct(totalRev, totalTarget);
           const prevRev     = prevTeams.reduce((s, t) => s + t.revenue, 0);
           const momDiff     = prevRev > 0 ? ((totalRev - prevRev) / prevRev * 100) : null;
+          const yoyDiff     = prevYearRev != null && prevYearRev > 0 ? ((totalRev - prevYearRev) / prevYearRev * 100) : null;
           const hnRev       = hnTeams.reduce((s, t) => s + t.revenue, 0);
           const hcmRev      = hcmTeams.reduce((s, t) => s + t.revenue, 0);
           const hnShare     = totalRev > 0 ? Math.round((hnRev / totalRev) * 100) : 0;
@@ -283,12 +292,21 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                         {momDiff >= 0 ? "+" : ""}{momDiff.toFixed(1)}% so với {prevLabel}
                       </span>
                     )}
+                    {yoyDiff !== null && (
+                      <span className={`flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${yoyDiff >= 0 ? "bg-blue-500/15 text-blue-300" : "bg-red-500/15 text-red-400"}`}>
+                        {yoyDiff >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                        {yoyDiff >= 0 ? "+" : ""}{yoyDiff.toFixed(1)}% so cùng kỳ 2025
+                      </span>
+                    )}
                   </div>
                   <div className="text-4xl font-bold text-white">{totalRev.toLocaleString()}<span className="text-xl text-slate-400 ml-1">M</span></div>
-                  <div className="text-sm text-slate-400 mt-1">
-                    Mục tiêu: <span className="text-white font-medium">{totalTarget.toLocaleString()}M</span>
+                  <div className="text-sm text-slate-400 mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
+                    <span>Mục tiêu: <span className="text-white font-medium">{totalTarget.toLocaleString()}M</span></span>
                     {prevRev > 0 && prevLabel && (
-                      <span className="ml-3 text-slate-500">Kỳ trước ({prevLabel}): <span className="text-slate-400">{prevRev.toLocaleString()}M</span></span>
+                      <span>Kỳ trước ({prevLabel}): <span className="text-slate-300">{prevRev.toLocaleString()}M</span></span>
+                    )}
+                    {prevYearRev != null && prevYearRev > 0 && (
+                      <span>Cùng kỳ 2025: <span className="text-slate-300">{prevYearRev.toLocaleString()}M</span></span>
                     )}
                   </div>
                 </div>
@@ -322,9 +340,18 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                   </div>
                   <div className="flex items-baseline gap-2">
                     <div className="text-xl font-bold text-white">{hnRev.toLocaleString()}<span className="text-sm text-slate-400 ml-1">M</span></div>
-                    {hnMom !== null && <span className={`text-xs font-semibold ${hnMom >= 0 ? "text-green-400" : "text-red-400"}`}>{hnMom >= 0 ? "+" : ""}{hnMom.toFixed(1)}%</span>}
+                    {hnMom !== null && prevLabel && (
+                      <span className={`text-xs font-semibold ${hnMom >= 0 ? "text-green-400" : "text-red-400"}`} title={`So với ${prevLabel}`}>
+                        {hnMom >= 0 ? "+" : ""}{hnMom.toFixed(1)}% vs {prevLabel}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">{hnTeams.length} team · MT: {hnTeams.reduce((s,t)=>s+t.target,0).toLocaleString()}M</div>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <span className="text-xs text-slate-400">{hnTeams.length} team · MT: {hnTeams.reduce((s,t)=>s+t.target,0).toLocaleString()}M</span>
+                    <span className={`text-xs font-bold ${thresholdColor(pct(hnRev, hnTeams.reduce((s,t)=>s+t.target,0)))}`}>
+                      Đạt {pct(hnRev, hnTeams.reduce((s,t)=>s+t.target,0))}% MT
+                    </span>
+                  </div>
                   <div className="mt-1.5 h-1 bg-slate-700 rounded-full overflow-hidden">
                     <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(pct(hnRev, hnTeams.reduce((s,t)=>s+t.target,0)), 100)}%` }} />
                   </div>
@@ -337,9 +364,18 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                   </div>
                   <div className="flex items-baseline gap-2">
                     <div className="text-xl font-bold text-white">{hcmRev.toLocaleString()}<span className="text-sm text-slate-400 ml-1">M</span></div>
-                    {hcmMom !== null && <span className={`text-xs font-semibold ${hcmMom >= 0 ? "text-green-400" : "text-red-400"}`}>{hcmMom >= 0 ? "+" : ""}{hcmMom.toFixed(1)}%</span>}
+                    {hcmMom !== null && prevLabel && (
+                      <span className={`text-xs font-semibold ${hcmMom >= 0 ? "text-green-400" : "text-red-400"}`} title={`So với ${prevLabel}`}>
+                        {hcmMom >= 0 ? "+" : ""}{hcmMom.toFixed(1)}% vs {prevLabel}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">{hcmTeams.length} team · MT: {hcmTeams.reduce((s,t)=>s+t.target,0).toLocaleString()}M</div>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <span className="text-xs text-slate-400">{hcmTeams.length} team · MT: {hcmTeams.reduce((s,t)=>s+t.target,0).toLocaleString()}M</span>
+                    <span className={`text-xs font-bold ${thresholdColor(pct(hcmRev, hcmTeams.reduce((s,t)=>s+t.target,0)))}`}>
+                      Đạt {pct(hcmRev, hcmTeams.reduce((s,t)=>s+t.target,0))}% MT
+                    </span>
+                  </div>
                   <div className="mt-1.5 h-1 bg-slate-700 rounded-full overflow-hidden">
                     <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(pct(hcmRev, hcmTeams.reduce((s,t)=>s+t.target,0)), 100)}%` }} />
                   </div>

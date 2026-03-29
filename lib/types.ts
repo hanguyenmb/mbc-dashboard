@@ -106,7 +106,7 @@ export interface TeamServiceRecord {
   elastic: number;
 }
 
-export type TeamMonthlyData = { month: string; teams: TeamServiceRecord[] }[];
+export type TeamMonthlyData = { month: string; teams: TeamServiceRecord[]; prevYearRevenue?: number }[];
 
 export interface AIAnalysis {
   summary: string;
