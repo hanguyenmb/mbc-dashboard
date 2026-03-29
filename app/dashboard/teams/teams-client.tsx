@@ -213,7 +213,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
             {(["all","HN","HCM"] as const).map(r => (
               <button key={r} onClick={() => setRegion(r)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${region === r ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-400 hover:text-white"}`}>
-                {r === "all" ? "Tất cả" : `Khu vực ${r}`}
+                {r === "all" ? "Toàn Quốc" : `Khu vực ${r}`}
               </button>
             ))}
           </div>
