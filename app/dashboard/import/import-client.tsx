@@ -1,266 +1,211 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Header, PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { IMPORT_LOGS } from "@/lib/mock-data";
-import {
-  Upload, FileSpreadsheet, Image, CheckCircle2,
-  AlertCircle, Clock, Trash2, Eye, Loader2,
-} from "lucide-react";
+import { CheckCircle2, Loader2, Save, RefreshCw } from "lucide-react";
+import { MONTHLY_DATA, REVENUE_TYPE, SERVICE_MONTHLY } from "@/lib/mock-data";
 
-type ImportMode = "excel" | "image" | null;
+type Tab = "monthly" | "revenue" | "service";
+
+function NumInput({
+  value, onChange, className = "",
+}: { value: number | null; onChange: (v: number | null) => void; className?: string }) {
+  return (
+    <input
+      type="number"
+      step="0.001"
+      value={value ?? ""}
+      placeholder="—"
+      onChange={(e) => onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
+      className={`w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-blue-500 ${className}`}
+    />
+  );
+}
 
 export function ImportClient({ userEmail }: { userEmail: string }) {
-  const [mode, setMode] = useState<ImportMode>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [tab, setTab] = useState<Tab>("monthly");
+  const [monthlyData, setMonthlyData] = useState<typeof MONTHLY_DATA>([...MONTHLY_DATA]);
+  const [revenueData, setRevenueData] = useState<typeof REVENUE_TYPE>([...REVENUE_TYPE]);
+  const [serviceData, setServiceData] = useState<typeof SERVICE_MONTHLY>([...SERVICE_MONTHLY]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setFile(f);
-    setResult(null);
-    setError(null);
-    if (mode === "image") {
-      const reader = new FileReader();
-      reader.onload = (ev) => setPreview(ev.target?.result as string);
-      reader.readAsDataURL(f);
-    } else {
-      setPreview(null);
-    }
-  }
-
-  async function handleUpload() {
-    if (!file) return;
+  const loadData = useCallback(async () => {
     setLoading(true);
-    setError(null);
-    setResult(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("mode", mode || "excel");
-
-      const res = await fetch("/api/import", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Lỗi khi xử lý file");
-      setResult(data.summary);
-    } catch (err: any) {
-      setError(err.message);
+      const [r1, r2, r3] = await Promise.all([
+        fetch("/api/data?key=monthly_data").then(r => r.json()),
+        fetch("/api/data?key=revenue_type").then(r => r.json()),
+        fetch("/api/data?key=service_monthly").then(r => r.json()),
+      ]);
+      if (r1.data) setMonthlyData(r1.data);
+      if (r2.data) setRevenueData(r2.data);
+      if (r3.data) setServiceData(r3.data);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const keyMap: Record<Tab, { key: string; data: any }> = {
+        monthly: { key: "monthly_data",    data: monthlyData },
+        revenue: { key: "revenue_type",    data: revenueData },
+        service: { key: "service_monthly", data: serviceData },
+      };
+      const { key, data } = keyMap[tab];
+      const res = await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, data }),
+      });
+      if (!res.ok) throw new Error("Lỗi lưu dữ liệu");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function reset() {
-    setFile(null);
-    setPreview(null);
-    setResult(null);
-    setError(null);
-    if (fileRef.current) fileRef.current.value = "";
-  }
-
-  const statusIcon = {
-    success: <CheckCircle2 size={14} className="text-green-400" />,
-    partial: <AlertCircle size={14} className="text-amber-400" />,
-    error: <AlertCircle size={14} className="text-red-400" />,
-  };
-  const statusBadge = {
-    success: "success" as const,
-    partial: "warning" as const,
-    error: "danger" as const,
-  };
+  const TABS: { key: Tab; label: string }[] = [
+    { key: "monthly", label: "Doanh Số Tháng" },
+    { key: "revenue", label: "ĐK Mới & Gia Hạn" },
+    { key: "service", label: "Dịch Vụ" },
+  ];
 
   return (
     <div>
       <Header title="Nhập Dữ Liệu" />
       <div className="p-6">
-        <PageHeader
-          title="Nhập Dữ Liệu"
-          subtitle="Upload file Excel hoặc ảnh báo cáo — AI sẽ tự đọc và phân tích"
-        />
+        <PageHeader title="Nhập Dữ Liệu Trực Tiếp" subtitle="Chỉnh sửa số liệu và bấm Lưu để cập nhật Dashboard ngay lập tức">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={loadData} disabled={loading}>
+              <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Tải lại
+            </Button>
+            <Button variant="primary" size="sm" onClick={save} disabled={saving || loading}>
+              {saving ? <Loader2 size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={13} className="text-green-400" /> : <Save size={13} />}
+              {saved ? "Đã lưu!" : "Lưu dữ liệu"}
+            </Button>
+          </div>
+        </PageHeader>
 
-        {/* Mode selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <button
-            onClick={() => { setMode("excel"); reset(); }}
-            className={`p-6 rounded-xl border-2 transition-all duration-200 text-left hover:-translate-y-0.5 ${
-              mode === "excel"
-                ? "border-blue-500 bg-blue-500/10"
-                : "border-slate-700/50 bg-slate-800/40 hover:border-slate-600"
-            }`}
-          >
-            <FileSpreadsheet size={28} className={mode === "excel" ? "text-blue-400" : "text-slate-400"} />
-            <div className="mt-3 font-semibold text-white">Upload Excel</div>
-            <div className="text-sm text-slate-400 mt-1">
-              Hỗ trợ .xlsx, .xls — AI phân tích và nhập dữ liệu tự động
-            </div>
-          </button>
-
-          <button
-            onClick={() => { setMode("image"); reset(); }}
-            className={`p-6 rounded-xl border-2 transition-all duration-200 text-left hover:-translate-y-0.5 ${
-              mode === "image"
-                ? "border-purple-500 bg-purple-500/10"
-                : "border-slate-700/50 bg-slate-800/40 hover:border-slate-600"
-            }`}
-          >
-            <Image size={28} className={mode === "image" ? "text-purple-400" : "text-slate-400"} />
-            <div className="mt-3 font-semibold text-white">Upload Ảnh Báo Cáo</div>
-            <div className="text-sm text-slate-400 mt-1">
-              Chụp ảnh hoặc screenshot báo cáo — Claude Vision sẽ đọc số liệu
-            </div>
-          </button>
+        {/* Tabs */}
+        <div className="flex gap-1 mb-4 bg-slate-800/50 p-1 rounded-xl w-fit">
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.key ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"}`}>
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Upload area */}
-        {mode && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>
-                {mode === "excel" ? "Upload File Excel" : "Upload Ảnh Báo Cáo"}
-              </CardTitle>
-              {file && (
-                <Button variant="ghost" size="sm" onClick={reset}>
-                  <Trash2 size={12} /> Xóa
-                </Button>
+        {loading ? (
+          <div className="flex items-center justify-center py-20 text-slate-500 gap-2">
+            <Loader2 size={16} className="animate-spin" /> Đang tải dữ liệu...
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="pt-4 overflow-x-auto">
+
+              {/* Tab 1: Doanh Số Tháng */}
+              {tab === "monthly" && (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-2 px-3 text-slate-400 font-medium w-12">Tháng</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">HN (tỷ)</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">HCM (tỷ)</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Cùng kỳ 2025</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">MT 8% (tỷ)</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">MT 10% (tỷ)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyData.map((row, i) => (
+                      <tr key={row.month} className="border-b border-slate-800 hover:bg-slate-800/30">
+                        <td className="py-1.5 px-3 text-slate-300 font-semibold">{row.month}</td>
+                        <td className="py-1 px-2"><NumInput value={row.hn ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hn: v } : r))} /></td>
+                        <td className="py-1 px-2"><NumInput value={row.hcm ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hcm: v } : r))} /></td>
+                        <td className="py-1 px-2"><NumInput value={row.cumKy} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, cumKy: v ?? 0 } : r))} /></td>
+                        <td className="py-1 px-2"><NumInput value={row.mt8} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, mt8: v ?? 0 } : r))} /></td>
+                        <td className="py-1 px-2"><NumInput value={row.mt10} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, mt10: v ?? 0 } : r))} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
-            </CardHeader>
-            <CardContent>
-              {!file ? (
-                <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:border-slate-500 transition-colors bg-slate-900/30 hover:bg-slate-900/50">
-                  <Upload size={28} className="text-slate-500 mb-3" />
-                  <span className="text-slate-400 text-sm font-medium">
-                    Kéo thả hoặc click để chọn file
-                  </span>
-                  <span className="text-slate-600 text-xs mt-1">
-                    {mode === "excel" ? ".xlsx, .xls (tối đa 10MB)" : "PNG, JPG, WEBP (tối đa 5MB)"}
-                  </span>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    className="hidden"
-                    accept={mode === "excel" ? ".xlsx,.xls" : "image/*"}
-                    onChange={handleFileChange}
-                  />
-                </label>
-              ) : (
-                <div className="space-y-4">
-                  {/* File info */}
-                  <div className="flex items-center gap-3 bg-slate-900/50 rounded-lg p-4">
-                    {mode === "excel" ? (
-                      <FileSpreadsheet size={24} className="text-green-400 flex-shrink-0" />
-                    ) : (
-                      <Image size={24} className="text-purple-400 flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white text-sm font-medium truncate">{file.name}</div>
-                      <div className="text-slate-400 text-xs">{(file.size / 1024).toFixed(1)} KB</div>
-                    </div>
-                    <CheckCircle2 size={16} className="text-green-400 flex-shrink-0" />
-                  </div>
 
-                  {/* Image preview */}
-                  {preview && (
-                    <div className="rounded-lg overflow-hidden border border-slate-700">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={preview} alt="Preview" className="w-full max-h-64 object-contain bg-slate-900" />
-                    </div>
-                  )}
-
-                  <Button
-                    variant="primary"
-                    onClick={handleUpload}
-                    disabled={loading}
-                    className="w-full justify-center"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        AI đang phân tích...
-                      </>
-                    ) : (
-                      <>
-                        <Upload size={14} />
-                        Phân Tích & Nhập Dữ Liệu
-                      </>
-                    )}
-                  </Button>
-                </div>
+              {/* Tab 2: ĐK Mới & Gia Hạn */}
+              {tab === "revenue" && (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-2 px-3 text-slate-400 font-medium w-12">Tháng</th>
+                      <th className="text-right py-2 px-2 text-sky-400 font-medium">ĐK Mới</th>
+                      <th className="text-right py-2 px-2 text-sky-300 font-medium">ĐK HN</th>
+                      <th className="text-right py-2 px-2 text-sky-300 font-medium">ĐK HCM</th>
+                      <th className="text-right py-2 px-2 text-purple-400 font-medium">Gia Hạn</th>
+                      <th className="text-right py-2 px-2 text-purple-300 font-medium">GH HN</th>
+                      <th className="text-right py-2 px-2 text-purple-300 font-medium">GH HCM</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">2025 ĐK</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">2025 GH</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {revenueData.map((row, i) => (
+                      <tr key={row.month} className="border-b border-slate-800 hover:bg-slate-800/30">
+                        <td className="py-1.5 px-3 text-slate-300 font-semibold">{row.month}</td>
+                        {(["dangKyMoi","dkHn","dkHcm","giaHan","ghHn","ghHcm","prev_dk","prev_gh"] as const).map(field => (
+                          <td key={field} className="py-1 px-2">
+                            <NumInput value={(row as any)[field]} onChange={v => setRevenueData(d => d.map((r, j) => j === i ? { ...r, [field]: v ?? 0 } : r))} />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
+
+              {/* Tab 3: Dịch Vụ */}
+              {tab === "service" && (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-2 px-3 text-slate-400 font-medium w-12">Tháng</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Host/Mail</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">MS/GWS</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Tên miền</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Transfer</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Sale AI</th>
+                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Elastic</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {serviceData.map((row, i) => (
+                      <tr key={row.month} className="border-b border-slate-800 hover:bg-slate-800/30">
+                        <td className="py-1.5 px-3 text-slate-300 font-semibold">{row.month}</td>
+                        {(["hostMail","msgws","tenMien","transferGws","saleAi","elastic"] as const).map(field => (
+                          <td key={field} className="py-1 px-2">
+                            <NumInput value={(row as any)[field]} onChange={v => setServiceData(d => d.map((r, j) => j === i ? { ...r, [field]: v ?? 0 } : r))} />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
             </CardContent>
           </Card>
         )}
 
-        {/* Result */}
-        {result && (
-          <Card className="mb-6 border-green-500/30">
-            <CardHeader>
-              <CardTitle className="text-green-400">Kết Quả Phân Tích AI</CardTitle>
-              <CheckCircle2 size={16} className="text-green-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="bg-slate-900/50 rounded-lg p-4 text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">
-                {result}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {error && (
-          <Card className="mb-6 border-red-500/30">
-            <CardContent className="pt-5">
-              <div className="flex items-start gap-3 text-red-400 text-sm">
-                <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Import history */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Lịch Sử Nhập Dữ Liệu</CardTitle>
-            <Clock size={14} className="text-slate-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {IMPORT_LOGS.map((log) => (
-                <div
-                  key={log.id}
-                  className="flex items-center gap-3 bg-slate-900/40 rounded-lg px-4 py-3 hover:bg-slate-900/60 transition-colors"
-                >
-                  {statusIcon[log.status]}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-white font-medium truncate">{log.filename}</div>
-                    <div className="text-xs text-slate-500">
-                      {new Date(log.importedAt).toLocaleString("vi-VN")} · {log.importedBy}
-                    </div>
-                    {log.notes && (
-                      <div className="text-xs text-amber-400 mt-0.5">{log.notes}</div>
-                    )}
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-sm text-slate-300">{log.rowCount} dòng</div>
-                    <Badge variant={statusBadge[log.status]} className="mt-1">
-                      {log.status === "success" ? "Thành công" : log.status === "partial" ? "Một phần" : "Lỗi"}
-                    </Badge>
-                  </div>
-                  <button className="text-slate-500 hover:text-blue-400 transition-colors p-1">
-                    <Eye size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <p className="text-xs text-slate-500 mt-3">Đơn vị: tỷ VNĐ cho Doanh Số Tháng & ĐK/GH · Triệu VNĐ cho Dịch Vụ · Sau khi lưu, Dashboard cập nhật ngay khi reload trang.</p>
       </div>
     </div>
   );
