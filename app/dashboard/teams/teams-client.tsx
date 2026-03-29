@@ -236,11 +236,75 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
           </div>
         )}
 
-        {/* Phần 1: KPI Vùng */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <RegionCard label="HN" teams={hnTeams} />
-          <RegionCard label="HCM" teams={hcmTeams} />
-        </div>
+        {/* Phần 1: KPI Tổng + Vùng */}
+        {(() => {
+          const totalRev    = allTeams.reduce((s, t) => s + t.revenue, 0);
+          const totalTarget = allTeams.reduce((s, t) => s + t.target, 0);
+          const totalPct    = pct(totalRev, totalTarget);
+          const hnRev       = hnTeams.reduce((s, t) => s + t.revenue, 0);
+          const hcmRev      = hcmTeams.reduce((s, t) => s + t.revenue, 0);
+          const hnShare     = totalRev > 0 ? Math.round((hnRev / totalRev) * 100) : 0;
+          const hcmShare    = totalRev > 0 ? Math.round((hcmRev / totalRev) * 100) : 0;
+          return (
+            <div className="rounded-xl border border-slate-600/50 bg-slate-800/40 p-5">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <div className="text-xs text-slate-400 font-medium mb-1 uppercase tracking-wide">
+                    Tổng Doanh Số Toàn Quốc — {view === "month" ? selectedMonth : `Q${selectedQuarter}`}
+                  </div>
+                  <div className="text-4xl font-bold text-white">{totalRev.toLocaleString()}<span className="text-xl text-slate-400 ml-1">M</span></div>
+                  <div className="text-sm text-slate-400 mt-1">Mục tiêu: <span className="text-white font-medium">{totalTarget.toLocaleString()}M</span></div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-3xl font-bold ${thresholdColor(totalPct)}`}>{totalPct}%</div>
+                  <div className="text-xs text-slate-400 mt-1">Đạt mục tiêu</div>
+                  <div className="flex items-center justify-end gap-1 mt-1">
+                    {totalPct >= 100
+                      ? <TrendingUp size={14} className="text-green-400" />
+                      : <TrendingDown size={14} className="text-red-400" />}
+                    <span className={`text-xs font-semibold ${thresholdColor(totalPct)}`}>
+                      {totalPct >= 100 ? "Đạt chỉ tiêu" : `Còn thiếu ${(totalTarget - totalRev).toLocaleString()}M`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bar tổng */}
+              <div className="h-2 bg-slate-700 rounded-full overflow-hidden mb-4">
+                <div className={`h-full rounded-full transition-all ${totalPct >= 100 ? "bg-green-500" : totalPct >= 80 ? "bg-amber-500" : totalPct >= 60 ? "bg-orange-500" : "bg-red-500"}`}
+                  style={{ width: `${Math.min(totalPct, 100)}%` }} />
+              </div>
+
+              {/* HN vs HCM split */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <MapPin size={11} className="text-blue-400" />
+                    <span className="text-xs font-semibold text-blue-400">Khu vực HN</span>
+                    <span className="ml-auto text-xs text-slate-500">{hnShare}% tổng</span>
+                  </div>
+                  <div className="text-xl font-bold text-white">{hnRev.toLocaleString()}<span className="text-sm text-slate-400 ml-1">M</span></div>
+                  <div className="text-xs text-slate-400 mt-0.5">{hnTeams.length} team · MT: {hnTeams.reduce((s,t)=>s+t.target,0).toLocaleString()}M</div>
+                  <div className="mt-1.5 h-1 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(pct(hnRev, hnTeams.reduce((s,t)=>s+t.target,0)), 100)}%` }} />
+                  </div>
+                </div>
+                <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <MapPin size={11} className="text-orange-400" />
+                    <span className="text-xs font-semibold text-orange-400">Khu vực HCM</span>
+                    <span className="ml-auto text-xs text-slate-500">{hcmShare}% tổng</span>
+                  </div>
+                  <div className="text-xl font-bold text-white">{hcmRev.toLocaleString()}<span className="text-sm text-slate-400 ml-1">M</span></div>
+                  <div className="text-xs text-slate-400 mt-0.5">{hcmTeams.length} team · MT: {hcmTeams.reduce((s,t)=>s+t.target,0).toLocaleString()}M</div>
+                  <div className="mt-1.5 h-1 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(pct(hcmRev, hcmTeams.reduce((s,t)=>s+t.target,0)), 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Phần 2: Bảng xếp hạng team */}
         <Card>
