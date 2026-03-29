@@ -110,6 +110,23 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
     ? getTeamsForMonths([selectedMonth])
     : getTeamsForMonths(QUARTER_MONTHS[selectedQuarter]);
 
+  // Kỳ trước để so sánh
+  const prevTeams = (() => {
+    if (view === "month") {
+      const idx = parseInt(selectedMonth.replace("T","")) - 1;
+      if (idx <= 0) return [];
+      return getTeamsForMonths([`T${idx}`]);
+    } else {
+      const prevQ = selectedQuarter - 1;
+      if (prevQ <= 0) return [];
+      return getTeamsForMonths(QUARTER_MONTHS[prevQ]);
+    }
+  })();
+
+  const prevLabel = view === "month"
+    ? (parseInt(selectedMonth.replace("T","")) > 1 ? `T${parseInt(selectedMonth.replace("T","")) - 1}` : null)
+    : (selectedQuarter > 1 ? `Q${selectedQuarter - 1}` : null);
+
   const hnTeams  = allTeams.filter(t => t.region === "HN");
   const hcmTeams = allTeams.filter(t => t.region === "HCM");
   const displayed = region === "all" ? allTeams : allTeams.filter(t => t.region === region);
@@ -241,19 +258,38 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
           const totalRev    = allTeams.reduce((s, t) => s + t.revenue, 0);
           const totalTarget = allTeams.reduce((s, t) => s + t.target, 0);
           const totalPct    = pct(totalRev, totalTarget);
+          const prevRev     = prevTeams.reduce((s, t) => s + t.revenue, 0);
+          const momDiff     = prevRev > 0 ? ((totalRev - prevRev) / prevRev * 100) : null;
           const hnRev       = hnTeams.reduce((s, t) => s + t.revenue, 0);
           const hcmRev      = hcmTeams.reduce((s, t) => s + t.revenue, 0);
           const hnShare     = totalRev > 0 ? Math.round((hnRev / totalRev) * 100) : 0;
           const hcmShare    = totalRev > 0 ? Math.round((hcmRev / totalRev) * 100) : 0;
+          const prevHnRev   = prevTeams.filter(t => t.region === "HN").reduce((s, t) => s + t.revenue, 0);
+          const prevHcmRev  = prevTeams.filter(t => t.region === "HCM").reduce((s, t) => s + t.revenue, 0);
+          const hnMom       = prevHnRev > 0 ? ((hnRev - prevHnRev) / prevHnRev * 100) : null;
+          const hcmMom      = prevHcmRev > 0 ? ((hcmRev - prevHcmRev) / prevHcmRev * 100) : null;
           return (
             <div className="rounded-xl border border-slate-600/50 bg-slate-800/40 p-5">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <div className="text-xs text-slate-400 font-medium mb-1 uppercase tracking-wide">
-                    Tổng Doanh Số Toàn Quốc — {view === "month" ? selectedMonth : `Q${selectedQuarter}`}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                      Tổng Doanh Số Toàn Quốc — {view === "month" ? selectedMonth : `Q${selectedQuarter}`}
+                    </span>
+                    {momDiff !== null && prevLabel && (
+                      <span className={`flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${momDiff >= 0 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
+                        {momDiff >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                        {momDiff >= 0 ? "+" : ""}{momDiff.toFixed(1)}% so với {prevLabel}
+                      </span>
+                    )}
                   </div>
                   <div className="text-4xl font-bold text-white">{totalRev.toLocaleString()}<span className="text-xl text-slate-400 ml-1">M</span></div>
-                  <div className="text-sm text-slate-400 mt-1">Mục tiêu: <span className="text-white font-medium">{totalTarget.toLocaleString()}M</span></div>
+                  <div className="text-sm text-slate-400 mt-1">
+                    Mục tiêu: <span className="text-white font-medium">{totalTarget.toLocaleString()}M</span>
+                    {prevRev > 0 && prevLabel && (
+                      <span className="ml-3 text-slate-500">Kỳ trước ({prevLabel}): <span className="text-slate-400">{prevRev.toLocaleString()}M</span></span>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
                   <div className={`text-3xl font-bold ${thresholdColor(totalPct)}`}>{totalPct}%</div>
@@ -283,7 +319,10 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                     <span className="text-xs font-semibold text-blue-400">Khu vực HN</span>
                     <span className="ml-auto text-xs text-slate-500">{hnShare}% tổng</span>
                   </div>
-                  <div className="text-xl font-bold text-white">{hnRev.toLocaleString()}<span className="text-sm text-slate-400 ml-1">M</span></div>
+                  <div className="flex items-baseline gap-2">
+                    <div className="text-xl font-bold text-white">{hnRev.toLocaleString()}<span className="text-sm text-slate-400 ml-1">M</span></div>
+                    {hnMom !== null && <span className={`text-xs font-semibold ${hnMom >= 0 ? "text-green-400" : "text-red-400"}`}>{hnMom >= 0 ? "+" : ""}{hnMom.toFixed(1)}%</span>}
+                  </div>
                   <div className="text-xs text-slate-400 mt-0.5">{hnTeams.length} team · MT: {hnTeams.reduce((s,t)=>s+t.target,0).toLocaleString()}M</div>
                   <div className="mt-1.5 h-1 bg-slate-700 rounded-full overflow-hidden">
                     <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(pct(hnRev, hnTeams.reduce((s,t)=>s+t.target,0)), 100)}%` }} />
@@ -295,7 +334,10 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                     <span className="text-xs font-semibold text-orange-400">Khu vực HCM</span>
                     <span className="ml-auto text-xs text-slate-500">{hcmShare}% tổng</span>
                   </div>
-                  <div className="text-xl font-bold text-white">{hcmRev.toLocaleString()}<span className="text-sm text-slate-400 ml-1">M</span></div>
+                  <div className="flex items-baseline gap-2">
+                    <div className="text-xl font-bold text-white">{hcmRev.toLocaleString()}<span className="text-sm text-slate-400 ml-1">M</span></div>
+                    {hcmMom !== null && <span className={`text-xs font-semibold ${hcmMom >= 0 ? "text-green-400" : "text-red-400"}`}>{hcmMom >= 0 ? "+" : ""}{hcmMom.toFixed(1)}%</span>}
+                  </div>
                   <div className="text-xs text-slate-400 mt-0.5">{hcmTeams.length} team · MT: {hcmTeams.reduce((s,t)=>s+t.target,0).toLocaleString()}M</div>
                   <div className="mt-1.5 h-1 bg-slate-700 rounded-full overflow-hidden">
                     <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(pct(hcmRev, hcmTeams.reduce((s,t)=>s+t.target,0)), 100)}%` }} />
