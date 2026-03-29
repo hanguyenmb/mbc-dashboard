@@ -36,7 +36,9 @@ const QUARTER_MONTHS: Record<number, string[]> = {
 };
 
 const TOOLTIP_STYLE = {
-  contentStyle: { background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#f1f5f9", fontSize: 12 },
+  contentStyle: { background: "#0f172a", border: "1px solid #475569", borderRadius: 8, color: "#f8fafc", fontSize: 12 },
+  labelStyle: { color: "#94a3b8", fontWeight: 600, marginBottom: 4 },
+  itemStyle: { color: "#f8fafc" },
 };
 
 function pct(v: number, t: number) { return t > 0 ? Math.round((v / t) * 100) : 0; }
