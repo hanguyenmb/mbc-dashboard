@@ -331,7 +331,7 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
           </CardContent>
         </Card>
 
-        {/* Phần 4: Radar HN vs HCM + Grouped bar */}
+        {/* Phần 4: Radar + Top Team per Service */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card>
             <CardHeader>
@@ -352,26 +352,78 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
             </CardContent>
           </Card>
 
+          {/* Top team per service */}
           <Card>
             <CardHeader>
-              <CardTitle>So Sánh Dịch Vụ Giữa Các Team</CardTitle>
+              <CardTitle>Team Dẫn Đầu Từng Dịch Vụ</CardTitle>
+              <span className="text-xs text-slate-500">
+                {region === "all" ? "Tất cả khu vực" : `Khu vực ${region}`} · {view === "month" ? selectedMonth : `Q${selectedQuarter}`}
+              </span>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={serviceCompareData} margin={{ bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="service" tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                  <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} tickFormatter={v => `${v}M`} />
-                  <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`]} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  {displayed.map((t, i) => (
-                    <Bar key={t.teamId} dataKey={t.teamName} fill={TEAM_COLORS[i % TEAM_COLORS.length]} radius={[3,3,0,0]} />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="space-y-2.5">
+                {SVC_KEYS.map(s => {
+                  const top = displayed.length > 0
+                    ? displayed.reduce((best, t) => ((t as any)[s.key] ?? 0) > ((best as any)[s.key] ?? 0) ? t : best, displayed[0])
+                    : null;
+                  const topVal = top ? ((top as any)[s.key] ?? 0) : 0;
+                  const maxVal = displayed.length > 0 ? Math.max(...displayed.map(t => (t as any)[s.key] ?? 0)) : 1;
+                  const barW = maxVal > 0 ? Math.round((topVal / maxVal) * 100) : 0;
+                  const r = parseInt(s.color.slice(1,3),16);
+                  const g = parseInt(s.color.slice(3,5),16);
+                  const b = parseInt(s.color.slice(5,7),16);
+                  return (
+                    <div key={s.key} className="flex items-center gap-3">
+                      <div className="w-24 text-xs font-medium shrink-0" style={{ color: s.color }}>{s.label}</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-xs text-white font-semibold">
+                            {top && topVal > 0 ? top.teamName : "—"}
+                          </span>
+                          <span className="text-xs font-mono" style={{ color: s.color }}>
+                            {topVal > 0 ? `${topVal.toLocaleString()}M` : "—"}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all"
+                            style={{ width: `${barW}%`, background: `rgba(${r},${g},${b},0.7)` }} />
+                        </div>
+                      </div>
+                      <div className="w-8 text-right text-xs text-slate-500 shrink-0">
+                        {top?.region && topVal > 0 ? (
+                          <span className={`px-1 py-0.5 rounded text-xs font-medium ${top.region === "HN" ? "text-blue-400" : "text-orange-400"}`}>
+                            {top.region}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Phần 5: So sánh dịch vụ giữa các team */}
+        <Card>
+          <CardHeader>
+            <CardTitle>So Sánh Dịch Vụ Giữa Các Team</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={serviceCompareData} margin={{ bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="service" tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} tickFormatter={v => `${v}M`} />
+                <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`]} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                {displayed.map((t, i) => (
+                  <Bar key={t.teamId} dataKey={t.teamName} fill={TEAM_COLORS[i % TEAM_COLORS.length]} radius={[3,3,0,0]} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
       {showAI && (
