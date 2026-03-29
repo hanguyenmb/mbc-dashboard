@@ -152,6 +152,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
           subtitle={`Xin chào ${userName}. ${lastUpdated ? `Dữ liệu cập nhật lúc: ${new Date(lastUpdated).toLocaleString("vi-VN")}` : "Dữ liệu mới nhất"}`}
         >
           <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">Bộ lọc:</span>
             {/* Dropdown Theo Tháng */}
             <div className="relative">
               <button
