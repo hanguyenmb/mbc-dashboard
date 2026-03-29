@@ -270,13 +270,22 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             const c8  = thresholdColor(tlMt8);
             const c10 = thresholdColor(tlMt10);
             const trendQuy = selQuy?.tangTruong ?? 0;
+            const hnQuy  = qMonths.reduce((s, m) => s + (m.hn  ?? 0), 0);
+            const hcmQuy = qMonths.reduce((s, m) => s + (m.hcm ?? 0), 0);
+            const hnQuyShare  = tongThucHien > 0 ? Math.round(hnQuy  / tongThucHien * 100) : 0;
+            const hcmQuyShare = tongThucHien > 0 ? Math.round(hcmQuy / tongThucHien * 100) : 0;
+            const prevQStart  = (selectedQuarter - 2) * 3;
+            const prevQMonths = selectedQuarter > 1 ? MONTHLY_DATA.slice(prevQStart, prevQStart + 3) : [];
+            const prevQTotal  = prevQMonths.reduce((s, m) => s + (m.hn ?? 0) + (m.hcm ?? 0), 0);
+            const qMom        = prevQTotal > 0 ? (tongThucHien - prevQTotal) / prevQTotal * 100 : null;
             return [
               <div key="thuc-hien-q" className="bg-slate-800/60 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4">
                 <div className="text-xs text-slate-400 mb-1">Thực hiện Q{selectedQuarter}</div>
                 <div className="text-xl font-bold text-blue-400">{tongThucHien.toFixed(2)} tỷ</div>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-xs text-slate-500">HN + HCM</span>
-                  {trendQuy > 0 && <TrendBadge pct={trendQuy - 100} label="vs 2025" />}
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <span className="text-xs text-slate-500 shrink-0">Toàn Quốc</span>
+                  {qMom !== null && <TrendBadge pct={qMom} label={`so Q${selectedQuarter - 1}`} />}
+                  {trendQuy > 0 && <TrendBadge pct={trendQuy - 100} label="CK 2025" />}
                 </div>
               </div>,
               <div key="mt8-q" className={`rounded-xl border p-4 ${c8.border} ${c8.bg}`}>
@@ -293,10 +302,20 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                   <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${c10.badge}`}>Đạt {tlMt10.toFixed(1)}%</span>
                 </div>
               </div>,
-              <div key="tang-truong-q" className="bg-slate-800/60 rounded-xl border border-green-500/20 bg-green-500/5 p-4">
-                <div className="text-xs text-slate-400 mb-1">Tăng trưởng Q{selectedQuarter}</div>
-                <div className="text-xl font-bold text-green-400">{trendQuy > 0 ? `${trendQuy.toFixed(2)}%` : "—"}</div>
-                <div className="text-xs text-slate-500 mt-1.5">So với cùng kỳ 2025</div>
+              <div key="hn-hcm-q" className="bg-slate-800/60 rounded-xl border border-slate-500/20 p-4">
+                <div className="text-xs text-slate-400 mb-1">Tỉ trọng HN và HCM</div>
+                <div className="text-lg font-bold text-slate-300">
+                  <span className="text-blue-400">{hnQuy.toFixed(2)}</span>
+                  <span className="text-slate-500 text-sm font-normal"> tỷ</span>
+                  <span className="text-slate-500 mx-1">/</span>
+                  <span className="text-orange-400">{hcmQuy.toFixed(2)}</span>
+                  <span className="text-slate-500 text-sm font-normal"> tỷ</span>
+                </div>
+                <div className="text-xs text-slate-500 mt-1.5">
+                  {tongThucHien > 0
+                    ? <><span className="text-blue-400 font-medium">HN {hnQuyShare}%</span> · <span className="text-orange-400 font-medium">HCM {hcmQuyShare}%</span></>
+                    : "tỷ VNĐ"}
+                </div>
               </div>,
             ];
           })()}
