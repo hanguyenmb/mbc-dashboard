@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, RadarChart, Radar, PolarGrid,
-  PolarAngleAxis, PolarRadiusAxis, Legend,
+  PolarAngleAxis, PolarRadiusAxis, Legend, LabelList,
 } from "recharts";
 import { Header, PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
@@ -261,7 +261,8 @@ export function TeamsClient({ role, teamId, teamServiceData }: TeamsClientProps)
                   <XAxis type="number" tick={{ fill: "#94a3b8", fontSize: 11 }} tickFormatter={v => `${v.toLocaleString()}M`} />
                   <YAxis type="category" dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} width={90} />
                   <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`, "Doanh số"]} />
-                  <Bar dataKey="revenue" radius={[0, 6, 6, 0]} label={{ position: "right", formatter: ((v: any, e: any) => `${e?.pct ?? 0}%`) as any, fill: "#94a3b8", fontSize: 11 }}>
+                  <Bar dataKey="revenue" radius={[0, 6, 6, 0]}>
+                    <LabelList dataKey="pct" position="right" formatter={(v: any) => `${v}%`} style={{ fill: "#94a3b8", fontSize: 11 }} />
                     {rankingData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Bar>
                 </BarChart>
