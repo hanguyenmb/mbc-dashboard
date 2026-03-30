@@ -10,16 +10,19 @@ import type { User, UserRole } from "@/lib/types";
 import { UserPlus, Edit2, Trash2, Search, Shield, Eye, X, Check, Clock } from "lucide-react";
 
 const ROLE_LABELS: Record<UserRole, string> = {
-  admin:  "Quản Trị",
-  viewer: "Xem",
+  admin:      "Quản Trị",
+  viewer:     "Xem",
+  teams_only: "Xem DS",
 };
 const ROLE_BADGE: Record<UserRole, "danger" | "brand"> = {
-  admin:  "danger",
-  viewer: "brand",
+  admin:      "danger",
+  viewer:     "brand",
+  teams_only: "brand",
 };
 const ROLE_ICON: Record<UserRole, React.ElementType> = {
-  admin:  Shield,
-  viewer: Eye,
+  admin:      Shield,
+  viewer:     Eye,
+  teams_only: Eye,
 };
 
 const emptyForm = { name: "", email: "", password: "", role: "viewer" as UserRole };

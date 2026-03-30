@@ -27,7 +27,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",         label: "Tổng Quan",        icon: LayoutDashboard, roles: ["admin", "viewer"] },
-  { href: "/dashboard/teams",   label: "Chi Tiết Doanh Số",icon: Users,           roles: ["admin", "viewer"] },
+  { href: "/dashboard/teams",   label: "Chi Tiết Doanh Số",icon: Users,           roles: ["admin", "viewer", "teams_only"] },
   { href: "/dashboard/weekly",  label: "Báo Cáo Tuần",     icon: BarChart3,       roles: ["admin", "viewer"] },
   { href: "/dashboard/ranking", label: "Bảng Xếp Hạng",    icon: Trophy,          roles: ["admin"] },
   { href: "/dashboard/import",  label: "Nhập Dữ Liệu",     icon: Upload,          roles: ["admin"] },
@@ -122,7 +122,7 @@ export function Sidebar({ role, userName, userAvatar }: SidebarProps) {
           <div className="flex-1 min-w-0">
             <div className="text-white text-xs font-medium truncate">{userName}</div>
             <div className="text-slate-400 text-xs capitalize">
-              {role === "admin" ? "Quản trị" : "Xem"}
+              {role === "admin" ? "Quản trị" : role === "teams_only" ? "Xem DS" : "Xem"}
             </div>
           </div>
           <button

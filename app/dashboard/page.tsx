@@ -8,6 +8,7 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
   const user = session.user as any;
+  if (user.role === "teams_only") redirect("/dashboard/teams");
   if (user.role !== "admin" && user.role !== "viewer") redirect("/login");
 
   const [monthlyData, serviceMonthly, revenueType, lastUpdated] = await Promise.all([
