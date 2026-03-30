@@ -9,7 +9,7 @@ export default async function TeamsPage() {
   const session = await auth();
   if (!session) redirect("/login");
   const user = session.user as any;
-  if (user.role !== "admin" && user.role !== "viewer") redirect("/dashboard");
+  if (user.role !== "admin" && user.role !== "viewer" && user.role !== "teams_only") redirect("/dashboard");
 
   const raw = await getData<any>("team_service").catch(() => null);
   let teamServiceData: TeamMonthlyData;
