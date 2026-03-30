@@ -10,8 +10,9 @@ import { Header, PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Sparkles, TrendingUp, TrendingDown, MapPin } from "lucide-react";
+import { Sparkles, History, TrendingUp, TrendingDown, MapPin } from "lucide-react";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
+import { AiHistoryPanel } from "@/components/ai/ai-history-panel";
 import { TEAM_SERVICE_DATA } from "@/lib/mock-data";
 import type { UserRole, TeamMonthlyData, TeamServiceRecord } from "@/lib/types";
 
@@ -79,6 +80,7 @@ function RegionCard({ label, teams }: { label: string; teams: TeamServiceRecord[
 
 export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: TeamsClientProps) {
   const [showAI, setShowAI] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [region, setRegion] = useState<"all" | "HN" | "HCM">("all");
   const [view, setView] = useState<"month" | "quarter">("month");
   const [selectedMonth, setSelectedMonth] = useState("T3");
@@ -200,6 +202,9 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
   return (
     <div>
       <Header title="Chi Tiết Doanh Số">
+        <Button variant="ghost" size="sm" onClick={() => setShowHistory(true)}>
+          <History size={14} /> Lịch Sử AI
+        </Button>
         <Button variant="primary" size="sm" onClick={() => setShowAI(true)}>
           <Sparkles size={14} /> Trợ Lý AI
         </Button>
@@ -653,6 +658,7 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
         </Card>
       </div>
 
+      {showHistory && <AiHistoryPanel onClose={() => setShowHistory(false)} />}
       {showAI && (
         <AiAnalysisPanel context="teams" data={{
           period: filterLabel,

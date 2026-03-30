@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  ChevronLeft, ChevronRight, Printer, Sparkles,
+  ChevronLeft, ChevronRight, Printer, Sparkles, History,
   Plus, Pencil, Trash2, Check, X, Save,
 } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
+import { AiHistoryPanel } from "@/components/ai/ai-history-panel";
 import { WEEKLY_CATEGORIES } from "@/lib/mock-data";
 import type { UserRole, WeeklyTask, TaskStatus } from "@/lib/types";
 
@@ -260,6 +261,7 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeTab, setActiveTab] = useState<"current" | "next" | "manage">("current");
   const [showAI, setShowAI] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [tasks, setTasks] = useState<WeeklyTask[]>([]);
   const [nextTasks, setNextTasks] = useState<WeeklyTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -343,6 +345,7 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
             <Plus size={14} /> Thêm Tác Vụ
           </Button>
         )}
+        <Button variant="ghost" size="sm" onClick={() => setShowHistory(true)}><History size={14} /> Lịch Sử AI</Button>
         <Button variant="ghost" size="sm" onClick={() => setShowAI(true)}><Sparkles size={14} /> Trợ Lý AI</Button>
         <Button variant="ghost" size="sm" onClick={() => window.print()}><Printer size={14} /> In</Button>
       </Header>
@@ -623,6 +626,7 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
         />
       )}
 
+      {showHistory && <AiHistoryPanel onClose={() => setShowHistory(false)} />}
       {showAI && (
         <AiAnalysisPanel
           context="weekly"
