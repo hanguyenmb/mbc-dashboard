@@ -19,7 +19,8 @@ export type DataKey =
   | "service_monthly"
   | "revenue_type"
   | "service_groups"
-  | "team_service";
+  | "team_service"
+  | "users";
 
 export async function getData<T>(key: DataKey): Promise<T | null> {
   const sb = supabaseAdmin();

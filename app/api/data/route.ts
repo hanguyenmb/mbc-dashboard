@@ -14,6 +14,7 @@ const FALLBACKS: Record<DataKey, unknown> = {
   revenue_type:    REVENUE_TYPE,
   service_groups:  SERVICE_GROUPS,
   team_service:    TEAM_SERVICE_DATA,
+  users:           [],
 };
 
 // GET /api/data?key=monthly_data

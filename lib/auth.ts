@@ -1,7 +1,8 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { USERS } from "./mock-data";
-import type { UserRole } from "./types";
+import { getData } from "./db";
+import type { User, UserRole } from "./types";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -16,7 +17,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const password = credentials?.password as string;
         if (!email || !password) return null;
 
-        const user = USERS.find(
+        // Ưu tiên users từ Supabase, fallback mock
+        const dbUsers = await getData<User[]>("users").catch(() => null);
+        const allUsers = dbUsers && dbUsers.length > 0 ? dbUsers : USERS;
+        const user = allUsers.find(
           (u) => u.email === email && u.password === password
         );
         if (!user) return null;

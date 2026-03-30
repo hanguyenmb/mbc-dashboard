@@ -1,13 +1,19 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { UsersClient } from "./users-client";
-import { supabaseAdmin } from "@/lib/db";
+import { supabaseAdmin, getData } from "@/lib/db";
+import { USERS } from "@/lib/mock-data";
+import type { User } from "@/lib/types";
 
 export default async function UsersPage() {
   const session = await auth();
   if (!session) redirect("/login");
   const user = session.user as any;
   if (user.role !== "admin") redirect("/dashboard");
+
+  // Load users từ Supabase, fallback mock
+  const dbUsers = await getData<User[]>("users").catch(() => null);
+  const initialUsers = dbUsers && dbUsers.length > 0 ? dbUsers : [...USERS];
 
   // Lấy lần đăng nhập cuối của mỗi user
   const lastLoginMap: Record<string, string> = {};
@@ -25,5 +31,5 @@ export default async function UsersPage() {
     }
   } catch {}
 
-  return <UsersClient lastLoginMap={lastLoginMap} />;
+  return <UsersClient initialUsers={initialUsers} lastLoginMap={lastLoginMap} />;
 }
