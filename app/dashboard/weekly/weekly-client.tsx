@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ChevronLeft, ChevronRight, Printer, Sparkles, History,
-  Plus, Pencil, Trash2, Check, X, Save,
+  Plus, Pencil, Trash2, Check, X, Save, FileText, StickyNote,
 } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Header, PageHeader } from "@/components/layout/header";
@@ -163,11 +163,12 @@ function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCance
 }
 
 // ── Task Card ─────────────────────────────────────────────────────────────────
-function TaskCard({ task, isManager, onEdit, onDelete, onProgressChange }: {
+function TaskCard({ task, isManager, onEdit, onDelete, onProgressChange, onDetail }: {
   task: WeeklyTask; isManager: boolean;
   onEdit: (t: WeeklyTask) => void;
   onDelete: (id: string) => void;
   onProgressChange: (id: string, p: number) => void;
+  onDetail: (t: WeeklyTask) => void;
 }) {
   const cat = CAT_MAP[task.category];
   const [localProg, setLocalProg] = useState(task.progress);
@@ -198,9 +199,11 @@ function TaskCard({ task, isManager, onEdit, onDelete, onProgressChange }: {
       <div className="flex items-start gap-2">
         <span className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: cat?.color ?? "#94a3b8" }} />
         <div className="flex-1 min-w-0">
-          <div className={`text-sm font-medium leading-snug ${liveStatus === "done" ? "line-through text-slate-400" : "text-slate-100"}`}>
+          <button onClick={() => onDetail(task)}
+            className={`text-sm font-medium leading-snug text-left hover:underline decoration-dotted underline-offset-2 transition-colors ${liveStatus === "done" ? "line-through text-slate-400" : "text-slate-100 hover:text-blue-300"}`}>
             {task.title}
-          </div>
+            {task.notes && <StickyNote size={10} className="inline ml-1.5 text-amber-400 opacity-80" />}
+          </button>
           {task.description && <div className="text-xs text-slate-500 mt-0.5">{task.description}</div>}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
@@ -255,6 +258,106 @@ function TaskCard({ task, isManager, onEdit, onDelete, onProgressChange }: {
   );
 }
 
+// ── Task Detail Panel ─────────────────────────────────────────────────────────
+function TaskDetailPanel({ task, isManager, onEdit, onSaveNotes, onClose }: {
+  task: WeeklyTask;
+  isManager: boolean;
+  onEdit: (t: WeeklyTask) => void;
+  onSaveNotes: (id: string, notes: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const cat = CAT_MAP[task.category];
+  const meta = STATUS_META[task.status];
+  const [notes, setNotes] = useState(task.notes ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSaveNotes() {
+    setSaving(true);
+    await onSaveNotes(task.id, notes);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-700">
+          <span className="w-3 h-3 rounded-full mt-1 flex-shrink-0" style={{ background: cat?.color ?? "#94a3b8" }} />
+          <div className="flex-1 min-w-0">
+            <div className="text-white font-semibold leading-snug">{task.title}</div>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${meta.bg} ${meta.color}`}>{meta.label}</span>
+              {cat && <span className="text-xs text-slate-500">{cat.name}</span>}
+              <span className="text-xs text-orange-400 font-bold">{task.progress}%</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isManager && (
+              <button onClick={() => { onClose(); onEdit(task); }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 transition-colors" title="Chỉnh sửa">
+                <Pencil size={14} />
+              </button>
+            )}
+            <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-5 space-y-4">
+          {/* Thanh tiến độ */}
+          <div>
+            <div className="flex justify-between text-xs text-slate-400 mb-1.5">
+              <span>Tiến độ</span>
+              <span className="text-orange-400 font-bold">{task.progress}%</span>
+            </div>
+            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{ width: `${task.progress}%`, background: "#f97316" }} />
+            </div>
+          </div>
+
+          {/* Mô tả */}
+          {task.description && (
+            <div>
+              <div className="text-xs text-slate-400 mb-1.5 flex items-center gap-1.5">
+                <FileText size={12} /> Mô tả
+              </div>
+              <div className="text-sm text-slate-300 bg-slate-900/50 rounded-lg px-3 py-2.5 border border-slate-700/50">
+                {task.description}
+              </div>
+            </div>
+          )}
+
+          {/* Ghi chú */}
+          <div>
+            <div className="text-xs text-slate-400 mb-1.5 flex items-center gap-1.5">
+              <StickyNote size={12} /> Ghi chú chi tiết
+            </div>
+            <textarea
+              value={notes}
+              onChange={(e) => { setNotes(e.target.value); setSaved(false); }}
+              placeholder="Nhập ghi chú, kết quả, vướng mắc, số liệu cụ thể..."
+              rows={5}
+              className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none resize-none"
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-slate-700 flex gap-3">
+          <Button variant="ghost" size="sm" onClick={onClose} className="flex-1 justify-center">Đóng</Button>
+          <Button variant="primary" size="sm" onClick={handleSaveNotes} disabled={saving} className="flex-1 justify-center">
+            {saving ? "Đang lưu..." : saved ? <><Check size={13} /> Đã lưu</> : <><Save size={13} /> Lưu ghi chú</>}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export function WeeklyClient({ userName, role }: WeeklyClientProps) {
   const isManager = role === "admin";
@@ -267,6 +370,7 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
   const [loading, setLoading] = useState(true);
   const [modalTask, setModalTask] = useState<Partial<WeeklyTask> | null | "new">(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [detailTask, setDetailTask] = useState<WeeklyTask | null>(null);
   const [newTaskCategory, setNewTaskCategory] = useState("doanh-so");
 
   const week = useMemo(() => getWeekInfo(weekOffset), [weekOffset]);
@@ -327,6 +431,13 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
     const status: TaskStatus = progress === 100 ? "done" : progress > 0 ? "inprogress" : "notstarted";
     await fetch("/api/weekly", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, progress, status }) });
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, progress, status } : t));
+  }
+
+  async function handleSaveNotes(id: string, notes: string) {
+    await fetch("/api/weekly", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, notes }) });
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, notes } : t));
+    setNextTasks((prev) => prev.map((t) => t.id === id ? { ...t, notes } : t));
+    if (detailTask?.id === id) setDetailTask((prev) => prev ? { ...prev, notes } : prev);
   }
 
   function openAddTask(category: string, forNextWeek = false) {
@@ -491,6 +602,7 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
                         onEdit={(t) => setModalTask(t)}
                         onDelete={(id) => setDeleteId(id)}
                         onProgressChange={handleProgressChange}
+                        onDetail={(t) => setDetailTask(t)}
                       />
                     ))}
                   </div>
@@ -528,6 +640,7 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
                       onEdit={(t) => setModalTask(t)}
                       onDelete={(id) => setDeleteId(id)}
                       onProgressChange={handleProgressChange}
+                      onDetail={(t) => setDetailTask(t)}
                     />
                   ))}
                 </div>
@@ -626,6 +739,15 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
         />
       )}
 
+      {detailTask && (
+        <TaskDetailPanel
+          task={detailTask}
+          isManager={isManager}
+          onEdit={(t) => setModalTask(t)}
+          onSaveNotes={handleSaveNotes}
+          onClose={() => setDetailTask(null)}
+        />
+      )}
       {showHistory && <AiHistoryPanel onClose={() => setShowHistory(false)} />}
       {showAI && (
         <AiAnalysisPanel

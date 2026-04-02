@@ -80,6 +80,7 @@ export interface WeeklyTask {
   id: string;
   title: string;
   description?: string;
+  notes?: string;   // Ghi chú chi tiết
   category: string;
   status: TaskStatus;
   progress: number; // 0-100
