@@ -457,12 +457,20 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             const nam2025fb = !hasPrev ? (qMs.reduce((s,m) => s+(m.cumKy??0), 0) || null) : null;
             const hn2026    = has2026  ? qMs.reduce((s,m) => s+(m.hn??0), 0) : null;
             const hcm2026   = has2026  ? qMs.reduce((s,m) => s+(m.hcm??0), 0) : null;
-            const base      = QUARTERLY_DATA[q-1];
+            const base         = QUARTERLY_DATA[q-1];
+            const mt8q         = qMs.reduce((s,m) => s+(m.mt8??0), 0) || base.mt8 || null;
+            const mt10q        = qMs.reduce((s,m) => s+(m.mt10??0), 0) || base.mt10 || null;
             const nam2025total = qMs.reduce((s,m) => s+(m.cumKy??0), 0) || null;
             const nam2026total = hn2026 != null ? (hn2026 + (hcm2026??0)) : (base.nam2026 ?? null);
+            // Tính động: % vs MT và tăng trưởng dựa trên dữ liệu thực tế
+            const tlMt8  = (nam2026total != null && mt8q  && mt8q  > 0) ? (nam2026total / mt8q  * 100) : (base.tlMt8  || null);
+            const tlMt10 = (nam2026total != null && mt10q && mt10q > 0) ? (nam2026total / mt10q * 100) : (base.tlMt10 || null);
+            const tangTruong = (nam2026total != null && nam2025total && nam2025total > 0)
+              ? (nam2026total / nam2025total * 100)
+              : (base.tangTruong || null);
             return { quy: `Q${q}`, hn2025, hcm2025, nam2025: nam2025fb, hn2026, hcm2026,
-                     nam2025total, nam2026total, mt10: base.mt10,
-                     tlMt8: base.tlMt8, tlMt10: base.tlMt10, tangTruong: base.tangTruong };
+                     nam2025total, nam2026total, mt8: mt8q, mt10: mt10q,
+                     tlMt8, tlMt10, tangTruong };
           });
           return (
           <Card className="mb-4">
