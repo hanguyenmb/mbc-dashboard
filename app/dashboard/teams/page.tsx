@@ -5,26 +5,31 @@ import { getData } from "@/lib/db";
 import { TEAM_SERVICE_DATA, MONTHLY_DATA } from "@/lib/mock-data";
 import type { TeamMonthlyData } from "@/lib/types";
 
+function normalizeTeamData(raw: any): TeamMonthlyData {
+  if (!raw) return TEAM_SERVICE_DATA;
+  if (Array.isArray(raw) && raw.length > 0 && !("month" in raw[0])) return TEAM_SERVICE_DATA;
+  return raw as TeamMonthlyData;
+}
+
 export default async function TeamsPage() {
   const session = await auth();
   if (!session) redirect("/login");
   const user = session.user as any;
   if (user.role !== "admin" && user.role !== "viewer" && user.role !== "teams_only") redirect("/dashboard");
 
-  const raw = await getData<any>("team_service").catch(() => null);
-  let teamServiceData: TeamMonthlyData;
-  if (!raw) {
-    teamServiceData = TEAM_SERVICE_DATA;
-  } else if (Array.isArray(raw) && raw.length > 0 && !("month" in raw[0])) {
-    // Dữ liệu cũ (TeamServiceRecord[]) → fallback mock
-    teamServiceData = TEAM_SERVICE_DATA;
-  } else {
-    teamServiceData = raw as TeamMonthlyData;
-  }
+  const [raw, rawPrev, monthlyData] = await Promise.all([
+    getData<any>("team_service").catch(() => null),
+    getData<any>("team_service_prev").catch(() => null),
+    getData<typeof MONTHLY_DATA>("monthly_data").then(d => d ?? MONTHLY_DATA).catch(() => MONTHLY_DATA),
+  ]);
 
-  const monthlyData = await getData<typeof MONTHLY_DATA>("monthly_data")
-    .then(d => d ?? MONTHLY_DATA)
-    .catch(() => MONTHLY_DATA);
-
-  return <TeamsClient role={user.role} teamId={user.teamId} teamServiceData={teamServiceData} monthlyData={monthlyData} />;
+  return (
+    <TeamsClient
+      role={user.role}
+      teamId={user.teamId}
+      teamServiceData={normalizeTeamData(raw)}
+      teamPrevData={normalizeTeamData(rawPrev)}
+      monthlyData={monthlyData}
+    />
+  );
 }

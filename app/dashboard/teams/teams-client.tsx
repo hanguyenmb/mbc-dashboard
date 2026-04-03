@@ -22,6 +22,7 @@ interface TeamsClientProps {
   role: UserRole;
   teamId: string | null;
   teamServiceData: TeamMonthlyData;
+  teamPrevData: TeamMonthlyData;
   monthlyData: MonthlyRow[];
 }
 
@@ -78,7 +79,7 @@ function RegionCard({ label, teams }: { label: string; teams: TeamServiceRecord[
   );
 }
 
-export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: TeamsClientProps) {
+export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, monthlyData }: TeamsClientProps) {
   const [showAI, setShowAI] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [region, setRegion] = useState<"all" | "HN" | "HCM">("all");
@@ -89,12 +90,13 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
   const [benchmark, setBenchmark] = useState(40);
 
   const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
+  const allPrevMonths = teamPrevData.length > 0 ? teamPrevData : [];
 
-  // Aggregate teams cho 1 tháng hoặc 1 quý
-  function getTeamsForMonths(monthKeys: string[]) {
+  // Aggregate teams cho 1 tháng hoặc 1 quý từ một dataset
+  function getTeamsForMonths(monthKeys: string[], source = allMonths) {
     const map: Record<string, import("@/lib/types").TeamServiceRecord> = {};
     for (const mk of monthKeys) {
-      const teams = allMonths.find(m => m.month === mk)?.teams ?? [];
+      const teams = source.find(m => m.month === mk)?.teams ?? [];
       for (const t of teams) {
         if (!map[t.teamId]) {
           map[t.teamId] = { ...t, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
@@ -112,9 +114,13 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
     return Object.values(map);
   }
 
-  const allTeams = view === "month"
-    ? getTeamsForMonths([selectedMonth])
-    : getTeamsForMonths(QUARTER_MONTHS[selectedQuarter]);
+  const monthKeys = view === "month" ? [selectedMonth] : QUARTER_MONTHS[selectedQuarter];
+  const allTeams = getTeamsForMonths(monthKeys);
+  const prevYearTeams = allPrevMonths.length > 0 ? getTeamsForMonths(monthKeys, allPrevMonths) : [];
+
+  // Map teamId → prev year data for quick lookup
+  const prevYearTeamMap = Object.fromEntries(prevYearTeams.map(t => [t.teamId, t]));
+  const hasPrevYearTeamData = prevYearTeams.some(t => t.revenue > 0 || SVC_KEYS.some(s => (t as any)[s.key] > 0));
 
   // Cùng kỳ 2025 từ monthly_data (tỷ → triệu *1000)
   const getMonthRow = (mk: string) => monthlyData.find(m => m.month === mk);
@@ -137,7 +143,7 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
         return sum > 0 ? sum * 1000 : null;
       })();
 
-  // Kỳ trước để so sánh
+  // Kỳ trước để so sánh (tháng trước / quý trước)
   const prevTeams = (() => {
     if (view === "month") {
       const idx = parseInt(selectedMonth.replace("T","")) - 1;
@@ -485,7 +491,8 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
                     <th key={s.key} className="text-right py-2 px-3 text-slate-400 font-medium">{s.label}</th>
                   ))}
                   <th className="text-right py-2 px-3 text-slate-400 font-medium">Tổng ĐKM</th>
-                  <th className="text-right py-2 px-3 text-slate-400 font-medium">Tỉ lệ ĐKM/Tổng DS</th>
+                  <th className="text-right py-2 px-3 text-slate-400 font-medium">Tỉ lệ ĐKM/DS</th>
+                  {hasPrevYearTeamData && <th className="text-right py-2 px-3 text-amber-400/80 font-medium">Tăng trưởng CK</th>}
                 </tr>
               </thead>
               <tbody>
@@ -497,6 +504,8 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
                   return displayed.map((team) => {
                     const svcTotal = SVC_KEYS.reduce((sum, s) => sum + ((team as any)[s.key] ?? 0), 0);
                     const ratio = team.revenue > 0 ? Math.round((svcTotal / team.revenue) * 100) : 0;
+                    const prev = prevYearTeamMap[team.teamId];
+                    const yoy = prev && prev.revenue > 0 ? ((team.revenue - prev.revenue) / prev.revenue * 100) : null;
                     return (
                       <tr key={team.teamId} className="border-b border-slate-800 hover:bg-slate-800/30">
                         <td className="py-2 px-3 text-white font-medium">{team.teamName}</td>
@@ -507,6 +516,8 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
                         </td>
                         {SVC_KEYS.map(s => {
                           const val = (team as any)[s.key] ?? 0;
+                          const prevVal = prev ? ((prev as any)[s.key] ?? 0) : 0;
+                          const svcYoy = prevVal > 0 ? ((val - prevVal) / prevVal * 100) : null;
                           const intensity = maxSvc[s.key] > 0 ? val / maxSvc[s.key] : 0;
                           const r = parseInt(s.color.slice(1,3),16);
                           const g = parseInt(s.color.slice(3,5),16);
@@ -514,7 +525,12 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
                           return (
                             <td key={s.key} className="py-2 px-3 text-right font-mono"
                               style={{ color: `rgba(${r},${g},${b},${0.45 + intensity * 0.55})` }}>
-                              {val > 0 ? val.toLocaleString() : "—"}
+                              <div>{val > 0 ? val.toLocaleString() : "—"}</div>
+                              {hasPrevYearTeamData && svcYoy !== null && (
+                                <div className={`text-[10px] font-semibold ${svcYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                  {svcYoy >= 0 ? "▲" : "▼"}{Math.abs(svcYoy).toFixed(0)}%
+                                </div>
+                              )}
                             </td>
                           );
                         })}
@@ -529,6 +545,15 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
                             </span>
                           ) : "—"}
                         </td>
+                        {hasPrevYearTeamData && (
+                          <td className="py-2 px-3 text-right">
+                            {yoy !== null ? (
+                              <span className={`font-bold text-xs px-1.5 py-0.5 rounded ${yoy >= 0 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
+                                {yoy >= 0 ? "▲" : "▼"}{Math.abs(yoy).toFixed(1)}%
+                              </span>
+                            ) : <span className="text-slate-600">—</span>}
+                          </td>
+                        )}
                       </tr>
                     );
                   });
@@ -538,13 +563,26 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
                   const totalSvc = displayed.reduce((sum, team) =>
                     sum + SVC_KEYS.reduce((s, sk) => s + ((team as any)[sk.key] ?? 0), 0), 0);
                   const totalDs = displayed.reduce((s, t) => s + t.revenue, 0);
+                  const prevTotalDs = displayed.reduce((s, t) => s + (prevYearTeamMap[t.teamId]?.revenue ?? 0), 0);
                   const avgRatio = totalDs > 0 ? Math.round((totalSvc / totalDs) * 100) : 0;
+                  const totalYoy = prevTotalDs > 0 ? ((totalDs - prevTotalDs) / prevTotalDs * 100) : null;
                   return (
                     <tr className="border-t-2 border-slate-600 bg-slate-800/50">
                       <td className="py-2 px-3 text-slate-300 font-bold text-xs" colSpan={2}>Tổng / TB</td>
                       {SVC_KEYS.map(s => {
                         const colTotal = displayed.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0);
-                        return <td key={s.key} className="py-2 px-3 text-right text-xs font-semibold text-slate-300">{colTotal > 0 ? colTotal.toLocaleString() : "—"}</td>;
+                        const colPrev = displayed.reduce((sum, t) => sum + ((prevYearTeamMap[t.teamId] as any)?.[s.key] ?? 0), 0);
+                        const colYoy = colPrev > 0 ? ((colTotal - colPrev) / colPrev * 100) : null;
+                        return (
+                          <td key={s.key} className="py-2 px-3 text-right text-xs font-semibold text-slate-300">
+                            <div>{colTotal > 0 ? colTotal.toLocaleString() : "—"}</div>
+                            {hasPrevYearTeamData && colYoy !== null && (
+                              <div className={`text-[10px] font-semibold ${colYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                {colYoy >= 0 ? "▲" : "▼"}{Math.abs(colYoy).toFixed(0)}%
+                              </div>
+                            )}
+                          </td>
+                        );
                       })}
                       <td className="py-2 px-3 text-right text-xs font-bold text-white">{totalSvc > 0 ? totalSvc.toLocaleString() : "—"}</td>
                       <td className="py-2 px-3 text-right text-xs font-bold">
@@ -555,6 +593,15 @@ export function TeamsClient({ role, teamId, teamServiceData, monthlyData }: Team
                           </span>
                         </span>
                       </td>
+                      {hasPrevYearTeamData && (
+                        <td className="py-2 px-3 text-right text-xs font-bold">
+                          {totalYoy !== null ? (
+                            <span className={`px-1.5 py-0.5 rounded ${totalYoy >= 0 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
+                              {totalYoy >= 0 ? "▲" : "▼"}{Math.abs(totalYoy).toFixed(1)}%
+                            </span>
+                          ) : "—"}
+                        </td>
+                      )}
                     </tr>
                   );
                 })()}
