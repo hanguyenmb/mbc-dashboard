@@ -84,7 +84,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
   const [showHistory, setShowHistory] = useState(false);
   const [region, setRegion] = useState<"all" | "HN" | "HCM">("all");
   const [view, setView] = useState<"month" | "quarter">("month");
-  const [selectedMonth, setSelectedMonth] = useState("T3");
+  const [selectedMonth, setSelectedMonth] = useState(`T${new Date().getMonth() + 1}`);
   const [selectedQuarter, setSelectedQuarter] = useState(1);
   const [openDropdown, setOpenDropdown] = useState<"month" | "quarter" | null>(null);
   const [benchmark, setBenchmark] = useState(40);
