@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
       id: r.id, title: r.title, description: r.description,
       category: r.category, status: r.status, progress: r.progress,
       weekKey: r.week_key,
+      ...(r.notes ? { notes: r.notes } : {}),
     }));
     return NextResponse.json({ tasks });
   } catch (err) {
@@ -89,6 +90,7 @@ export async function PUT(req: NextRequest) {
   if (updates.category    !== undefined) dbUpdates.category    = updates.category;
   if (updates.status      !== undefined) dbUpdates.status      = updates.status;
   if (updates.progress    !== undefined) dbUpdates.progress    = updates.progress;
+  if (updates.notes       !== undefined) dbUpdates.notes       = updates.notes;
 
   const { error } = await sb.from("weekly_tasks").update(dbUpdates).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
