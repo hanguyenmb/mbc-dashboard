@@ -30,7 +30,9 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
   const [monthlyData, setMonthlyData] = useState<typeof MONTHLY_DATA>([...MONTHLY_DATA]);
   const [revenueData, setRevenueData] = useState<typeof REVENUE_TYPE>([...REVENUE_TYPE]);
   const [teamData, setTeamData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t })) })));
+  const [teamPrevData, setTeamPrevData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 })) })));
   const [teamMonth, setTeamMonth] = useState("T3");
+  const [teamYear, setTeamYear] = useState<"2026" | "prev">("2026");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -38,11 +40,12 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [r1, r2] = await Promise.all([
+      const [r1, r2, r4, r5] = await Promise.all([
         fetch("/api/data?key=monthly_data").then(r => r.json()),
         fetch("/api/data?key=revenue_type").then(r => r.json()),
+        fetch("/api/data?key=team_service").then(r => r.json()),
+        fetch("/api/data?key=team_service_prev").then(r => r.json()),
       ]);
-      const r4 = await fetch("/api/data?key=team_service").then(r => r.json());
       if (r1.data) setMonthlyData(r1.data);
       if (r2.data) setRevenueData(r2.data);
       if (r4.data) {
@@ -57,6 +60,9 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
           setTeamData(r4.data as TeamMonthlyData);
         }
       }
+      if (r5.data && Array.isArray(r5.data) && r5.data.length > 0 && "month" in r5.data[0]) {
+        setTeamPrevData(r5.data as TeamMonthlyData);
+      }
     } finally {
       setLoading(false);
     }
@@ -70,7 +76,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
       const keyMap: Record<Tab, { key: string; data: any }> = {
         monthly: { key: "monthly_data",    data: monthlyData },
         revenue: { key: "revenue_type",    data: revenueData },
-        team:    { key: "team_service",    data: teamData  },
+        team:    { key: teamYear === "prev" ? "team_service_prev" : "team_service", data: teamYear === "prev" ? teamPrevData : teamData },
       };
       const { key, data } = keyMap[tab];
       const res = await fetch("/api/data", {
@@ -197,10 +203,31 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                 };
                 const isQuarter = teamMonth.startsWith("Q");
 
+                const isPrev = teamYear === "prev";
+                const activeData = isPrev ? teamPrevData : teamData;
+                const setActiveData = isPrev ? setTeamPrevData : setTeamData;
+
+                // Khi CK 2025: sync danh sách team từ 2026 (để khớp teamId/tên/vùng)
+                const syncedPrevData = isPrev ? teamPrevData.map(pm => {
+                  const cur = teamData.find(m => m.month === pm.month);
+                  if (!cur) return pm;
+                  return {
+                    ...pm,
+                    teams: cur.teams.map(ct => {
+                      const pt = pm.teams.find(t => t.teamId === ct.teamId);
+                      return pt
+                        ? { ...pt, teamName: ct.teamName, region: ct.region }
+                        : { ...ct, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
+                    }),
+                  };
+                }) : activeData;
+
+                const displayData = isPrev ? syncedPrevData : activeData;
+
                 const currentTeams = (() => {
-                  if (!isQuarter) return teamData.find(m => m.month === teamMonth)?.teams ?? [];
+                  if (!isQuarter) return displayData.find(m => m.month === teamMonth)?.teams ?? [];
                   const months = QUARTER_MAP[teamMonth];
-                  const monthDatas = months.map(m => teamData.find(d => d.month === m)?.teams ?? []);
+                  const monthDatas = months.map(m => displayData.find(d => d.month === m)?.teams ?? []);
                   const baseTeams = monthDatas[0] ?? [];
                   return baseTeams.map((t, i) => ({
                     ...t,
@@ -214,24 +241,28 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                 const hcmTotals = Object.fromEntries(SVC_FIELDS.map(f => [f, currentTeams.filter(t => t.region === "HCM").reduce((s, t) => s + ((t as any)[f] ?? 0), 0)]));
 
                 const addTeam = () => {
+                  if (isPrev) return;
                   const newTeam: TeamServiceRecord = { teamId: `team_${Date.now()}`, teamName: "Team mới", region: "HN", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
                   setTeamData(d => d.map(m => ({ ...m, teams: [...m.teams, { ...newTeam }] })));
                 };
 
                 const deleteTeam = (teamId: string) => {
+                  if (isPrev) return;
                   setTeamData(d => d.map(m => ({ ...m, teams: m.teams.filter(t => t.teamId !== teamId) })));
                 };
 
                 const updateName = (teamId: string, val: string) => {
+                  if (isPrev) return;
                   setTeamData(d => d.map(m => ({ ...m, teams: m.teams.map(t => t.teamId === teamId ? { ...t, teamName: val } : t) })));
                 };
 
                 const updateRegion = (teamId: string, val: "HN" | "HCM") => {
+                  if (isPrev) return;
                   setTeamData(d => d.map(m => ({ ...m, teams: m.teams.map(t => t.teamId === teamId ? { ...t, region: val } : t) })));
                 };
 
                 const updateField = (i: number, field: string, v: number | null) => {
-                  setTeamData(d => d.map(m => m.month === teamMonth
+                  setActiveData(d => d.map(m => m.month === teamMonth
                     ? { ...m, teams: m.teams.map((r, j) => j === i ? { ...r, [field]: v ?? 0 } : r) }
                     : m
                   ));
@@ -239,6 +270,22 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
 
                 return (
                   <div className="space-y-3">
+                    {/* Toggle năm */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">Năm nhập:</span>
+                      <div className="flex bg-slate-800 rounded-lg p-0.5 gap-0.5">
+                        <button onClick={() => setTeamYear("2026")}
+                          className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${teamYear === "2026" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"}`}>
+                          2026
+                        </button>
+                        <button onClick={() => setTeamYear("prev")}
+                          className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${teamYear === "prev" ? "bg-amber-600 text-white" : "text-amber-400/70 hover:text-amber-300"}`}>
+                          CK 2025
+                        </button>
+                      </div>
+                      {isPrev && <span className="text-xs text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/30">Nhập số liệu cùng kỳ 2025 để so sánh tăng trưởng</span>}
+                    </div>
+
                     {/* Tabs tháng + quý */}
                     <div className="flex flex-wrap gap-1 items-center">
                       <span className="text-xs text-slate-500 mr-1">Tháng:</span>
@@ -255,7 +302,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           {q}
                         </button>
                       ))}
-                      {!isQuarter && (
+                      {!isQuarter && !isPrev && (
                         <button onClick={addTeam}
                           className="ml-auto text-xs text-blue-400 hover:text-blue-300 px-3 py-1 rounded-lg border border-blue-500/30 hover:bg-blue-500/10 transition-colors">
                           + Thêm Team
@@ -266,7 +313,9 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                     <p className="text-xs text-slate-500">
                       {isQuarter
                         ? `Xem tổng hợp ${teamMonth} (${QUARTER_MAP[teamMonth].join("+")}) — chỉ đọc, nhập số liệu ở từng tháng`
-                        : "Tên team & vùng áp dụng cho tất cả tháng · Doanh số nhập riêng từng tháng · Cùng kỳ 2025 nhập ở tab Doanh Số Tháng"}
+                        : isPrev
+                          ? "Nhập doanh số từng nhóm dịch vụ của năm 2025 để so sánh tăng trưởng · Tên team & vùng lấy theo danh sách 2026"
+                          : "Tên team & vùng áp dụng cho tất cả tháng · Doanh số nhập riêng từng tháng · Cùng kỳ 2025 nhập ở tab Doanh Số Tháng"}
                     </p>
 
                     <table className="w-full text-xs">
@@ -282,26 +331,20 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           <th className="text-right py-2 px-2 text-purple-400">Transfer</th>
                           <th className="text-right py-2 px-2 text-red-400">Sale AI</th>
                           <th className="text-right py-2 px-2 text-cyan-400">Elastic</th>
-                          {!isQuarter && <th className="py-2 px-2"></th>}
+                          {!isQuarter && !isPrev && <th className="py-2 px-2"></th>}
                         </tr>
                       </thead>
                       <tbody>
                         {currentTeams.map((row, i) => (
-                          <tr key={row.teamId} className="border-b border-slate-800 hover:bg-slate-800/30">
+                          <tr key={row.teamId} className={`border-b border-slate-800 hover:bg-slate-800/30 ${isPrev ? "bg-amber-950/10" : ""}`}>
                             <td className="py-1 px-3">
-                              {isQuarter
+                              {isQuarter || isPrev
                                 ? <span className="text-slate-200">{row.teamName}</span>
                                 : <input value={row.teamName} onChange={e => updateName(row.teamId, e.target.value)}
                                     className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500" />}
                             </td>
                             <td className="py-1 px-2 text-center">
-                              {isQuarter
-                                ? <span className={row.region === "HN" ? "text-blue-400" : "text-orange-400"}>{row.region}</span>
-                                : <select value={row.region} onChange={e => updateRegion(row.teamId, e.target.value as "HN"|"HCM")}
-                                    className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500">
-                                    <option value="HN">HN</option>
-                                    <option value="HCM">HCM</option>
-                                  </select>}
+                              <span className={row.region === "HN" ? "text-blue-400" : "text-orange-400"}>{row.region}</span>
                             </td>
                             {SVC_FIELDS.map(field => (
                               <td key={field} className="py-1 px-2">
@@ -310,7 +353,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                                   : <NumInput value={(row as any)[field]} onChange={v => updateField(i, field, v)} />}
                               </td>
                             ))}
-                            {!isQuarter && (
+                            {!isQuarter && !isPrev && (
                               <td className="py-1 px-2">
                                 <button onClick={() => deleteTeam(row.teamId)} className="text-slate-600 hover:text-red-400 transition-colors">✕</button>
                               </td>
@@ -327,7 +370,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                               {(hnTotals[f] as number).toFixed(1)}
                             </td>
                           ))}
-                          {!isQuarter && <td />}
+                          {!isQuarter && !isPrev && <td />}
                         </tr>
                         <tr className="border-t border-orange-500/40 bg-orange-900/20">
                           <td className="py-2 px-3 font-bold text-orange-300">HCM</td>
@@ -337,7 +380,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                               {(hcmTotals[f] as number).toFixed(1)}
                             </td>
                           ))}
-                          {!isQuarter && <td />}
+                          {!isQuarter && !isPrev && <td />}
                         </tr>
                         <tr className="border-t-2 border-slate-500 bg-slate-700/40">
                           <td className="py-2.5 px-3 font-bold text-white text-sm">TỔNG</td>
@@ -347,7 +390,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                               {(totals[f] as number).toFixed(1)}
                             </td>
                           ))}
-                          {!isQuarter && <td />}
+                          {!isQuarter && !isPrev && <td />}
                         </tr>
                       </tfoot>
                     </table>

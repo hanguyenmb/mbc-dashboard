@@ -20,6 +20,7 @@ export type DataKey =
   | "revenue_type"
   | "service_groups"
   | "team_service"
+  | "team_service_prev"
   | "users";
 
 export async function getData<T>(key: DataKey): Promise<T | null> {
