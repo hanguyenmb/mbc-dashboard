@@ -58,8 +58,8 @@ export function Sidebar({ role, userName, userAvatar }: SidebarProps) {
           MB
         </div>
         <div>
-          <div className="text-white font-semibold text-sm leading-tight">MBC Dashboard</div>
-          <div className="text-slate-400 text-xs">v1.0.0</div>
+          <div className="text-white font-semibold text-sm leading-tight">BZ MBC Dashboard</div>
+          <div className="text-slate-400 text-xs">v1.2</div>
         </div>
       </div>
 

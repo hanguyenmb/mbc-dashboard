@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MBC Dashboard — Mắt Bão Corporation",
+  title: "BZ MBC Dashboard — Mắt Bão Corporation",
   description: "Hệ thống báo cáo kinh doanh nội bộ MBC",
 };
 

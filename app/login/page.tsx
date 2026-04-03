@@ -41,7 +41,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-2xl shadow-blue-500/30 mb-4">
             MB
           </div>
-          <h1 className="text-2xl font-bold text-white">MBC Dashboard</h1>
+          <h1 className="text-2xl font-bold text-white">BZ MBC Dashboard</h1>
           <p className="text-slate-400 text-sm mt-1">Hệ thống báo cáo kinh doanh</p>
         </div>
 
@@ -126,7 +126,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-600 mt-6">
-          © 2026 MBC Dashboard
+          © 2026 BZ MBC Dashboard
         </p>
       </div>
     </div>
