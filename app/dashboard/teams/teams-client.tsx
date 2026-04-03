@@ -558,23 +558,29 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     );
                   });
                 })()}
-                {/* Summary row */}
-                {(() => {
-                  const totalSvc = displayed.reduce((sum, team) =>
-                    sum + SVC_KEYS.reduce((s, sk) => s + ((team as any)[sk.key] ?? 0), 0), 0);
-                  const totalDs = displayed.reduce((s, t) => s + t.revenue, 0);
-                  const prevTotalDs = displayed.reduce((s, t) => s + (prevYearTeamMap[t.teamId]?.revenue ?? 0), 0);
-                  const avgRatio = totalDs > 0 ? Math.round((totalSvc / totalDs) * 100) : 0;
-                  const totalYoy = prevTotalDs > 0 ? ((totalDs - prevTotalDs) / prevTotalDs * 100) : null;
+                {/* HN / HCM / Tổng summary rows */}
+                {(["HN","HCM","all"] as const).map(reg => {
+                  const regTeams = reg === "all" ? displayed : displayed.filter(t => t.region === reg);
+                  if (regTeams.length === 0) return null;
+                  const regDs = regTeams.reduce((s, t) => s + t.revenue, 0);
+                  const regSvc = regTeams.reduce((sum, t) => sum + SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0), 0);
+                  const prevRegDs = regTeams.reduce((s, t) => s + (prevYearTeamMap[t.teamId]?.revenue ?? 0), 0);
+                  const regRatio = regDs > 0 ? Math.round((regSvc / regDs) * 100) : 0;
+                  const regYoy = prevRegDs > 0 ? ((regDs - prevRegDs) / prevRegDs * 100) : null;
+                  const isTotal = reg === "all";
+                  const labelColor = reg === "HN" ? "text-blue-300" : reg === "HCM" ? "text-orange-300" : "text-white";
+                  const rowBg = reg === "HN" ? "bg-blue-900/20 border-blue-500/30" : reg === "HCM" ? "bg-orange-900/20 border-orange-500/30" : "bg-slate-800/50 border-slate-600";
                   return (
-                    <tr className="border-t-2 border-slate-600 bg-slate-800/50">
-                      <td className="py-2 px-3 text-slate-300 font-bold text-xs" colSpan={2}>Tổng / TB</td>
+                    <tr key={reg} className={`border-t-2 ${rowBg}`}>
+                      <td className={`py-2 px-3 font-bold text-xs ${labelColor}`} colSpan={2}>
+                        {isTotal ? "TỔNG" : `Khu vực ${reg}`}
+                      </td>
                       {SVC_KEYS.map(s => {
-                        const colTotal = displayed.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0);
-                        const colPrev = displayed.reduce((sum, t) => sum + ((prevYearTeamMap[t.teamId] as any)?.[s.key] ?? 0), 0);
+                        const colTotal = regTeams.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0);
+                        const colPrev = regTeams.reduce((sum, t) => sum + ((prevYearTeamMap[t.teamId] as any)?.[s.key] ?? 0), 0);
                         const colYoy = colPrev > 0 ? ((colTotal - colPrev) / colPrev * 100) : null;
                         return (
-                          <td key={s.key} className="py-2 px-3 text-right text-xs font-semibold text-slate-300">
+                          <td key={s.key} className={`py-2 px-3 text-right text-xs font-semibold ${labelColor}`}>
                             <div>{colTotal > 0 ? colTotal.toLocaleString() : "—"}</div>
                             {hasPrevYearTeamData && colYoy !== null && (
                               <div className={`text-[10px] font-semibold ${colYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
@@ -584,27 +590,27 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                           </td>
                         );
                       })}
-                      <td className="py-2 px-3 text-right text-xs font-bold text-white">{totalSvc > 0 ? totalSvc.toLocaleString() : "—"}</td>
+                      <td className={`py-2 px-3 text-right text-xs font-bold ${labelColor}`}>{regSvc > 0 ? regSvc.toLocaleString() : "—"}</td>
                       <td className="py-2 px-3 text-right text-xs font-bold">
-                        <span className={avgRatio >= benchmark ? "text-green-400" : "text-red-400"}>
-                          {totalDs > 0 ? `${avgRatio}%` : "—"}
+                        <span className={regRatio >= benchmark ? "text-green-400" : "text-red-400"}>
+                          {regDs > 0 ? `${regRatio}%` : "—"}
                           <span className="ml-1 text-xs font-normal opacity-70">
-                            {totalDs > 0 ? (avgRatio >= benchmark ? "✓" : `↓${benchmark - avgRatio}%`) : ""}
+                            {regDs > 0 ? (regRatio >= benchmark ? "✓" : `↓${benchmark - regRatio}%`) : ""}
                           </span>
                         </span>
                       </td>
                       {hasPrevYearTeamData && (
                         <td className="py-2 px-3 text-right text-xs font-bold">
-                          {totalYoy !== null ? (
-                            <span className={`px-1.5 py-0.5 rounded ${totalYoy >= 0 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
-                              {totalYoy >= 0 ? "▲" : "▼"}{Math.abs(totalYoy).toFixed(1)}%
+                          {regYoy !== null ? (
+                            <span className={`px-1.5 py-0.5 rounded ${regYoy >= 0 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
+                              {regYoy >= 0 ? "▲" : "▼"}{Math.abs(regYoy).toFixed(1)}%
                             </span>
-                          ) : "—"}
+                          ) : <span className="text-slate-600">—</span>}
                         </td>
                       )}
                     </tr>
                   );
-                })()}
+                })}
               </tbody>
             </table>
           </CardContent>
