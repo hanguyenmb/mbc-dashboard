@@ -5,10 +5,10 @@ import { Header, PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Loader2, Save, RefreshCw } from "lucide-react";
-import { MONTHLY_DATA, REVENUE_TYPE, SERVICE_MONTHLY, TEAM_SERVICE_DATA } from "@/lib/mock-data";
+import { MONTHLY_DATA, REVENUE_TYPE, TEAM_SERVICE_DATA } from "@/lib/mock-data";
 import type { TeamServiceRecord, TeamMonthlyData } from "@/lib/types";
 
-type Tab = "monthly" | "revenue" | "service" | "team";
+type Tab = "monthly" | "revenue" | "team";
 
 function NumInput({
   value, onChange, className = "",
@@ -29,7 +29,6 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
   const [tab, setTab] = useState<Tab>("monthly");
   const [monthlyData, setMonthlyData] = useState<typeof MONTHLY_DATA>([...MONTHLY_DATA]);
   const [revenueData, setRevenueData] = useState<typeof REVENUE_TYPE>([...REVENUE_TYPE]);
-  const [serviceData, setServiceData] = useState<typeof SERVICE_MONTHLY>([...SERVICE_MONTHLY]);
   const [teamData, setTeamData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t })) })));
   const [teamMonth, setTeamMonth] = useState("T3");
   const [loading, setLoading] = useState(true);
@@ -39,15 +38,13 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [r1, r2, r3] = await Promise.all([
+      const [r1, r2] = await Promise.all([
         fetch("/api/data?key=monthly_data").then(r => r.json()),
         fetch("/api/data?key=revenue_type").then(r => r.json()),
-        fetch("/api/data?key=service_monthly").then(r => r.json()),
       ]);
       const r4 = await fetch("/api/data?key=team_service").then(r => r.json());
       if (r1.data) setMonthlyData(r1.data);
       if (r2.data) setRevenueData(r2.data);
-      if (r3.data) setServiceData(r3.data);
       if (r4.data) {
         // Migration: nếu dữ liệu cũ là TeamServiceRecord[] (không có month), chuyển sang TeamMonthlyData
         if (Array.isArray(r4.data) && r4.data.length > 0 && !("month" in r4.data[0])) {
@@ -73,7 +70,6 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
       const keyMap: Record<Tab, { key: string; data: any }> = {
         monthly: { key: "monthly_data",    data: monthlyData },
         revenue: { key: "revenue_type",    data: revenueData },
-        service: { key: "service_monthly", data: serviceData },
         team:    { key: "team_service",    data: teamData  },
       };
       const { key, data } = keyMap[tab];
@@ -93,7 +89,6 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
   const TABS: { key: Tab; label: string }[] = [
     { key: "monthly", label: "Doanh Số Tháng" },
     { key: "revenue", label: "ĐK Mới & Gia Hạn" },
-    { key: "service", label: "Dịch Vụ" },
     { key: "team",    label: "Doanh Số Team" },
   ];
 
@@ -194,38 +189,29 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                 </table>
               )}
 
-              {/* Tab 3: Dịch Vụ */}
-              {tab === "service" && (
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-700">
-                      <th className="text-left py-2 px-3 text-slate-400 font-medium w-12">Tháng</th>
-                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Host/Mail</th>
-                      <th className="text-right py-2 px-2 text-slate-400 font-medium">MS/GWS</th>
-                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Tên miền</th>
-                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Transfer</th>
-                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Sale AI</th>
-                      <th className="text-right py-2 px-2 text-slate-400 font-medium">Elastic</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {serviceData.map((row, i) => (
-                      <tr key={row.month} className="border-b border-slate-800 hover:bg-slate-800/30">
-                        <td className="py-1.5 px-3 text-slate-300 font-semibold">{row.month}</td>
-                        {(["hostMail","msgws","tenMien","transferGws","saleAi","elastic"] as const).map(field => (
-                          <td key={field} className="py-1 px-2">
-                            <NumInput value={(row as any)[field]} onChange={v => setServiceData(d => d.map((r, j) => j === i ? { ...r, [field]: v ?? 0 } : r))} />
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-
-              {/* Tab 4: Doanh Số Team */}
+              {/* Tab 3: Doanh Số Team */}
               {tab === "team" && (() => {
-                const currentTeams = teamData.find(m => m.month === teamMonth)?.teams ?? [];
+                const SVC_FIELDS = ["revenue","target","hostMail","msgws","tenMien","transferGws","saleAi","elastic"] as const;
+                const QUARTER_MAP: Record<string, string[]> = {
+                  Q1: ["T1","T2","T3"], Q2: ["T4","T5","T6"], Q3: ["T7","T8","T9"], Q4: ["T10","T11","T12"],
+                };
+                const isQuarter = teamMonth.startsWith("Q");
+
+                const currentTeams = (() => {
+                  if (!isQuarter) return teamData.find(m => m.month === teamMonth)?.teams ?? [];
+                  const months = QUARTER_MAP[teamMonth];
+                  const monthDatas = months.map(m => teamData.find(d => d.month === m)?.teams ?? []);
+                  const baseTeams = monthDatas[0] ?? [];
+                  return baseTeams.map((t, i) => ({
+                    ...t,
+                    ...Object.fromEntries(SVC_FIELDS.map(f => [f, months.reduce((s, _, mi) => s + ((monthDatas[mi][i] as any)?.[f] ?? 0), 0)])),
+                  }));
+                })();
+
+                // Totals row
+                const totals = Object.fromEntries(SVC_FIELDS.map(f => [f, currentTeams.reduce((s, t) => s + ((t as any)[f] ?? 0), 0)]));
+                const hnTotals = Object.fromEntries(SVC_FIELDS.map(f => [f, currentTeams.filter(t => t.region === "HN").reduce((s, t) => s + ((t as any)[f] ?? 0), 0)]));
+                const hcmTotals = Object.fromEntries(SVC_FIELDS.map(f => [f, currentTeams.filter(t => t.region === "HCM").reduce((s, t) => s + ((t as any)[f] ?? 0), 0)]));
 
                 const addTeam = () => {
                   const newTeam: TeamServiceRecord = { teamId: `team_${Date.now()}`, teamName: "Team mới", region: "HN", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
@@ -253,21 +239,35 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
 
                 return (
                   <div className="space-y-3">
-                    {/* Tabs tháng */}
-                    <div className="flex flex-wrap gap-1">
+                    {/* Tabs tháng + quý */}
+                    <div className="flex flex-wrap gap-1 items-center">
+                      <span className="text-xs text-slate-500 mr-1">Tháng:</span>
                       {Array.from({ length: 12 }, (_, i) => `T${i + 1}`).map(m => (
                         <button key={m} onClick={() => setTeamMonth(m)}
                           className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${teamMonth === m ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
                           {m}
                         </button>
                       ))}
-                      <button onClick={addTeam}
-                        className="ml-auto text-xs text-blue-400 hover:text-blue-300 px-3 py-1 rounded-lg border border-blue-500/30 hover:bg-blue-500/10 transition-colors">
-                        + Thêm Team
-                      </button>
+                      <span className="text-xs text-slate-500 ml-3 mr-1">Quý:</span>
+                      {["Q1","Q2","Q3","Q4"].map(q => (
+                        <button key={q} onClick={() => setTeamMonth(q)}
+                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${teamMonth === q ? "bg-purple-600 text-white" : "bg-slate-800 text-purple-400 hover:text-white"}`}>
+                          {q}
+                        </button>
+                      ))}
+                      {!isQuarter && (
+                        <button onClick={addTeam}
+                          className="ml-auto text-xs text-blue-400 hover:text-blue-300 px-3 py-1 rounded-lg border border-blue-500/30 hover:bg-blue-500/10 transition-colors">
+                          + Thêm Team
+                        </button>
+                      )}
                     </div>
 
-                    <p className="text-xs text-slate-500">Tên team & vùng áp dụng cho tất cả tháng · Doanh số nhập riêng từng tháng · Cùng kỳ 2025 nhập ở tab Doanh Số Tháng</p>
+                    <p className="text-xs text-slate-500">
+                      {isQuarter
+                        ? `Xem tổng hợp ${teamMonth} (${QUARTER_MAP[teamMonth].join("+")}) — chỉ đọc, nhập số liệu ở từng tháng`
+                        : "Tên team & vùng áp dụng cho tất cả tháng · Doanh số nhập riêng từng tháng · Cùng kỳ 2025 nhập ở tab Doanh Số Tháng"}
+                    </p>
 
                     <table className="w-full text-xs">
                       <thead>
@@ -282,34 +282,74 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           <th className="text-right py-2 px-2 text-purple-400">Transfer</th>
                           <th className="text-right py-2 px-2 text-red-400">Sale AI</th>
                           <th className="text-right py-2 px-2 text-cyan-400">Elastic</th>
-                          <th className="py-2 px-2"></th>
+                          {!isQuarter && <th className="py-2 px-2"></th>}
                         </tr>
                       </thead>
                       <tbody>
                         {currentTeams.map((row, i) => (
                           <tr key={row.teamId} className="border-b border-slate-800 hover:bg-slate-800/30">
                             <td className="py-1 px-3">
-                              <input value={row.teamName} onChange={e => updateName(row.teamId, e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500" />
+                              {isQuarter
+                                ? <span className="text-slate-200">{row.teamName}</span>
+                                : <input value={row.teamName} onChange={e => updateName(row.teamId, e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500" />}
                             </td>
                             <td className="py-1 px-2 text-center">
-                              <select value={row.region} onChange={e => updateRegion(row.teamId, e.target.value as "HN"|"HCM")}
-                                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500">
-                                <option value="HN">HN</option>
-                                <option value="HCM">HCM</option>
-                              </select>
+                              {isQuarter
+                                ? <span className={row.region === "HN" ? "text-blue-400" : "text-orange-400"}>{row.region}</span>
+                                : <select value={row.region} onChange={e => updateRegion(row.teamId, e.target.value as "HN"|"HCM")}
+                                    className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500">
+                                    <option value="HN">HN</option>
+                                    <option value="HCM">HCM</option>
+                                  </select>}
                             </td>
-                            {(["revenue","target","hostMail","msgws","tenMien","transferGws","saleAi","elastic"] as const).map(field => (
+                            {SVC_FIELDS.map(field => (
                               <td key={field} className="py-1 px-2">
-                                <NumInput value={(row as any)[field]} onChange={v => updateField(i, field, v)} />
+                                {isQuarter
+                                  ? <span className="block text-right text-slate-300 tabular-nums pr-2">{((row as any)[field] ?? 0).toFixed(1)}</span>
+                                  : <NumInput value={(row as any)[field]} onChange={v => updateField(i, field, v)} />}
                               </td>
                             ))}
-                            <td className="py-1 px-2">
-                              <button onClick={() => deleteTeam(row.teamId)} className="text-slate-600 hover:text-red-400 transition-colors">✕</button>
-                            </td>
+                            {!isQuarter && (
+                              <td className="py-1 px-2">
+                                <button onClick={() => deleteTeam(row.teamId)} className="text-slate-600 hover:text-red-400 transition-colors">✕</button>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-blue-500/40 bg-blue-900/20">
+                          <td className="py-2 px-3 font-bold text-blue-300">HN</td>
+                          <td className="py-2 px-2 text-center text-blue-400 text-xs">—</td>
+                          {SVC_FIELDS.map(f => (
+                            <td key={f} className="py-2 px-2 text-right font-semibold text-blue-300 tabular-nums">
+                              {(hnTotals[f] as number).toFixed(1)}
+                            </td>
+                          ))}
+                          {!isQuarter && <td />}
+                        </tr>
+                        <tr className="border-t border-orange-500/40 bg-orange-900/20">
+                          <td className="py-2 px-3 font-bold text-orange-300">HCM</td>
+                          <td className="py-2 px-2 text-center text-orange-400 text-xs">—</td>
+                          {SVC_FIELDS.map(f => (
+                            <td key={f} className="py-2 px-2 text-right font-semibold text-orange-300 tabular-nums">
+                              {(hcmTotals[f] as number).toFixed(1)}
+                            </td>
+                          ))}
+                          {!isQuarter && <td />}
+                        </tr>
+                        <tr className="border-t-2 border-slate-500 bg-slate-700/40">
+                          <td className="py-2.5 px-3 font-bold text-white text-sm">TỔNG</td>
+                          <td className="py-2 px-2 text-center text-slate-400 text-xs">—</td>
+                          {SVC_FIELDS.map(f => (
+                            <td key={f} className="py-2.5 px-2 text-right font-bold text-white tabular-nums">
+                              {(totals[f] as number).toFixed(1)}
+                            </td>
+                          ))}
+                          {!isQuarter && <td />}
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 );
