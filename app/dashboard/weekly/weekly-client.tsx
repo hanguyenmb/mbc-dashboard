@@ -335,13 +335,15 @@ function TaskDetailPanel({ task, isManager, onEdit, onSaveNotes, onClose }: {
           <div>
             <div className="text-xs text-slate-400 mb-1.5 flex items-center gap-1.5">
               <StickyNote size={12} /> Ghi chú chi tiết
+              {!isManager && <span className="text-slate-600 text-xs">(chỉ xem)</span>}
             </div>
             <textarea
               value={notes}
-              onChange={(e) => { setNotes(e.target.value); setSaved(false); }}
-              placeholder="Nhập ghi chú, kết quả, vướng mắc, số liệu cụ thể..."
+              onChange={isManager ? (e) => { setNotes(e.target.value); setSaved(false); } : undefined}
+              readOnly={!isManager}
+              placeholder={isManager ? "Nhập ghi chú, kết quả, vướng mắc, số liệu cụ thể..." : "Chưa có ghi chú."}
               rows={5}
-              className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none resize-none"
+              className={`w-full bg-slate-900 border rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none resize-none ${isManager ? "border-slate-600 focus:border-blue-500" : "border-slate-700/50 cursor-default text-slate-400"}`}
             />
           </div>
         </div>
@@ -349,9 +351,11 @@ function TaskDetailPanel({ task, isManager, onEdit, onSaveNotes, onClose }: {
         {/* Footer */}
         <div className="px-5 py-4 border-t border-slate-700 flex gap-3">
           <Button variant="ghost" size="sm" onClick={onClose} className="flex-1 justify-center">Đóng</Button>
-          <Button variant="primary" size="sm" onClick={handleSaveNotes} disabled={saving} className="flex-1 justify-center">
-            {saving ? "Đang lưu..." : saved ? <><Check size={13} /> Đã lưu</> : <><Save size={13} /> Lưu ghi chú</>}
-          </Button>
+          {isManager && (
+            <Button variant="primary" size="sm" onClick={handleSaveNotes} disabled={saving} className="flex-1 justify-center">
+              {saving ? "Đang lưu..." : saved ? <><Check size={13} /> Đã lưu</> : <><Save size={13} /> Lưu ghi chú</>}
+            </Button>
+          )}
         </div>
       </div>
     </div>
