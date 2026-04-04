@@ -48,21 +48,38 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
       ]);
       if (r1.data) setMonthlyData(r1.data);
       if (r2.data) setRevenueData(r2.data);
+      let currentTeamData: TeamMonthlyData = TEAM_SERVICE_DATA;
       if (r4.data) {
-        // Migration: nếu dữ liệu cũ là TeamServiceRecord[] (không có month), chuyển sang TeamMonthlyData
         if (Array.isArray(r4.data) && r4.data.length > 0 && !("month" in r4.data[0])) {
           const oldTeams = r4.data as TeamServiceRecord[];
-          setTeamData(TEAM_SERVICE_DATA.map(m => ({
+          currentTeamData = TEAM_SERVICE_DATA.map(m => ({
             ...m,
             teams: oldTeams.map(t => ({ ...t, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 })),
-          })));
+          }));
         } else {
-          setTeamData(r4.data as TeamMonthlyData);
+          currentTeamData = r4.data as TeamMonthlyData;
         }
+        setTeamData(currentTeamData);
       }
-      if (r5.data && Array.isArray(r5.data) && r5.data.length > 0 && "month" in r5.data[0]) {
-        setTeamPrevData(r5.data as TeamMonthlyData);
-      }
+
+      // Sync teamPrevData theo cùng cấu trúc teamId/thứ tự với teamData 2026
+      const prevRaw: TeamMonthlyData | null =
+        r5.data && Array.isArray(r5.data) && r5.data.length > 0 && "month" in r5.data[0]
+          ? r5.data as TeamMonthlyData
+          : null;
+      const syncedPrev: TeamMonthlyData = currentTeamData.map(({ month, teams }) => {
+        const prevMonth = prevRaw?.find(m => m.month === month);
+        return {
+          month,
+          teams: teams.map(ct => {
+            const pt = prevMonth?.teams.find(t => t.teamId === ct.teamId);
+            return pt
+              ? { ...pt, teamName: ct.teamName, region: ct.region }
+              : { ...ct, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
+          }),
+        };
+      });
+      setTeamPrevData(syncedPrev);
     } finally {
       setLoading(false);
     }
@@ -204,25 +221,9 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                 const isQuarter = teamMonth.startsWith("Q");
 
                 const isPrev = teamYear === "prev";
-                const activeData = isPrev ? teamPrevData : teamData;
+                // teamPrevData đã được sync cùng cấu trúc với teamData từ loadData
+                const displayData = isPrev ? teamPrevData : teamData;
                 const setActiveData = isPrev ? setTeamPrevData : setTeamData;
-
-                // Khi CK 2025: sync danh sách team từ 2026 (để khớp teamId/tên/vùng)
-                const syncedPrevData = isPrev ? teamPrevData.map(pm => {
-                  const cur = teamData.find(m => m.month === pm.month);
-                  if (!cur) return pm;
-                  return {
-                    ...pm,
-                    teams: cur.teams.map(ct => {
-                      const pt = pm.teams.find(t => t.teamId === ct.teamId);
-                      return pt
-                        ? { ...pt, teamName: ct.teamName, region: ct.region }
-                        : { ...ct, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
-                    }),
-                  };
-                }) : activeData;
-
-                const displayData = isPrev ? syncedPrevData : activeData;
 
                 const currentTeams = (() => {
                   if (!isQuarter) return displayData.find(m => m.month === teamMonth)?.teams ?? [];
