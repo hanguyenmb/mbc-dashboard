@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, RadarChart, Radar, PolarGrid,
@@ -88,6 +88,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
   const [selectedQuarter, setSelectedQuarter] = useState(1);
   const [openDropdown, setOpenDropdown] = useState<"month" | "quarter" | null>(null);
   const [benchmark, setBenchmark] = useState(40);
+  const rankingRef = useRef<HTMLDivElement>(null);
 
   const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
   const allPrevMonths = teamPrevData.length > 0 ? teamPrevData : [];
@@ -445,33 +446,44 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           <CardContent>
             {rankingData.length === 0 || !hasData ? (
               <div className="text-center text-slate-500 py-10 text-sm">Chưa có dữ liệu</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={Math.max(200, rankingData.length * 52)}>
-                <BarChart data={rankingData} layout="vertical" margin={{ left: 16, right: hasPrevYearTeamData ? 120 : 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
-                  <XAxis type="number" tick={{ fill: "#94a3b8", fontSize: 11 }} tickFormatter={v => `${v.toLocaleString()}M`} />
-                  <YAxis type="category" dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} width={90} />
-                  <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`, "Doanh số"]} />
-                  <Bar dataKey="revenue" radius={[0, 6, 6, 0]}>
-                    <LabelList dataKey="pct" position="right" content={(props: any) => {
-                      const { x, y, width, height, value } = props;
-                      const color = value >= 100 ? "#4ade80" : "#f87171";
-                      return <text x={x + width + 8} y={y + height / 2 + 4} fill={color} fontSize={11} fontWeight={600}>{value}%</text>;
-                    }} />
-                    {hasPrevYearTeamData && (
-                      <LabelList dataKey="dkmYoy" position="right" content={(props: any) => {
-                        const { x, y, width, height, value } = props;
-                        if (value == null) return null;
-                        const color = value >= 0 ? "#34d399" : "#f87171";
-                        const sign = value >= 0 ? "▲" : "▼";
-                        return <text x={x + width + 65} y={y + height / 2 + 4} fill={color} fontSize={10} fontWeight={700}>{sign}{Math.abs(value).toFixed(1)}%</text>;
-                      }} />
-                    )}
-                    {rankingData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+            ) : (() => {
+              const RIGHT_MARGIN = hasPrevYearTeamData ? 140 : 70;
+              const PCT_COL_W = 44;   // width reserved for pct label
+              const YOY_COL_W = 60;   // width reserved for yoy label
+              return (
+                <div ref={rankingRef}>
+                  <ResponsiveContainer width="100%" height={Math.max(200, rankingData.length * 52)}>
+                    <BarChart data={rankingData} layout="vertical" margin={{ left: 16, right: RIGHT_MARGIN }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+                      <XAxis type="number" tick={{ fill: "#94a3b8", fontSize: 11 }} tickFormatter={v => `${v.toLocaleString()}M`} />
+                      <YAxis type="category" dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} width={90} />
+                      <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`, "Doanh số"]} />
+                      <Bar dataKey="revenue" radius={[0, 6, 6, 0]}>
+                        <LabelList dataKey="pct" position="right" content={(props: any) => {
+                          const { y, height, value, viewBox } = props;
+                          const chartRightEdge = (viewBox?.width ?? 0) + (viewBox?.x ?? 0);
+                          const x = chartRightEdge + (hasPrevYearTeamData ? YOY_COL_W + 4 : 4);
+                          const color = value >= 100 ? "#4ade80" : "#f87171";
+                          return <text x={x} y={y + height / 2 + 4} fill={color} fontSize={11} fontWeight={600} textAnchor="start">{value}%</text>;
+                        }} />
+                        {hasPrevYearTeamData && (
+                          <LabelList dataKey="dkmYoy" position="right" content={(props: any) => {
+                            const { y, height, value, viewBox } = props;
+                            if (value == null) return null;
+                            const chartRightEdge = (viewBox?.width ?? 0) + (viewBox?.x ?? 0);
+                            const x = chartRightEdge + 4;
+                            const color = value >= 0 ? "#34d399" : "#f87171";
+                            const sign = value >= 0 ? "▲" : "▼";
+                            return <text x={x} y={y + height / 2 + 4} fill={color} fontSize={10} fontWeight={700} textAnchor="start">{sign}{Math.abs(value).toFixed(1)}%</text>;
+                          }} />
+                        )}
+                        {rankingData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 
