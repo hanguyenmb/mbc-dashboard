@@ -675,7 +675,6 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             <div className="mt-4 overflow-x-auto rounded-lg border border-slate-700/50">
               <table className="w-full text-xs border-collapse">
                 {(() => {
-                  const months2026 = REVENUE_TYPE.filter(r => r.dangKyMoi > 0 || r.giaHan > 0);
                   const rows = [
                     { label: "ĐK Mới Tổng", key: "dangKyMoi", prevKey: "prev_dk",    color: "text-sky-300",    bg: "bg-sky-500/10",    border: "border-sky-500/20",    lb: "border-l-2 border-sky-400",    bold: true },
                     { label: "— HN",          key: "dkHn",      prevKey: "prev_dkHn",  color: "text-sky-400",    bg: "bg-sky-500/5",     border: "border-sky-500/10",    lb: "border-l-2 border-sky-600 pl-5", bold: false },
@@ -685,38 +684,51 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                     { label: "— HCM",         key: "ghHcm",     prevKey: "prev_ghHcm", color: "text-violet-400", bg: "bg-violet-500/5",  border: "border-violet-500/10", lb: "border-l-2 border-violet-600 pl-5", bold: false },
                   ];
                   const hasPrevHnHcm = REVENUE_TYPE.some(r => ((r as any).prev_dkHn ?? 0) > 0 || ((r as any).prev_ghHn ?? 0) > 0);
+
+                  // Xác định cột: tháng (T1-T12) hoặc quý (Q1-Q4)
+                  type Col = { label: string; months: string[] };
+                  const QUARTER_MONTHS_MAP: Record<string,string[]> = { Q1:["T1","T2","T3"], Q2:["T4","T5","T6"], Q3:["T7","T8","T9"], Q4:["T10","T11","T12"] };
+                  const cols: Col[] = view === "quy"
+                    ? ["Q1","Q2","Q3","Q4"].map(q => ({ label: q, months: QUARTER_MONTHS_MAP[q] }))
+                    : Array.from({ length: 12 }, (_, i) => ({ label: `T${i+1}`, months: [`T${i+1}`] }));
+
+                  // Helper: sum một row qua nhiều tháng
+                  const sumVal = (fieldKey: string, monthLabels: string[]) =>
+                    monthLabels.reduce((s, ml) => s + ((REVENUE_TYPE.find(r => r.month === ml) as any)?.[fieldKey] ?? 0), 0);
+
                   return (
                     <>
                       <thead>
                         <tr className="bg-slate-800/80">
                           <td className="py-2 px-3 font-semibold text-slate-300 border-b border-slate-700/50 min-w-[150px]">Chi tiết Doanh số</td>
-                          {months2026.map(r => <td key={r.month} className="py-2 px-3 text-right font-semibold text-slate-400 border-b border-slate-700/50 min-w-[60px]">{r.month}</td>)}
-                          <td className="py-2 px-3 text-right font-bold text-white border-b border-slate-700/50">Tổng</td>
-                          <td className="py-2 px-3 text-right font-bold text-amber-400/80 border-b border-slate-700/50 text-xs">So CK</td>
+                          {cols.map(col => (
+                            <td key={col.label} className="py-2 px-3 text-right font-semibold text-slate-400 border-b border-slate-700/50 min-w-[90px]">{col.label}</td>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
                         {rows.map((row) => {
-                          const vals = months2026.map(r => (r as any)[row.key] as number);
-                          const tot = vals.reduce((s, v) => s + v, 0);
-                          // CK: dùng prevKey HN/HCM nếu có data, fallback prevKey tổng cho HN/HCM rows
-                          const useTotal = !hasPrevHnHcm && (row.prevKey === "prev_dkHn" || row.prevKey === "prev_dkHcm" || row.prevKey === "prev_ghHn" || row.prevKey === "prev_ghHcm");
-                          const prevTot = useTotal ? null : months2026.reduce((s, r) => s + ((r as any)[row.prevKey] ?? 0), 0);
-                          const yoy = prevTot && prevTot > 0 ? ((tot - prevTot) / prevTot * 100) : null;
+                          const isSubRow = !hasPrevHnHcm && (row.prevKey === "prev_dkHn" || row.prevKey === "prev_dkHcm" || row.prevKey === "prev_ghHn" || row.prevKey === "prev_ghHcm");
                           return (
                             <tr key={`${row.label}-${row.key}`} className={`${row.bg} border-b ${row.border}`}>
                               <td className={`py-2 px-3 ${row.bold ? "font-semibold" : "font-medium"} ${row.color} ${row.lb}`}>{row.label}</td>
-                              {vals.map((v, i) => (
-                                <td key={i} className={`py-2 px-3 text-right tabular-nums ${row.color}`}>{v.toFixed(3)}</td>
-                              ))}
-                              <td className={`py-2 px-3 text-right font-bold tabular-nums ${row.color}`}>{tot.toFixed(3)}</td>
-                              <td className="py-2 px-3 text-right">
-                                {yoy !== null ? (
-                                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${yoy >= 0 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
-                                    {yoy >= 0 ? "▲" : "▼"}{Math.abs(yoy).toFixed(1)}%
-                                  </span>
-                                ) : <span className="text-slate-700 text-xs">—</span>}
-                              </td>
+                              {cols.map(col => {
+                                const val = sumVal(row.key, col.months);
+                                const prevVal = isSubRow ? null : sumVal(row.prevKey, col.months);
+                                const yoy = prevVal && prevVal > 0 ? ((val - prevVal) / prevVal * 100) : null;
+                                return (
+                                  <td key={col.label} className="py-1.5 px-3 text-right tabular-nums">
+                                    <div className={`${row.color} ${row.bold ? "font-semibold" : ""}`}>
+                                      {val > 0 ? val.toFixed(3) : <span className="text-slate-600">—</span>}
+                                    </div>
+                                    {yoy !== null && (
+                                      <div className={`text-[10px] font-bold mt-0.5 ${yoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                        {yoy >= 0 ? "▲" : "▼"}{Math.abs(yoy).toFixed(1)}%
+                                      </div>
+                                    )}
+                                  </td>
+                                );
+                              })}
                             </tr>
                           );
                         })}
