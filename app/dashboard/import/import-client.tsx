@@ -185,26 +185,40 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
               {/* Tab 2: ĐK Mới & Gia Hạn */}
               {tab === "revenue" && (() => {
                 const is2026 = revenueYear === "2026";
-                const fields2026 = ["dangKyMoi","dkHn","dkHcm","giaHan","ghHn","ghHcm"] as const;
-                const fieldsPrev = ["prev_dk","prev_dkHn","prev_dkHcm","prev_gh","prev_ghHn","prev_ghHcm"] as const;
-                const fields = is2026 ? fields2026 : fieldsPrev;
-                const headers2026 = [
-                  { label: "ĐK Mới", color: "text-sky-400" },
-                  { label: "ĐK HN",  color: "text-sky-300" },
-                  { label: "ĐK HCM", color: "text-sky-300" },
-                  { label: "Gia Hạn",color: "text-purple-400" },
-                  { label: "GH HN",  color: "text-purple-300" },
-                  { label: "GH HCM", color: "text-purple-300" },
+                // Columns config: [field, label, color, isTotal]
+                type ColCfg = { field: string; label: string; color: string; isTotal?: boolean };
+                const cols2026: ColCfg[] = [
+                  { field: "dangKyMoi", label: "ĐK Mới",  color: "text-sky-400",    isTotal: true },
+                  { field: "dkHn",      label: "ĐK HN",   color: "text-sky-300" },
+                  { field: "dkHcm",     label: "ĐK HCM",  color: "text-sky-300" },
+                  { field: "giaHan",    label: "Gia Hạn", color: "text-purple-400", isTotal: true },
+                  { field: "ghHn",      label: "GH HN",   color: "text-purple-300" },
+                  { field: "ghHcm",     label: "GH HCM",  color: "text-purple-300" },
                 ];
-                const headersPrev = [
-                  { label: "ĐK Mới 2025", color: "text-amber-400" },
-                  { label: "ĐK HN 2025",  color: "text-amber-300" },
-                  { label: "ĐK HCM 2025", color: "text-amber-300" },
-                  { label: "Gia Hạn 2025",color: "text-orange-400" },
-                  { label: "GH HN 2025",  color: "text-orange-300" },
-                  { label: "GH HCM 2025", color: "text-orange-300" },
+                const colsPrev: ColCfg[] = [
+                  { field: "prev_dk",    label: "ĐK Mới 2025",  color: "text-amber-400",  isTotal: true },
+                  { field: "prev_dkHn",  label: "ĐK HN 2025",   color: "text-amber-300" },
+                  { field: "prev_dkHcm", label: "ĐK HCM 2025",  color: "text-amber-300" },
+                  { field: "prev_gh",    label: "Gia Hạn 2025",  color: "text-orange-400", isTotal: true },
+                  { field: "prev_ghHn",  label: "GH HN 2025",   color: "text-orange-300" },
+                  { field: "prev_ghHcm", label: "GH HCM 2025",  color: "text-orange-300" },
                 ];
-                const headers = is2026 ? headers2026 : headersPrev;
+                const cols = is2026 ? cols2026 : colsPrev;
+
+                // Auto-compute totals when HN/HCM sub-fields change
+                const handleRevenueChange = (rowIdx: number, field: string, v: number | null) => {
+                  setRevenueData(d => d.map((r, j) => {
+                    if (j !== rowIdx) return r;
+                    const updated = { ...r, [field]: v ?? 0 };
+                    // recompute totals
+                    updated.dangKyMoi = (updated.dkHn ?? 0) + (updated.dkHcm ?? 0);
+                    updated.giaHan    = (updated.ghHn ?? 0) + (updated.ghHcm ?? 0);
+                    (updated as any).prev_dk = ((updated as any).prev_dkHn ?? 0) + ((updated as any).prev_dkHcm ?? 0);
+                    (updated as any).prev_gh = ((updated as any).prev_ghHn ?? 0) + ((updated as any).prev_ghHcm ?? 0);
+                    return updated;
+                  }));
+                };
+
                 return (
                   <div className="space-y-3">
                     {/* Toggle năm */}
@@ -226,8 +240,10 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                       <thead>
                         <tr className="border-b border-slate-700">
                           <th className="text-left py-2 px-3 text-slate-400 font-medium w-12">Tháng</th>
-                          {headers.map(h => (
-                            <th key={h.label} className={`text-right py-2 px-2 ${h.color} font-medium`}>{h.label}</th>
+                          {cols.map(c => (
+                            <th key={c.field} className={`text-right py-2 px-2 ${c.color} font-medium`}>
+                              {c.label}{c.isTotal && <span className="ml-1 text-[10px] opacity-50">(tự tính)</span>}
+                            </th>
                           ))}
                         </tr>
                       </thead>
@@ -235,9 +251,15 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                         {revenueData.map((row, i) => (
                           <tr key={row.month} className={`border-b border-slate-800 hover:bg-slate-800/30 ${!is2026 ? "bg-amber-950/10" : ""}`}>
                             <td className="py-1.5 px-3 text-slate-300 font-semibold">{row.month}</td>
-                            {fields.map(field => (
-                              <td key={field} className="py-1 px-2">
-                                <NumInput value={(row as any)[field] ?? 0} onChange={v => setRevenueData(d => d.map((r, j) => j === i ? { ...r, [field]: v ?? 0 } : r))} />
+                            {cols.map(c => (
+                              <td key={c.field} className="py-1 px-2">
+                                {c.isTotal ? (
+                                  <div className="w-full bg-slate-800/60 border border-slate-600/40 rounded px-2 py-1 text-right text-slate-300 font-semibold">
+                                    {((row as any)[c.field] ?? 0).toLocaleString()}
+                                  </div>
+                                ) : (
+                                  <NumInput value={(row as any)[c.field] ?? 0} onChange={v => handleRevenueChange(i, c.field, v)} />
+                                )}
                               </td>
                             ))}
                           </tr>
