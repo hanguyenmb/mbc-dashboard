@@ -711,7 +711,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                               {cols.map(col => {
                                 const val = sumVal(row.key, col.months);
                                 const prevVal = isSubRow ? null : sumVal(row.prevKey, col.months);
-                                const yoy = prevVal && prevVal > 0 ? ((val - prevVal) / prevVal * 100) : null;
+                                const yoy = (val > 0 && prevVal && prevVal > 0) ? ((val - prevVal) / prevVal * 100) : null;
                                 return (
                                   <td key={col.label} className="py-1.5 px-3 text-right tabular-nums">
                                     <div className={`${row.color} ${row.bold ? "font-semibold" : ""}`}>
