@@ -169,13 +169,20 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
   // Ranking chart data
   const rankingData = [...displayed]
     .sort((a, b) => b.revenue - a.revenue)
-    .map(t => ({
-      name: t.teamName,
-      revenue: t.revenue,
-      target: t.target,
-      pct: pct(t.revenue, t.target),
-      color: t.region === "HN" ? "#3b82f6" : "#f97316",
-    }));
+    .map(t => {
+      const prev = prevYearTeamMap[t.teamId];
+      const svcTotal = SVC_KEYS.reduce((sum, s) => sum + ((t as any)[s.key] ?? 0), 0);
+      const prevSvcTotal = SVC_KEYS.reduce((sum, s) => sum + ((prev as any)?.[s.key] ?? 0), 0);
+      const dkmYoy = (svcTotal > 0 && prevSvcTotal > 0) ? ((svcTotal - prevSvcTotal) / prevSvcTotal * 100) : null;
+      return {
+        name: t.teamName,
+        revenue: t.revenue,
+        target: t.target,
+        pct: pct(t.revenue, t.target),
+        dkmYoy,
+        color: t.region === "HN" ? "#3b82f6" : "#f97316",
+      };
+    });
 
   // Heatmap: team × service
   const hasData = allTeams.some(t => t.revenue > 0);
@@ -440,7 +447,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
               <div className="text-center text-slate-500 py-10 text-sm">Chưa có dữ liệu</div>
             ) : (
               <ResponsiveContainer width="100%" height={Math.max(200, rankingData.length * 52)}>
-                <BarChart data={rankingData} layout="vertical" margin={{ left: 16, right: 60 }}>
+                <BarChart data={rankingData} layout="vertical" margin={{ left: 16, right: hasPrevYearTeamData ? 120 : 60 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
                   <XAxis type="number" tick={{ fill: "#94a3b8", fontSize: 11 }} tickFormatter={v => `${v.toLocaleString()}M`} />
                   <YAxis type="category" dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} width={90} />
@@ -451,6 +458,15 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                       const color = value >= 100 ? "#4ade80" : "#f87171";
                       return <text x={x + width + 8} y={y + height / 2 + 4} fill={color} fontSize={11} fontWeight={600}>{value}%</text>;
                     }} />
+                    {hasPrevYearTeamData && (
+                      <LabelList dataKey="dkmYoy" position="right" content={(props: any) => {
+                        const { x, y, width, height, value } = props;
+                        if (value == null) return null;
+                        const color = value >= 0 ? "#34d399" : "#f87171";
+                        const sign = value >= 0 ? "▲" : "▼";
+                        return <text x={x + width + 65} y={y + height / 2 + 4} fill={color} fontSize={10} fontWeight={700}>{sign}{Math.abs(value).toFixed(1)}%</text>;
+                      }} />
+                    )}
                     {rankingData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Bar>
                 </BarChart>
@@ -492,7 +508,6 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   ))}
                   <th className="text-right py-2 px-3 text-slate-400 font-medium">Tổng ĐKM</th>
                   <th className="text-right py-2 px-3 text-slate-400 font-medium">Tỉ lệ ĐKM/DS</th>
-                  {hasPrevYearTeamData && <th className="text-right py-2 px-3 text-amber-400/80 font-medium">Tăng trưởng CK</th>}
                 </tr>
               </thead>
               <tbody>
@@ -505,7 +520,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     const svcTotal = SVC_KEYS.reduce((sum, s) => sum + ((team as any)[s.key] ?? 0), 0);
                     const ratio = team.revenue > 0 ? Math.round((svcTotal / team.revenue) * 100) : 0;
                     const prev = prevYearTeamMap[team.teamId];
-                    const yoy = (team.revenue > 0 && prev && prev.revenue > 0) ? ((team.revenue - prev.revenue) / prev.revenue * 100) : null;
+                    const prevSvcTotal = SVC_KEYS.reduce((sum, s) => sum + ((prev as any)?.[s.key] ?? 0), 0);
+                    const dkmYoy = (svcTotal > 0 && prevSvcTotal > 0) ? ((svcTotal - prevSvcTotal) / prevSvcTotal * 100) : null;
                     return (
                       <tr key={team.teamId} className="border-b border-slate-800 hover:bg-slate-800/30">
                         <td className="py-2 px-3 text-white font-medium">{team.teamName}</td>
@@ -534,7 +550,14 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                             </td>
                           );
                         })}
-                        <td className="py-2 px-3 text-right font-semibold text-white">{svcTotal > 0 ? svcTotal.toLocaleString() : "—"}</td>
+                        <td className="py-2 px-3 text-right font-semibold text-white">
+                          <div>{svcTotal > 0 ? svcTotal.toLocaleString() : "—"}</div>
+                          {hasPrevYearTeamData && dkmYoy !== null && (
+                            <div className={`text-[10px] font-bold mt-0.5 ${dkmYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                              {dkmYoy >= 0 ? "▲" : "▼"}{Math.abs(dkmYoy).toFixed(1)}%
+                            </div>
+                          )}
+                        </td>
                         <td className="py-2 px-3 text-right">
                           {team.revenue > 0 ? (
                             <span className={`font-bold ${ratio >= benchmark ? "text-green-400" : "text-red-400"}`}>
@@ -545,15 +568,6 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                             </span>
                           ) : "—"}
                         </td>
-                        {hasPrevYearTeamData && (
-                          <td className="py-2 px-3 text-right">
-                            {yoy !== null ? (
-                              <span className={`font-bold text-xs px-1.5 py-0.5 rounded ${yoy >= 0 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
-                                {yoy >= 0 ? "▲" : "▼"}{Math.abs(yoy).toFixed(1)}%
-                              </span>
-                            ) : <span className="text-slate-600">—</span>}
-                          </td>
-                        )}
                       </tr>
                     );
                   });
@@ -564,9 +578,9 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   if (regTeams.length === 0) return null;
                   const regDs = regTeams.reduce((s, t) => s + t.revenue, 0);
                   const regSvc = regTeams.reduce((sum, t) => sum + SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0), 0);
-                  const prevRegDs = regTeams.reduce((s, t) => s + (prevYearTeamMap[t.teamId]?.revenue ?? 0), 0);
+                  const prevRegSvc = regTeams.reduce((sum, t) => sum + SVC_KEYS.reduce((s, sk) => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0), 0);
                   const regRatio = regDs > 0 ? Math.round((regSvc / regDs) * 100) : 0;
-                  const regYoy = (regDs > 0 && prevRegDs > 0) ? ((regDs - prevRegDs) / prevRegDs * 100) : null;
+                  const regDkmYoy = (regSvc > 0 && prevRegSvc > 0) ? ((regSvc - prevRegSvc) / prevRegSvc * 100) : null;
                   const isTotal = reg === "all";
                   const labelColor = reg === "HN" ? "text-blue-300" : reg === "HCM" ? "text-orange-300" : "text-white";
                   const rowBg = reg === "HN" ? "bg-blue-900/20 border-blue-500/30" : reg === "HCM" ? "bg-orange-900/20 border-orange-500/30" : "bg-slate-800/50 border-slate-600";
@@ -590,7 +604,14 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                           </td>
                         );
                       })}
-                      <td className={`py-2 px-3 text-right text-xs font-bold ${labelColor}`}>{regSvc > 0 ? regSvc.toLocaleString() : "—"}</td>
+                      <td className={`py-2 px-3 text-right text-xs font-bold ${labelColor}`}>
+                        <div>{regSvc > 0 ? regSvc.toLocaleString() : "—"}</div>
+                        {hasPrevYearTeamData && regDkmYoy !== null && (
+                          <div className={`text-[10px] font-bold mt-0.5 ${regDkmYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                            {regDkmYoy >= 0 ? "▲" : "▼"}{Math.abs(regDkmYoy).toFixed(1)}%
+                          </div>
+                        )}
+                      </td>
                       <td className="py-2 px-3 text-right text-xs font-bold">
                         <span className={regRatio >= benchmark ? "text-green-400" : "text-red-400"}>
                           {regDs > 0 ? `${regRatio}%` : "—"}
@@ -599,15 +620,6 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                           </span>
                         </span>
                       </td>
-                      {hasPrevYearTeamData && (
-                        <td className="py-2 px-3 text-right text-xs font-bold">
-                          {regYoy !== null ? (
-                            <span className={`px-1.5 py-0.5 rounded ${regYoy >= 0 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
-                              {regYoy >= 0 ? "▲" : "▼"}{Math.abs(regYoy).toFixed(1)}%
-                            </span>
-                          ) : <span className="text-slate-600">—</span>}
-                        </td>
-                      )}
                     </tr>
                   );
                 })}
