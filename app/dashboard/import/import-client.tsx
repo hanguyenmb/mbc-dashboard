@@ -88,6 +88,17 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Tự đồng bộ HN/HCM trong monthlyData từ revenueData (HN = dkHn+ghHn, HCM = dkHcm+ghHcm)
+  useEffect(() => {
+    setMonthlyData(prev => prev.map(row => {
+      const rev = revenueData.find(r => r.month === row.month);
+      if (!rev) return row;
+      const hn  = ((rev as any).dkHn  ?? 0) + ((rev as any).ghHn  ?? 0);
+      const hcm = ((rev as any).dkHcm ?? 0) + ((rev as any).ghHcm ?? 0);
+      return { ...row, hn, hcm };
+    }));
+  }, [revenueData]);
+
   async function save() {
     setSaving(true);
     try {
@@ -156,8 +167,8 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                   <thead>
                     <tr className="border-b border-slate-700">
                       <th className="text-left py-2 px-3 text-slate-400 font-medium w-12">Tháng</th>
-                      <th className="text-right py-2 px-2 text-slate-400 font-medium">HN (tỷ)</th>
-                      <th className="text-right py-2 px-2 text-slate-400 font-medium">HCM (tỷ)</th>
+                      <th className="text-right py-2 px-2 text-sky-400 font-medium">HN (tỷ) <span className="text-[10px] opacity-50">(tự tính)</span></th>
+                      <th className="text-right py-2 px-2 text-sky-400 font-medium">HCM (tỷ) <span className="text-[10px] opacity-50">(tự tính)</span></th>
                       <th className="text-right py-2 px-2 text-slate-400 font-medium">Cùng kỳ 2025</th>
                       <th className="text-right py-2 px-2 text-blue-400/70 font-medium">HN 2025 (tỷ)</th>
                       <th className="text-right py-2 px-2 text-orange-400/70 font-medium">HCM 2025 (tỷ)</th>
@@ -169,8 +180,16 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                     {monthlyData.map((row, i) => (
                       <tr key={row.month} className="border-b border-slate-800 hover:bg-slate-800/30">
                         <td className="py-1.5 px-3 text-slate-300 font-semibold">{row.month}</td>
-                        <td className="py-1 px-2"><NumInput value={row.hn ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hn: v } as any : r))} /></td>
-                        <td className="py-1 px-2"><NumInput value={row.hcm ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hcm: v } as any : r))} /></td>
+                        <td className="py-1 px-2">
+                          <div className="w-full bg-slate-800/60 border border-slate-600/40 rounded px-2 py-1 text-right text-sky-300 font-semibold">
+                            {(row.hn ?? 0).toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="py-1 px-2">
+                          <div className="w-full bg-slate-800/60 border border-slate-600/40 rounded px-2 py-1 text-right text-sky-300 font-semibold">
+                            {(row.hcm ?? 0).toLocaleString()}
+                          </div>
+                        </td>
                         <td className="py-1 px-2"><NumInput value={row.cumKy} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, cumKy: v ?? 0 } : r))} /></td>
                         <td className="py-1 px-2"><NumInput value={(row as any).hnPrev ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hnPrev: v } as any : r))} /></td>
                         <td className="py-1 px-2"><NumInput value={(row as any).hcmPrev ?? null} onChange={v => setMonthlyData(d => d.map((r, j) => j === i ? { ...r, hcmPrev: v } as any : r))} /></td>
