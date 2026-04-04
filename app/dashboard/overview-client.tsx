@@ -83,9 +83,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   const [showAI, setShowAI] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [view, setView] = useState<"thang" | "quy">("thang");
-  const dataMonths = monthlyData.filter(m => m.hn != null);
-  const realMonthIdx = Math.min(new Date().getMonth(), dataMonths.length - 1);
-  const [selectedMonthIdx, setSelectedMonthIdx] = useState(realMonthIdx);
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState(new Date().getMonth());
   const [selectedQuarter, setSelectedQuarter] = useState(1);
   const [openDropdown, setOpenDropdown] = useState<"thang" | "quy" | null>(null);
   const [svcView, setSvcView] = useState<"stacked" | "grouped">("stacked");
