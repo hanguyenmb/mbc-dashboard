@@ -33,6 +33,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
   const [teamPrevData, setTeamPrevData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 })) })));
   const [teamMonth, setTeamMonth] = useState("T3");
   const [teamYear, setTeamYear] = useState<"2026" | "prev">("2026");
+  const [revenueYear, setRevenueYear] = useState<"2026" | "prev">("2026");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -182,35 +183,70 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
               )}
 
               {/* Tab 2: ĐK Mới & Gia Hạn */}
-              {tab === "revenue" && (
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-700">
-                      <th className="text-left py-2 px-3 text-slate-400 font-medium w-12">Tháng</th>
-                      <th className="text-right py-2 px-2 text-sky-400 font-medium">ĐK Mới</th>
-                      <th className="text-right py-2 px-2 text-sky-300 font-medium">ĐK HN</th>
-                      <th className="text-right py-2 px-2 text-sky-300 font-medium">ĐK HCM</th>
-                      <th className="text-right py-2 px-2 text-purple-400 font-medium">Gia Hạn</th>
-                      <th className="text-right py-2 px-2 text-purple-300 font-medium">GH HN</th>
-                      <th className="text-right py-2 px-2 text-purple-300 font-medium">GH HCM</th>
-                      <th className="text-right py-2 px-2 text-slate-400 font-medium">2025 ĐK</th>
-                      <th className="text-right py-2 px-2 text-slate-400 font-medium">2025 GH</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {revenueData.map((row, i) => (
-                      <tr key={row.month} className="border-b border-slate-800 hover:bg-slate-800/30">
-                        <td className="py-1.5 px-3 text-slate-300 font-semibold">{row.month}</td>
-                        {(["dangKyMoi","dkHn","dkHcm","giaHan","ghHn","ghHcm","prev_dk","prev_gh"] as const).map(field => (
-                          <td key={field} className="py-1 px-2">
-                            <NumInput value={(row as any)[field]} onChange={v => setRevenueData(d => d.map((r, j) => j === i ? { ...r, [field]: v ?? 0 } : r))} />
-                          </td>
+              {tab === "revenue" && (() => {
+                const is2026 = revenueYear === "2026";
+                const fields2026 = ["dangKyMoi","dkHn","dkHcm","giaHan","ghHn","ghHcm"] as const;
+                const fieldsPrev = ["prev_dk","prev_dkHn","prev_dkHcm","prev_gh","prev_ghHn","prev_ghHcm"] as const;
+                const fields = is2026 ? fields2026 : fieldsPrev;
+                const headers2026 = [
+                  { label: "ĐK Mới", color: "text-sky-400" },
+                  { label: "ĐK HN",  color: "text-sky-300" },
+                  { label: "ĐK HCM", color: "text-sky-300" },
+                  { label: "Gia Hạn",color: "text-purple-400" },
+                  { label: "GH HN",  color: "text-purple-300" },
+                  { label: "GH HCM", color: "text-purple-300" },
+                ];
+                const headersPrev = [
+                  { label: "ĐK Mới 2025", color: "text-amber-400" },
+                  { label: "ĐK HN 2025",  color: "text-amber-300" },
+                  { label: "ĐK HCM 2025", color: "text-amber-300" },
+                  { label: "Gia Hạn 2025",color: "text-orange-400" },
+                  { label: "GH HN 2025",  color: "text-orange-300" },
+                  { label: "GH HCM 2025", color: "text-orange-300" },
+                ];
+                const headers = is2026 ? headers2026 : headersPrev;
+                return (
+                  <div className="space-y-3">
+                    {/* Toggle năm */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">Năm nhập:</span>
+                      <div className="flex bg-slate-800 rounded-lg p-0.5 gap-0.5">
+                        <button onClick={() => setRevenueYear("2026")}
+                          className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${is2026 ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"}`}>
+                          2026
+                        </button>
+                        <button onClick={() => setRevenueYear("prev")}
+                          className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${!is2026 ? "bg-amber-600 text-white" : "text-amber-400/70 hover:text-amber-300"}`}>
+                          CK 2025
+                        </button>
+                      </div>
+                      {!is2026 && <span className="text-xs text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/30">Nhập ĐK Mới & Gia Hạn năm 2025 để tính tăng trưởng</span>}
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-700">
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium w-12">Tháng</th>
+                          {headers.map(h => (
+                            <th key={h.label} className={`text-right py-2 px-2 ${h.color} font-medium`}>{h.label}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {revenueData.map((row, i) => (
+                          <tr key={row.month} className={`border-b border-slate-800 hover:bg-slate-800/30 ${!is2026 ? "bg-amber-950/10" : ""}`}>
+                            <td className="py-1.5 px-3 text-slate-300 font-semibold">{row.month}</td>
+                            {fields.map(field => (
+                              <td key={field} className="py-1 px-2">
+                                <NumInput value={(row as any)[field] ?? 0} onChange={v => setRevenueData(d => d.map((r, j) => j === i ? { ...r, [field]: v ?? 0 } : r))} />
+                              </td>
+                            ))}
+                          </tr>
                         ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
 
               {/* Tab 3: Doanh Số Team */}
               {tab === "team" && (() => {
