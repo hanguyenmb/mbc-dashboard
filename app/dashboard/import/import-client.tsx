@@ -20,7 +20,7 @@ function NumInput({
       value={value ?? ""}
       placeholder="—"
       onChange={(e) => onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
-      className={`w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-blue-500 ${className}`}
+      className={`w-full min-w-[72px] bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-blue-500 ${className}`}
     />
   );
 }
@@ -396,21 +396,21 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           : "Tên team & vùng áp dụng cho tất cả tháng · Doanh số nhập riêng từng tháng · Cùng kỳ 2025 nhập ở tab Doanh Số Tháng"}
                     </p>
 
-                    <table className="w-full text-xs">
+                    <table className="text-xs" style={{ minWidth: "900px", width: "100%" }}>
                       <thead>
                         <tr className="border-b border-slate-700">
-                          <th className="text-left py-2 px-3 text-slate-400 sticky left-0 z-10 bg-slate-900">Tên Team</th>
-                          <th className="text-center py-2 px-2 text-slate-400">Vùng</th>
-                          <th className="text-right py-2 px-2 text-slate-400">Tổng DS</th>
-                          <th className="text-right py-2 px-2 text-slate-400">Mục tiêu</th>
-                          <th className="text-right py-2 px-2 text-teal-400">Số KH</th>
-                          <th className="text-right py-2 px-2 text-blue-400">Host/Mail</th>
-                          <th className="text-right py-2 px-2 text-green-400">MS/GWS</th>
-                          <th className="text-right py-2 px-2 text-amber-400">Tên miền</th>
-                          <th className="text-right py-2 px-2 text-purple-400">Transfer</th>
-                          <th className="text-right py-2 px-2 text-red-400">Sale AI</th>
-                          <th className="text-right py-2 px-2 text-cyan-400">Elastic</th>
-                          {!isQuarter && !isPrev && <th className="py-2 px-2"></th>}
+                          <th className="text-left py-2 px-3 text-slate-400 sticky left-0 z-10 bg-slate-900 w-32">Tên Team</th>
+                          <th className="text-center py-2 px-2 text-slate-400 w-14">Vùng</th>
+                          <th className="text-right py-2 px-2 text-slate-400 w-24">Tổng DS</th>
+                          <th className="text-right py-2 px-2 text-slate-400 w-24">Mục tiêu</th>
+                          <th className="text-right py-2 px-2 text-teal-400 w-20">Số KH</th>
+                          <th className="text-right py-2 px-2 text-blue-400 w-24">Host/Mail</th>
+                          <th className="text-right py-2 px-2 text-green-400 w-24">MS/GWS</th>
+                          <th className="text-right py-2 px-2 text-amber-400 w-24">Tên miền</th>
+                          <th className="text-right py-2 px-2 text-purple-400 w-24">Transfer</th>
+                          <th className="text-right py-2 px-2 text-red-400 w-24">Sale AI</th>
+                          <th className="text-right py-2 px-2 text-cyan-400 w-24">Elastic</th>
+                          {!isQuarter && !isPrev && <th className="py-2 px-2 w-8"></th>}
                         </tr>
                       </thead>
                       <tbody>
