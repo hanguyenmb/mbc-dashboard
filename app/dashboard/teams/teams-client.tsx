@@ -553,7 +553,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                               style={{ color: `rgba(${r},${g},${b},${0.45 + intensity * 0.55})` }}>
                               <div className="text-sm font-semibold">{val > 0 ? val.toLocaleString() : "—"}</div>
                               {hasPrevYearTeamData && svcYoy !== null && (
-                                <div className={`text-[9px] font-medium ${svcYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                <div className={`text-[11px] font-medium ${svcYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
                                   {svcYoy >= 0 ? "▲" : "▼"}{Math.abs(svcYoy).toFixed(0)}%
                                 </div>
                               )}
@@ -563,7 +563,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                         <td className="py-2 px-3 text-right font-semibold text-white">
                           <div className="text-sm">{svcTotal > 0 ? svcTotal.toLocaleString() : "—"}</div>
                           {hasPrevYearTeamData && dkmYoy !== null && (
-                            <div className={`text-[9px] font-medium mt-0.5 ${dkmYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                            <div className={`text-[11px] font-medium mt-0.5 ${dkmYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
                               {dkmYoy >= 0 ? "▲" : "▼"}{Math.abs(dkmYoy).toFixed(1)}%
                             </div>
                           )}
@@ -607,7 +607,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                           <td key={s.key} className={`py-2 px-3 text-right font-semibold ${labelColor}`}>
                             <div className="text-sm">{colTotal > 0 ? colTotal.toLocaleString() : "—"}</div>
                             {hasPrevYearTeamData && colYoy !== null && (
-                              <div className={`text-[9px] font-medium ${colYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                              <div className={`text-[11px] font-medium ${colYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
                                 {colYoy >= 0 ? "▲" : "▼"}{Math.abs(colYoy).toFixed(0)}%
                               </div>
                             )}
@@ -617,7 +617,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                       <td className={`py-2 px-3 text-right font-bold ${labelColor}`}>
                         <div className="text-sm">{regSvc > 0 ? regSvc.toLocaleString() : "—"}</div>
                         {hasPrevYearTeamData && regDkmYoy !== null && (
-                          <div className={`text-[9px] font-medium mt-0.5 ${regDkmYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                          <div className={`text-[11px] font-medium mt-0.5 ${regDkmYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
                             {regDkmYoy >= 0 ? "▲" : "▼"}{Math.abs(regDkmYoy).toFixed(1)}%
                           </div>
                         )}
