@@ -172,15 +172,13 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
     .sort((a, b) => b.revenue - a.revenue)
     .map(t => {
       const prev = prevYearTeamMap[t.teamId];
-      const svcTotal = SVC_KEYS.reduce((sum, s) => sum + ((t as any)[s.key] ?? 0), 0);
-      const prevSvcTotal = SVC_KEYS.reduce((sum, s) => sum + ((prev as any)?.[s.key] ?? 0), 0);
-      const dkmYoy = (svcTotal > 0 && prevSvcTotal > 0) ? ((svcTotal - prevSvcTotal) / prevSvcTotal * 100) : null;
+      const dsYoy = (t.revenue > 0 && prev && prev.revenue > 0) ? ((t.revenue - prev.revenue) / prev.revenue * 100) : null;
       return {
         name: t.teamName,
         revenue: t.revenue,
         target: t.target,
         pct: pct(t.revenue, t.target),
-        dkmYoy,
+        dkmYoy: dsYoy,
         color: t.region === "HN" ? "#3b82f6" : "#f97316",
       };
     });
