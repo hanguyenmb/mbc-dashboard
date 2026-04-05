@@ -462,7 +462,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                         <LabelList dataKey="pct" position="right" content={(props: any) => {
                           const { y, height, value, viewBox } = props;
                           const chartRightEdge = (viewBox?.width ?? 0) + (viewBox?.x ?? 0);
-                          const x = chartRightEdge + (hasPrevYearTeamData ? YOY_COL_W + 4 : 4);
+                          const x = chartRightEdge + 4;
                           const color = value >= 100 ? "#4ade80" : "#f87171";
                           return <text x={x} y={y + height / 2 + 4} fill={color} fontSize={11} fontWeight={600} textAnchor="start">{value}%</text>;
                         }} />
@@ -471,7 +471,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                             const { y, height, value, viewBox } = props;
                             if (value == null) return null;
                             const chartRightEdge = (viewBox?.width ?? 0) + (viewBox?.x ?? 0);
-                            const x = chartRightEdge + 4;
+                            const x = chartRightEdge + PCT_COL_W + 4;
                             const color = value >= 0 ? "#34d399" : "#f87171";
                             const sign = value >= 0 ? "▲" : "▼";
                             return <text x={x} y={y + height / 2 + 4} fill={color} fontSize={10} fontWeight={700} textAnchor="start">{sign}{Math.abs(value).toFixed(1)}%</text>;
