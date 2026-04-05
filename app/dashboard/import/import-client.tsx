@@ -31,7 +31,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
   const [revenueData, setRevenueData] = useState<typeof REVENUE_TYPE>([...REVENUE_TYPE]);
   const [teamData, setTeamData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t })) })));
   const [teamPrevData, setTeamPrevData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 })) })));
-  const [teamMonth, setTeamMonth] = useState("T3");
+  const [teamMonth, setTeamMonth] = useState(`T${new Date().getMonth() + 1}`);
   const [teamYear, setTeamYear] = useState<"2026" | "prev">("2026");
   const [revenueYear, setRevenueYear] = useState<"2026" | "prev">("2026");
   const [loading, setLoading] = useState(true);
