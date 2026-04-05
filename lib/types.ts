@@ -97,8 +97,9 @@ export interface TeamServiceRecord {
   teamId: string;
   teamName: string;
   region: "HN" | "HCM";
-  revenue: number;   // tổng DS (triệu VNĐ)
-  target: number;    // mục tiêu tổng
+  revenue: number;       // tổng DS (triệu VNĐ)
+  target: number;        // mục tiêu tổng
+  customerCount: number; // số lượng khách hàng
   hostMail: number;
   msgws: number;
   tenMien: number;

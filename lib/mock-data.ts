@@ -215,12 +215,12 @@ export const SOURCE_DATA = [
 
 // ── TEAM SERVICE BREAKDOWN (triệu VNĐ) ──────────────────────────────────────
 const _DEFAULT_TEAMS: import("./types").TeamServiceRecord[] = [
-  { teamId: "hn1",  teamName: "Team HN 1",  region: "HN",  revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
-  { teamId: "hn2",  teamName: "Team HN 2",  region: "HN",  revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
-  { teamId: "hn3",  teamName: "Team HN 3",  region: "HN",  revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
-  { teamId: "hcm1", teamName: "Team HCM 1", region: "HCM", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
-  { teamId: "hcm2", teamName: "Team HCM 2", region: "HCM", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
-  { teamId: "hcm3", teamName: "Team HCM 3", region: "HCM", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hn1",  teamName: "Team HN 1",  region: "HN",  revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hn2",  teamName: "Team HN 2",  region: "HN",  revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hn3",  teamName: "Team HN 3",  region: "HN",  revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hcm1", teamName: "Team HCM 1", region: "HCM", revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hcm2", teamName: "Team HCM 2", region: "HCM", revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
+  { teamId: "hcm3", teamName: "Team HCM 3", region: "HCM", revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 },
 ];
 export const TEAM_SERVICE_DATA: import("./types").TeamMonthlyData =
   Array.from({ length: 12 }, (_, i) => ({

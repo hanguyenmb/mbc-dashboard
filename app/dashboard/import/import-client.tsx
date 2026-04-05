@@ -30,7 +30,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
   const [monthlyData, setMonthlyData] = useState<typeof MONTHLY_DATA>([...MONTHLY_DATA]);
   const [revenueData, setRevenueData] = useState<typeof REVENUE_TYPE>([...REVENUE_TYPE]);
   const [teamData, setTeamData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t })) })));
-  const [teamPrevData, setTeamPrevData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 })) })));
+  const [teamPrevData, setTeamPrevData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 })) })));
   const [teamMonth, setTeamMonth] = useState(`T${new Date().getMonth() + 1}`);
   const [teamYear, setTeamYear] = useState<"2026" | "prev">("2026");
   const [revenueYear, setRevenueYear] = useState<"2026" | "prev">("2026");
@@ -55,7 +55,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
           const oldTeams = r4.data as TeamServiceRecord[];
           currentTeamData = TEAM_SERVICE_DATA.map(m => ({
             ...m,
-            teams: oldTeams.map(t => ({ ...t, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 })),
+            teams: oldTeams.map(t => ({ ...t, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 })),
           }));
         } else {
           currentTeamData = r4.data as TeamMonthlyData;
@@ -76,7 +76,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
             const pt = prevMonth?.teams.find(t => t.teamId === ct.teamId);
             return pt
               ? { ...pt, teamName: ct.teamName, region: ct.region }
-              : { ...ct, revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
+              : { ...ct, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
           }),
         };
       });
@@ -320,7 +320,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
 
                 const addTeam = () => {
                   if (isPrev) return;
-                  const newTeam: TeamServiceRecord = { teamId: `team_${Date.now()}`, teamName: "Team mới", region: "HN", revenue: 0, target: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
+                  const newTeam: TeamServiceRecord = { teamId: `team_${Date.now()}`, teamName: "Team mới", region: "HN", revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
                   setTeamData(d => d.map(m => ({ ...m, teams: [...m.teams, { ...newTeam }] })));
                 };
 
@@ -403,6 +403,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           <th className="text-center py-2 px-2 text-slate-400">Vùng</th>
                           <th className="text-right py-2 px-2 text-slate-400">Tổng DS</th>
                           <th className="text-right py-2 px-2 text-slate-400">Mục tiêu</th>
+                          <th className="text-right py-2 px-2 text-teal-400">Số KH</th>
                           <th className="text-right py-2 px-2 text-blue-400">Host/Mail</th>
                           <th className="text-right py-2 px-2 text-green-400">MS/GWS</th>
                           <th className="text-right py-2 px-2 text-amber-400">Tên miền</th>
@@ -424,13 +425,26 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                             <td className="py-1 px-2 text-center">
                               <span className={row.region === "HN" ? "text-blue-400" : "text-orange-400"}>{row.region}</span>
                             </td>
-                            {SVC_FIELDS.map(field => (
-                              <td key={field} className="py-1 px-2">
-                                {isQuarter
-                                  ? <span className="block text-right text-slate-300 tabular-nums pr-2">{((row as any)[field] ?? 0).toFixed(1)}</span>
-                                  : <NumInput value={(row as any)[field]} onChange={v => updateField(i, field, v)} />}
-                              </td>
-                            ))}
+                            {SVC_FIELDS.map(field => {
+                              // Insert Số KH column after "target"
+                              const khCell = field === "hostMail" ? (
+                                <td key="customerCount" className="py-1 px-2">
+                                  {isQuarter
+                                    ? <span className="block text-right text-teal-300 tabular-nums pr-2">{row.customerCount ?? 0}</span>
+                                    : <NumInput value={row.customerCount ?? 0} onChange={v => updateField(i, "customerCount", v)} />}
+                                </td>
+                              ) : null;
+                              return (
+                                <>
+                                  {khCell}
+                                  <td key={field} className="py-1 px-2">
+                                    {isQuarter
+                                      ? <span className="block text-right text-slate-300 tabular-nums pr-2">{((row as any)[field] ?? 0).toFixed(1)}</span>
+                                      : <NumInput value={(row as any)[field]} onChange={v => updateField(i, field, v)} />}
+                                  </td>
+                                </>
+                              );
+                            })}
                             {!isQuarter && !isPrev && (
                               <td className="py-1 px-2">
                                 <button onClick={() => deleteTeam(row.teamId)} className="text-slate-600 hover:text-red-400 transition-colors">✕</button>
@@ -443,31 +457,28 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                         <tr className="border-t-2 border-blue-500/40 bg-blue-900/20">
                           <td className="py-2 px-3 font-bold text-blue-300">HN</td>
                           <td className="py-2 px-2 text-center text-blue-400 text-xs">—</td>
-                          {SVC_FIELDS.map(f => (
-                            <td key={f} className="py-2 px-2 text-right font-semibold text-blue-300 tabular-nums">
-                              {(hnTotals[f] as number).toFixed(1)}
-                            </td>
-                          ))}
+                          {SVC_FIELDS.map(f => (<>
+                            {f === "hostMail" && <td key="kh-hn" className="py-2 px-2 text-right font-semibold text-teal-300 tabular-nums">{currentTeams.filter(t=>t.region==="HN").reduce((s,t)=>s+(t.customerCount??0),0)}</td>}
+                            <td key={f} className="py-2 px-2 text-right font-semibold text-blue-300 tabular-nums">{(hnTotals[f] as number).toFixed(1)}</td>
+                          </>))}
                           {!isQuarter && !isPrev && <td />}
                         </tr>
                         <tr className="border-t border-orange-500/40 bg-orange-900/20">
                           <td className="py-2 px-3 font-bold text-orange-300">HCM</td>
                           <td className="py-2 px-2 text-center text-orange-400 text-xs">—</td>
-                          {SVC_FIELDS.map(f => (
-                            <td key={f} className="py-2 px-2 text-right font-semibold text-orange-300 tabular-nums">
-                              {(hcmTotals[f] as number).toFixed(1)}
-                            </td>
-                          ))}
+                          {SVC_FIELDS.map(f => (<>
+                            {f === "hostMail" && <td key="kh-hcm" className="py-2 px-2 text-right font-semibold text-teal-300 tabular-nums">{currentTeams.filter(t=>t.region==="HCM").reduce((s,t)=>s+(t.customerCount??0),0)}</td>}
+                            <td key={f} className="py-2 px-2 text-right font-semibold text-orange-300 tabular-nums">{(hcmTotals[f] as number).toFixed(1)}</td>
+                          </>))}
                           {!isQuarter && !isPrev && <td />}
                         </tr>
                         <tr className="border-t-2 border-slate-500 bg-slate-700/40">
                           <td className="py-2.5 px-3 font-bold text-white text-sm">TỔNG</td>
                           <td className="py-2 px-2 text-center text-slate-400 text-xs">—</td>
-                          {SVC_FIELDS.map(f => (
-                            <td key={f} className="py-2.5 px-2 text-right font-bold text-white tabular-nums">
-                              {(totals[f] as number).toFixed(1)}
-                            </td>
-                          ))}
+                          {SVC_FIELDS.map(f => (<>
+                            {f === "hostMail" && <td key="kh-total" className="py-2.5 px-2 text-right font-bold text-teal-300 tabular-nums">{currentTeams.reduce((s,t)=>s+(t.customerCount??0),0)}</td>}
+                            <td key={f} className="py-2.5 px-2 text-right font-bold text-white tabular-nums">{(totals[f] as number).toFixed(1)}</td>
+                          </>))}
                           {!isQuarter && !isPrev && <td />}
                         </tr>
                       </tfoot>
