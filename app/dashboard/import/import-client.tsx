@@ -399,7 +399,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-slate-700">
-                          <th className="text-left py-2 px-3 text-slate-400">Tên Team</th>
+                          <th className="text-left py-2 px-3 text-slate-400 sticky left-0 z-10 bg-slate-900">Tên Team</th>
                           <th className="text-center py-2 px-2 text-slate-400">Vùng</th>
                           <th className="text-right py-2 px-2 text-slate-400">Tổng DS</th>
                           <th className="text-right py-2 px-2 text-slate-400">Mục tiêu</th>
@@ -416,7 +416,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                       <tbody>
                         {currentTeams.map((row, i) => (
                           <tr key={row.teamId} className={`border-b border-slate-800 hover:bg-slate-800/30 ${isPrev ? "bg-amber-950/10" : ""}`}>
-                            <td className="py-1 px-3">
+                            <td className={`py-1 px-3 sticky left-0 z-10 ${isPrev ? "bg-amber-950/20" : "bg-slate-900"}`}>
                               {isQuarter || isPrev
                                 ? <span className="text-slate-200">{row.teamName}</span>
                                 : <input value={row.teamName} onChange={e => updateName(row.teamId, e.target.value)}
@@ -455,7 +455,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                       </tbody>
                       <tfoot>
                         <tr className="border-t-2 border-blue-500/40 bg-blue-900/20">
-                          <td className="py-2 px-3 font-bold text-blue-300">HN</td>
+                          <td className="py-2 px-3 font-bold text-blue-300 sticky left-0 z-10 bg-blue-900/60">HN</td>
                           <td className="py-2 px-2 text-center text-blue-400 text-xs">—</td>
                           {SVC_FIELDS.map(f => (<>
                             {f === "hostMail" && <td key="kh-hn" className="py-2 px-2 text-right font-semibold text-teal-300 tabular-nums">{currentTeams.filter(t=>t.region==="HN").reduce((s,t)=>s+(t.customerCount??0),0)}</td>}
@@ -464,7 +464,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           {!isQuarter && !isPrev && <td />}
                         </tr>
                         <tr className="border-t border-orange-500/40 bg-orange-900/20">
-                          <td className="py-2 px-3 font-bold text-orange-300">HCM</td>
+                          <td className="py-2 px-3 font-bold text-orange-300 sticky left-0 z-10 bg-orange-900/60">HCM</td>
                           <td className="py-2 px-2 text-center text-orange-400 text-xs">—</td>
                           {SVC_FIELDS.map(f => (<>
                             {f === "hostMail" && <td key="kh-hcm" className="py-2 px-2 text-right font-semibold text-teal-300 tabular-nums">{currentTeams.filter(t=>t.region==="HCM").reduce((s,t)=>s+(t.customerCount??0),0)}</td>}
@@ -473,7 +473,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           {!isQuarter && !isPrev && <td />}
                         </tr>
                         <tr className="border-t-2 border-slate-500 bg-slate-700/40">
-                          <td className="py-2.5 px-3 font-bold text-white text-sm">TỔNG</td>
+                          <td className="py-2.5 px-3 font-bold text-white text-sm sticky left-0 z-10 bg-slate-700/80">TỔNG</td>
                           <td className="py-2 px-2 text-center text-slate-400 text-xs">—</td>
                           {SVC_FIELDS.map(f => (<>
                             {f === "hostMail" && <td key="kh-total" className="py-2.5 px-2 text-right font-bold text-teal-300 tabular-nums">{currentTeams.reduce((s,t)=>s+(t.customerCount??0),0)}</td>}
