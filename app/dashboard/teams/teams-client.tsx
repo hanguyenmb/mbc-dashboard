@@ -767,7 +767,9 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)       ? ((khDkm - prevKhDkm)   / prevKhDkm  * 100) : null;
             const dkmYoy    = (dkm > 0 && prevDkm > 0)           ? ((dkm - prevDkm)       / prevDkm    * 100) : null;
             const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((avgDkm - prevAvgDkm) / prevAvgDkm * 100) : null;
-            return { ...r, khDkm, prevKhDkm, dkm, prevDkm, avgDkm, prevAvgDkm, khDkmYoy, dkmYoy, avgDkmYoy };
+            const tlKhDkm   = (khDkm > 0 && r.kh > 0)           ? (khDkm / r.kh * 100)                       : null;
+            const tlAvgDkm  = (avgDkm > 0 && r.avgDs > 0)        ? (avgDkm / r.avgDs * 100)                   : null;
+            return { ...r, khDkm, prevKhDkm, dkm, prevDkm, avgDkm, prevAvgDkm, khDkmYoy, dkmYoy, avgDkmYoy, tlKhDkm, tlAvgDkm };
           });
 
           const hasDkmKhData = dkmRows.some(r => r.khDkm > 0);
@@ -775,17 +777,22 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           const dkmRegionSummary = (["HN","HCM","all"] as const).map(reg => {
             const ts = reg === "all" ? dkmRows : dkmRows.filter(t => t.region === reg);
             if (ts.length === 0) return null;
-            const khDkm = ts.reduce((s,t) => s + t.khDkm, 0);
-            const dkm = ts.reduce((s,t) => s + t.dkm, 0);
+            const khDkm   = ts.reduce((s,t) => s + t.khDkm, 0);
+            const khTotal = ts.reduce((s,t) => s + t.kh, 0);
+            const dkm     = ts.reduce((s,t) => s + t.dkm, 0);
+            const dsTotal = ts.reduce((s,t) => s + t.ds, 0);
             const prevKhDkm = ts.reduce((s,t) => s + t.prevKhDkm, 0);
-            const prevDkm = ts.reduce((s,t) => s + t.prevDkm, 0);
-            const avgDkm = khDkm > 0 ? dkm / khDkm : 0;
-            const prevAvgDkm = prevKhDkm > 0 ? prevDkm / prevKhDkm : 0;
+            const prevDkm   = ts.reduce((s,t) => s + t.prevDkm, 0);
+            const avgDkm      = khDkm > 0   ? dkm / khDkm     : 0;
+            const avgDsTotal  = khTotal > 0  ? dsTotal / khTotal : 0;
+            const prevAvgDkm  = prevKhDkm > 0 ? prevDkm / prevKhDkm : 0;
             const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)       ? ((khDkm - prevKhDkm)   / prevKhDkm  * 100) : null;
             const dkmYoy    = (dkm > 0 && prevDkm > 0)           ? ((dkm - prevDkm)       / prevDkm    * 100) : null;
             const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((avgDkm - prevAvgDkm) / prevAvgDkm * 100) : null;
-            return { reg, khDkm, dkm, avgDkm, khDkmYoy, dkmYoy, avgDkmYoy };
-          }).filter(Boolean) as { reg: string; khDkm: number; dkm: number; avgDkm: number; khDkmYoy: number|null; dkmYoy: number|null; avgDkmYoy: number|null; }[];
+            const tlKhDkm   = (khDkm > 0 && khTotal > 0)         ? (khDkm / khTotal * 100)                    : null;
+            const tlAvgDkm  = (avgDkm > 0 && avgDsTotal > 0)     ? (avgDkm / avgDsTotal * 100)                : null;
+            return { reg, khDkm, dkm, avgDkm, khDkmYoy, dkmYoy, avgDkmYoy, tlKhDkm, tlAvgDkm };
+          }).filter(Boolean) as { reg: string; khDkm: number; dkm: number; avgDkm: number; khDkmYoy: number|null; dkmYoy: number|null; avgDkmYoy: number|null; tlKhDkm: number|null; tlAvgDkm: number|null; }[];
 
           return (
             <>
@@ -881,6 +888,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                       <th className="text-right py-2 px-3 text-cyan-400 font-medium">KH ĐKM</th>
                       <th className="text-right py-2 px-3 text-blue-400 font-medium">DS ĐKM (tr.đ)</th>
                       <th className="text-right py-2 px-3 text-purple-400 font-medium">TB DS ĐKM/KH</th>
+                      <th className="text-right py-2 px-3 text-amber-400 font-medium">KH ĐKM / Tổng KH</th>
+                      <th className="text-right py-2 px-3 text-rose-400 font-medium">TB DS ĐKM/KH / TB DS/KH</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -903,6 +912,12 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                         <td className="py-2 px-3 text-right">
                           <div className="text-sm font-semibold text-purple-300">{r.avgDkm > 0 ? r.avgDkm.toFixed(1) : "—"}</div>
                           {hasPrevKhData && <YoyBadge val={r.avgDkmYoy} />}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="text-sm font-semibold text-amber-300">{r.tlKhDkm != null ? `${r.tlKhDkm.toFixed(1)}%` : "—"}</div>
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="text-sm font-semibold text-rose-300">{r.tlAvgDkm != null ? `${r.tlAvgDkm.toFixed(1)}%` : "—"}</div>
                         </td>
                       </tr>
                     ))}
@@ -928,6 +943,12 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                           <td className="py-2 px-3 text-right">
                             <div className={`text-sm font-bold ${labelColor}`}>{s.avgDkm > 0 ? s.avgDkm.toFixed(1) : "—"}</div>
                             {hasPrevKhData && <YoyBadge val={s.avgDkmYoy} />}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className={`text-sm font-bold text-amber-300`}>{s.tlKhDkm != null ? `${s.tlKhDkm.toFixed(1)}%` : "—"}</div>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className={`text-sm font-bold text-rose-300`}>{s.tlAvgDkm != null ? `${s.tlAvgDkm.toFixed(1)}%` : "—"}</div>
                           </td>
                         </tr>
                       );
