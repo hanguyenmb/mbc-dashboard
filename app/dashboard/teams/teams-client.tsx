@@ -793,7 +793,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
               <CardHeader>
                 <CardTitle>Báo Cáo Khách Hàng — {filterLabel}</CardTitle>
                 <div className="flex items-center gap-3 text-xs text-slate-400">
-                  <span>Số KH đăng ký mới · DS (triệu VNĐ) · TB DS/KH</span>
+                  <span>Tổng Số KH · DS (triệu VNĐ) · TB DS/KH</span>
                   {hasPrevKhData && <span className="text-amber-400">▲/▼ so cùng kỳ 2025</span>}
                 </div>
               </CardHeader>
