@@ -404,6 +404,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           <th className="text-right py-2 px-2 text-slate-400 w-24">Tổng DS</th>
                           <th className="text-right py-2 px-2 text-slate-400 w-24">Mục tiêu</th>
                           <th className="text-right py-2 px-2 text-teal-400 w-20">Số KH</th>
+                          <th className="text-right py-2 px-2 text-cyan-400 w-20">KH ĐKM</th>
                           <th className="text-right py-2 px-2 text-blue-400 w-24">Host/Mail</th>
                           <th className="text-right py-2 px-2 text-green-400 w-24">MS/GWS</th>
                           <th className="text-right py-2 px-2 text-amber-400 w-24">Tên miền</th>
@@ -426,13 +427,20 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                               <span className={row.region === "HN" ? "text-blue-400" : "text-orange-400"}>{row.region}</span>
                             </td>
                             {SVC_FIELDS.map(field => {
-                              // Insert Số KH column after "target"
+                              // Insert Số KH + KH ĐKM columns after "target"
                               const khCell = field === "hostMail" ? (
-                                <td key="customerCount" className="py-1 px-2">
-                                  {isQuarter
-                                    ? <span className="block text-right text-teal-300 tabular-nums pr-2">{row.customerCount ?? 0}</span>
-                                    : <NumInput value={row.customerCount ?? 0} onChange={v => updateField(i, "customerCount", v)} />}
-                                </td>
+                                <>
+                                  <td key="customerCount" className="py-1 px-2">
+                                    {isQuarter
+                                      ? <span className="block text-right text-teal-300 tabular-nums pr-2">{row.customerCount ?? 0}</span>
+                                      : <NumInput value={row.customerCount ?? 0} onChange={v => updateField(i, "customerCount", v)} />}
+                                  </td>
+                                  <td key="customerCountDkm" className="py-1 px-2">
+                                    {isQuarter
+                                      ? <span className="block text-right text-cyan-300 tabular-nums pr-2">{row.customerCountDkm ?? 0}</span>
+                                      : <NumInput value={row.customerCountDkm ?? null} onChange={v => updateField(i, "customerCountDkm", v)} />}
+                                  </td>
+                                </>
                               ) : null;
                               return (
                                 <>
@@ -459,6 +467,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           <td className="py-2 px-2 text-center text-blue-400 text-xs">—</td>
                           {SVC_FIELDS.map(f => (<>
                             {f === "hostMail" && <td key="kh-hn" className="py-2 px-2 text-right font-semibold text-teal-300 tabular-nums">{currentTeams.filter(t=>t.region==="HN").reduce((s,t)=>s+(t.customerCount??0),0)}</td>}
+                            {f === "hostMail" && <td key="khd-hn" className="py-2 px-2 text-right font-semibold text-cyan-300 tabular-nums">{currentTeams.filter(t=>t.region==="HN").reduce((s,t)=>s+(t.customerCountDkm??0),0)}</td>}
                             <td key={f} className="py-2 px-2 text-right font-semibold text-blue-300 tabular-nums">{(hnTotals[f] as number).toFixed(1)}</td>
                           </>))}
                           {!isQuarter && !isPrev && <td />}
@@ -468,6 +477,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           <td className="py-2 px-2 text-center text-orange-400 text-xs">—</td>
                           {SVC_FIELDS.map(f => (<>
                             {f === "hostMail" && <td key="kh-hcm" className="py-2 px-2 text-right font-semibold text-teal-300 tabular-nums">{currentTeams.filter(t=>t.region==="HCM").reduce((s,t)=>s+(t.customerCount??0),0)}</td>}
+                            {f === "hostMail" && <td key="khd-hcm" className="py-2 px-2 text-right font-semibold text-cyan-300 tabular-nums">{currentTeams.filter(t=>t.region==="HCM").reduce((s,t)=>s+(t.customerCountDkm??0),0)}</td>}
                             <td key={f} className="py-2 px-2 text-right font-semibold text-orange-300 tabular-nums">{(hcmTotals[f] as number).toFixed(1)}</td>
                           </>))}
                           {!isQuarter && !isPrev && <td />}
@@ -477,6 +487,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                           <td className="py-2 px-2 text-center text-slate-400 text-xs">—</td>
                           {SVC_FIELDS.map(f => (<>
                             {f === "hostMail" && <td key="kh-total" className="py-2.5 px-2 text-right font-bold text-teal-300 tabular-nums">{currentTeams.reduce((s,t)=>s+(t.customerCount??0),0)}</td>}
+                            {f === "hostMail" && <td key="khd-total" className="py-2.5 px-2 text-right font-bold text-cyan-300 tabular-nums">{currentTeams.reduce((s,t)=>s+(t.customerCountDkm??0),0)}</td>}
                             <td key={f} className="py-2.5 px-2 text-right font-bold text-white tabular-nums">{(totals[f] as number).toFixed(1)}</td>
                           </>))}
                           {!isQuarter && !isPrev && <td />}

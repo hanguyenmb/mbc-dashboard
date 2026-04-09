@@ -99,7 +99,8 @@ export interface TeamServiceRecord {
   region: "HN" | "HCM";
   revenue: number;       // tổng DS (triệu VNĐ)
   target: number;        // mục tiêu tổng
-  customerCount: number; // số lượng khách hàng
+  customerCount: number;     // tổng KH (ĐKM + gia hạn)
+  customerCountDkm?: number; // KH đăng ký mới
   hostMail: number;
   msgws: number;
   tenMien: number;

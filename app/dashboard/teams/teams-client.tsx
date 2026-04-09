@@ -756,31 +756,36 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             );
           }
 
-          // Tính DS ĐKM per team (sum service keys)
+          // Tính DS ĐKM per team (sum service keys) — dùng customerCountDkm riêng
           const dkmRows = rows.map(r => {
+            const khDkm = (r as any).customerCountDkm ?? 0;
+            const prevKhDkm = (prevYearTeamMap[r.teamId] as any)?.customerCountDkm ?? 0;
             const dkm = SVC_KEYS.reduce((s, sk) => s + ((r as any)[sk.key] ?? 0), 0);
             const prevDkm = SVC_KEYS.reduce((s, sk) => s + ((prevYearTeamMap[r.teamId] as any)?.[sk.key] ?? 0), 0);
-            const avgDkm = r.kh > 0 ? dkm / r.kh : 0;
-            const prevAvgDkm = r.prevKh > 0 ? prevDkm / r.prevKh : 0;
-            const dkmYoy    = (dkm > 0 && prevDkm > 0)       ? ((dkm - prevDkm)         / prevDkm    * 100) : null;
-            const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0) ? ((avgDkm - prevAvgDkm)   / prevAvgDkm * 100) : null;
-            return { ...r, dkm, prevDkm, avgDkm, prevAvgDkm, dkmYoy, avgDkmYoy };
+            const avgDkm = khDkm > 0 ? dkm / khDkm : 0;
+            const prevAvgDkm = prevKhDkm > 0 ? prevDkm / prevKhDkm : 0;
+            const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)       ? ((khDkm - prevKhDkm)   / prevKhDkm  * 100) : null;
+            const dkmYoy    = (dkm > 0 && prevDkm > 0)           ? ((dkm - prevDkm)       / prevDkm    * 100) : null;
+            const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((avgDkm - prevAvgDkm) / prevAvgDkm * 100) : null;
+            return { ...r, khDkm, prevKhDkm, dkm, prevDkm, avgDkm, prevAvgDkm, khDkmYoy, dkmYoy, avgDkmYoy };
           });
+
+          const hasDkmKhData = dkmRows.some(r => r.khDkm > 0);
 
           const dkmRegionSummary = (["HN","HCM","all"] as const).map(reg => {
             const ts = reg === "all" ? dkmRows : dkmRows.filter(t => t.region === reg);
             if (ts.length === 0) return null;
-            const kh = ts.reduce((s,t) => s + t.kh, 0);
+            const khDkm = ts.reduce((s,t) => s + t.khDkm, 0);
             const dkm = ts.reduce((s,t) => s + t.dkm, 0);
-            const prevKh = ts.reduce((s,t) => s + t.prevKh, 0);
+            const prevKhDkm = ts.reduce((s,t) => s + t.prevKhDkm, 0);
             const prevDkm = ts.reduce((s,t) => s + t.prevDkm, 0);
-            const avgDkm = kh > 0 ? dkm / kh : 0;
-            const prevAvgDkm = prevKh > 0 ? prevDkm / prevKh : 0;
-            const khYoy     = (kh > 0 && prevKh > 0)         ? ((kh - prevKh)           / prevKh    * 100) : null;
-            const dkmYoy    = (dkm > 0 && prevDkm > 0)       ? ((dkm - prevDkm)         / prevDkm   * 100) : null;
-            const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0) ? ((avgDkm - prevAvgDkm)   / prevAvgDkm * 100) : null;
-            return { reg, kh, dkm, avgDkm, khYoy, dkmYoy, avgDkmYoy };
-          }).filter(Boolean) as { reg: string; kh: number; dkm: number; avgDkm: number; khYoy: number|null; dkmYoy: number|null; avgDkmYoy: number|null; }[];
+            const avgDkm = khDkm > 0 ? dkm / khDkm : 0;
+            const prevAvgDkm = prevKhDkm > 0 ? prevDkm / prevKhDkm : 0;
+            const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)       ? ((khDkm - prevKhDkm)   / prevKhDkm  * 100) : null;
+            const dkmYoy    = (dkm > 0 && prevDkm > 0)           ? ((dkm - prevDkm)       / prevDkm    * 100) : null;
+            const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((avgDkm - prevAvgDkm) / prevAvgDkm * 100) : null;
+            return { reg, khDkm, dkm, avgDkm, khDkmYoy, dkmYoy, avgDkmYoy };
+          }).filter(Boolean) as { reg: string; khDkm: number; dkm: number; avgDkm: number; khDkmYoy: number|null; dkmYoy: number|null; avgDkmYoy: number|null; }[];
 
           return (
             <>
@@ -857,12 +862,13 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
               </CardContent>
             </Card>
 
-            {/* Bảng TB DS ĐKM / KH */}
+            {/* Bảng TB DS ĐKM / KH — chỉ hiện khi có dữ liệu KH ĐKM */}
+            {hasDkmKhData && (
             <Card className="mb-4">
               <CardHeader>
                 <CardTitle>TB Doanh Số Đăng Ký Mới / Khách Hàng — {filterLabel}</CardTitle>
                 <div className="flex items-center gap-3 text-xs text-slate-400">
-                  <span>Số KH · DS ĐKM (triệu VNĐ) · TB DS ĐKM/KH</span>
+                  <span>KH ĐKM · DS ĐKM (triệu VNĐ) · TB DS ĐKM/KH</span>
                   {hasPrevKhData && <span className="text-amber-400">▲/▼ so cùng kỳ 2025</span>}
                 </div>
               </CardHeader>
@@ -872,7 +878,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     <tr className="border-b border-slate-700">
                       <th className="text-left py-2 px-3 text-slate-400 w-32">Team</th>
                       <th className="text-center py-2 px-2 text-slate-400">Vùng</th>
-                      <th className="text-right py-2 px-3 text-teal-400 font-medium">Số KH</th>
+                      <th className="text-right py-2 px-3 text-cyan-400 font-medium">KH ĐKM</th>
                       <th className="text-right py-2 px-3 text-blue-400 font-medium">DS ĐKM (tr.đ)</th>
                       <th className="text-right py-2 px-3 text-purple-400 font-medium">TB DS ĐKM/KH</th>
                     </tr>
@@ -887,8 +893,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                           </span>
                         </td>
                         <td className="py-2 px-3 text-right">
-                          <div className="text-sm font-semibold text-teal-300">{r.kh > 0 ? r.kh : "—"}</div>
-                          {hasPrevKhData && <YoyBadge val={r.khYoy} />}
+                          <div className="text-sm font-semibold text-cyan-300">{r.khDkm > 0 ? r.khDkm : "—"}</div>
+                          {hasPrevKhData && <YoyBadge val={r.khDkmYoy} />}
                         </td>
                         <td className="py-2 px-3 text-right">
                           <div className="text-sm font-semibold text-blue-300">{r.dkm > 0 ? r.dkm.toLocaleString() : "—"}</div>
@@ -912,8 +918,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                             {isTotal ? "TỔNG" : `Khu vực ${s.reg}`}
                           </td>
                           <td className="py-2 px-3 text-right">
-                            <div className={`text-sm font-bold ${labelColor}`}>{s.kh > 0 ? s.kh : "—"}</div>
-                            {hasPrevKhData && <YoyBadge val={s.khYoy} />}
+                            <div className={`text-sm font-bold ${labelColor}`}>{s.khDkm > 0 ? s.khDkm : "—"}</div>
+                            {hasPrevKhData && <YoyBadge val={s.khDkmYoy} />}
                           </td>
                           <td className="py-2 px-3 text-right">
                             <div className={`text-sm font-bold ${labelColor}`}>{s.dkm > 0 ? s.dkm.toLocaleString() : "—"}</div>
@@ -930,6 +936,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                 </table>
               </CardContent>
             </Card>
+            )}
             </>
           );
         })()}
