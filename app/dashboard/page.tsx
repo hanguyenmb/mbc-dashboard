@@ -36,12 +36,22 @@ export default async function DashboardPage() {
     getLastUpdated("monthly_data"),
   ]).catch(() => [MONTHLY_DATA, REVENUE_TYPE, TEAM_SERVICE_DATA, null]);
 
+  // Sync hn/hcm từ revenue_type để overview luôn khớp, không cần save thủ công
+  const syncedMonthly = (monthlyData as typeof MONTHLY_DATA).map(row => {
+    const rev = (revenueType as typeof REVENUE_TYPE).find((r: any) => r.month === row.month);
+    if (!rev) return row;
+    const hn  = ((rev as any).dkHn  ?? 0) + ((rev as any).ghHn  ?? 0);
+    const hcm = ((rev as any).dkHcm ?? 0) + ((rev as any).ghHcm ?? 0);
+    if (hn === 0 && hcm === 0) return row;
+    return { ...row, hn, hcm };
+  });
+
   const serviceMonthly = deriveServiceMonthly(teamService as TeamMonthlyData);
 
   return (
     <OverviewClient
       userName={user.name}
-      monthlyData={monthlyData as typeof MONTHLY_DATA}
+      monthlyData={syncedMonthly}
       serviceMonthly={serviceMonthly as typeof SERVICE_MONTHLY}
       revenueType={revenueType as typeof REVENUE_TYPE}
       lastUpdated={lastUpdated as string | null}

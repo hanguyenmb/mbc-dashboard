@@ -486,7 +486,80 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           </CardContent>
         </Card>
 
-        {/* Phần 3: Heatmap team × dịch vụ */}
+        {/* Phần 3: Radar + Top Team per Service */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Radar: Thế Mạnh Dịch Vụ Đăng Ký Mới HN vs HCM</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="#334155" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                  <PolarRadiusAxis tick={{ fill: "#475569", fontSize: 9 }} />
+                  <Radar name="HN" dataKey="HN" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                  <Radar name="HCM" dataKey="HCM" stroke="#f97316" fill="#f97316" fillOpacity={0.3} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`]} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Top team per service */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Team Dẫn Đầu Từng Dịch Vụ Đăng Ký Mới</CardTitle>
+              <span className="text-xs text-slate-500">
+                {region === "all" ? "Tất cả khu vực" : `Khu vực ${region}`} · {view === "month" ? selectedMonth : `Q${selectedQuarter}`}
+              </span>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2.5">
+                {SVC_KEYS.map(s => {
+                  const top = displayed.length > 0
+                    ? displayed.reduce((best, t) => ((t as any)[s.key] ?? 0) > ((best as any)[s.key] ?? 0) ? t : best, displayed[0])
+                    : null;
+                  const topVal = top ? ((top as any)[s.key] ?? 0) : 0;
+                  const maxVal = displayed.length > 0 ? Math.max(...displayed.map(t => (t as any)[s.key] ?? 0)) : 1;
+                  const barW = maxVal > 0 ? Math.round((topVal / maxVal) * 100) : 0;
+                  const r = parseInt(s.color.slice(1,3),16);
+                  const g = parseInt(s.color.slice(3,5),16);
+                  const b = parseInt(s.color.slice(5,7),16);
+                  return (
+                    <div key={s.key} className="flex items-center gap-3">
+                      <div className="w-24 text-xs font-medium shrink-0" style={{ color: s.color }}>{s.label}</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-xs text-white font-semibold">
+                            {top && topVal > 0 ? top.teamName : "—"}
+                          </span>
+                          <span className="text-xs font-mono" style={{ color: s.color }}>
+                            {topVal > 0 ? `${topVal.toLocaleString()}M` : "—"}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all"
+                            style={{ width: `${barW}%`, background: `rgba(${r},${g},${b},0.7)` }} />
+                        </div>
+                      </div>
+                      <div className="w-8 text-right text-xs text-slate-500 shrink-0">
+                        {top?.region && topVal > 0 ? (
+                          <span className={`px-1 py-0.5 rounded text-xs font-medium ${top.region === "HN" ? "text-blue-400" : "text-orange-400"}`}>
+                            {top.region}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Phần 4: Heatmap team × dịch vụ */}
         <Card>
           <CardHeader>
             <CardTitle>Ma Trận Doanh Số Đăng Ký Mới theo Loại Dịch Vụ (triệu VNĐ)</CardTitle>
@@ -758,79 +831,6 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             </Card>
           );
         })()}
-
-        {/* Phần 5: Radar + Top Team per Service */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Radar: Thế Mạnh Dịch Vụ Đăng Ký Mới HN vs HCM</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="#334155" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                  <PolarRadiusAxis tick={{ fill: "#475569", fontSize: 9 }} />
-                  <Radar name="HN" dataKey="HN" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
-                  <Radar name="HCM" dataKey="HCM" stroke="#f97316" fill="#f97316" fillOpacity={0.3} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`]} />
-                </RadarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Top team per service */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Dẫn Đầu Từng Dịch Vụ Đăng Ký Mới</CardTitle>
-              <span className="text-xs text-slate-500">
-                {region === "all" ? "Tất cả khu vực" : `Khu vực ${region}`} · {view === "month" ? selectedMonth : `Q${selectedQuarter}`}
-              </span>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2.5">
-                {SVC_KEYS.map(s => {
-                  const top = displayed.length > 0
-                    ? displayed.reduce((best, t) => ((t as any)[s.key] ?? 0) > ((best as any)[s.key] ?? 0) ? t : best, displayed[0])
-                    : null;
-                  const topVal = top ? ((top as any)[s.key] ?? 0) : 0;
-                  const maxVal = displayed.length > 0 ? Math.max(...displayed.map(t => (t as any)[s.key] ?? 0)) : 1;
-                  const barW = maxVal > 0 ? Math.round((topVal / maxVal) * 100) : 0;
-                  const r = parseInt(s.color.slice(1,3),16);
-                  const g = parseInt(s.color.slice(3,5),16);
-                  const b = parseInt(s.color.slice(5,7),16);
-                  return (
-                    <div key={s.key} className="flex items-center gap-3">
-                      <div className="w-24 text-xs font-medium shrink-0" style={{ color: s.color }}>{s.label}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-xs text-white font-semibold">
-                            {top && topVal > 0 ? top.teamName : "—"}
-                          </span>
-                          <span className="text-xs font-mono" style={{ color: s.color }}>
-                            {topVal > 0 ? `${topVal.toLocaleString()}M` : "—"}
-                          </span>
-                        </div>
-                        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all"
-                            style={{ width: `${barW}%`, background: `rgba(${r},${g},${b},0.7)` }} />
-                        </div>
-                      </div>
-                      <div className="w-8 text-right text-xs text-slate-500 shrink-0">
-                        {top?.region && topVal > 0 ? (
-                          <span className={`px-1 py-0.5 rounded text-xs font-medium ${top.region === "HN" ? "text-blue-400" : "text-orange-400"}`}>
-                            {top.region}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Phần 5: So sánh dịch vụ giữa các team */}
         <Card>
