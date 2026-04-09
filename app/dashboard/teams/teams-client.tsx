@@ -756,7 +756,34 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             );
           }
 
+          // Tính DS ĐKM per team (sum service keys)
+          const dkmRows = rows.map(r => {
+            const dkm = SVC_KEYS.reduce((s, sk) => s + ((r as any)[sk.key] ?? 0), 0);
+            const prevDkm = SVC_KEYS.reduce((s, sk) => s + ((prevYearTeamMap[r.teamId] as any)?.[sk.key] ?? 0), 0);
+            const avgDkm = r.kh > 0 ? dkm / r.kh : 0;
+            const prevAvgDkm = r.prevKh > 0 ? prevDkm / r.prevKh : 0;
+            const dkmYoy    = (dkm > 0 && prevDkm > 0)       ? ((dkm - prevDkm)         / prevDkm    * 100) : null;
+            const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0) ? ((avgDkm - prevAvgDkm)   / prevAvgDkm * 100) : null;
+            return { ...r, dkm, prevDkm, avgDkm, prevAvgDkm, dkmYoy, avgDkmYoy };
+          });
+
+          const dkmRegionSummary = (["HN","HCM","all"] as const).map(reg => {
+            const ts = reg === "all" ? dkmRows : dkmRows.filter(t => t.region === reg);
+            if (ts.length === 0) return null;
+            const kh = ts.reduce((s,t) => s + t.kh, 0);
+            const dkm = ts.reduce((s,t) => s + t.dkm, 0);
+            const prevKh = ts.reduce((s,t) => s + t.prevKh, 0);
+            const prevDkm = ts.reduce((s,t) => s + t.prevDkm, 0);
+            const avgDkm = kh > 0 ? dkm / kh : 0;
+            const prevAvgDkm = prevKh > 0 ? prevDkm / prevKh : 0;
+            const khYoy     = (kh > 0 && prevKh > 0)         ? ((kh - prevKh)           / prevKh    * 100) : null;
+            const dkmYoy    = (dkm > 0 && prevDkm > 0)       ? ((dkm - prevDkm)         / prevDkm   * 100) : null;
+            const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0) ? ((avgDkm - prevAvgDkm)   / prevAvgDkm * 100) : null;
+            return { reg, kh, dkm, avgDkm, khYoy, dkmYoy, avgDkmYoy };
+          }).filter(Boolean) as { reg: string; kh: number; dkm: number; avgDkm: number; khYoy: number|null; dkmYoy: number|null; avgDkmYoy: number|null; }[];
+
           return (
+            <>
             <Card className="mb-4">
               <CardHeader>
                 <CardTitle>Báo Cáo Khách Hàng — {filterLabel}</CardTitle>
@@ -829,6 +856,81 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                 </table>
               </CardContent>
             </Card>
+
+            {/* Bảng TB DS ĐKM / KH */}
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>TB Doanh Số Đăng Ký Mới / Khách Hàng — {filterLabel}</CardTitle>
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  <span>Số KH · DS ĐKM (triệu VNĐ) · TB DS ĐKM/KH</span>
+                  {hasPrevKhData && <span className="text-amber-400">▲/▼ so cùng kỳ 2025</span>}
+                </div>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-2 px-3 text-slate-400 w-32">Team</th>
+                      <th className="text-center py-2 px-2 text-slate-400">Vùng</th>
+                      <th className="text-right py-2 px-3 text-teal-400 font-medium">Số KH</th>
+                      <th className="text-right py-2 px-3 text-blue-400 font-medium">DS ĐKM (tr.đ)</th>
+                      <th className="text-right py-2 px-3 text-purple-400 font-medium">TB DS ĐKM/KH</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dkmRows.map(r => (
+                      <tr key={r.teamId} className="border-b border-slate-800 hover:bg-slate-800/30">
+                        <td className="py-2 px-3 text-white font-medium">{r.teamName}</td>
+                        <td className="py-2 px-2 text-center">
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${r.region === "HN" ? "bg-blue-500/20 text-blue-400" : "bg-orange-500/20 text-orange-400"}`}>
+                            {r.region}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="text-sm font-semibold text-teal-300">{r.kh > 0 ? r.kh : "—"}</div>
+                          {hasPrevKhData && <YoyBadge val={r.khYoy} />}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="text-sm font-semibold text-blue-300">{r.dkm > 0 ? r.dkm.toLocaleString() : "—"}</div>
+                          {hasPrevKhData && <YoyBadge val={r.dkmYoy} />}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="text-sm font-semibold text-purple-300">{r.avgDkm > 0 ? r.avgDkm.toFixed(1) : "—"}</div>
+                          {hasPrevKhData && <YoyBadge val={r.avgDkmYoy} />}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    {dkmRegionSummary.map(s => {
+                      const isTotal = s.reg === "all";
+                      const labelColor = s.reg === "HN" ? "text-blue-300" : s.reg === "HCM" ? "text-orange-300" : "text-white";
+                      const rowBg = s.reg === "HN" ? "bg-blue-900/20 border-blue-500/30" : s.reg === "HCM" ? "bg-orange-900/20 border-orange-500/30" : "bg-slate-800/50 border-slate-600";
+                      return (
+                        <tr key={s.reg} className={`border-t-2 ${rowBg}`}>
+                          <td className={`py-2 px-3 font-bold text-xs ${labelColor}`} colSpan={2}>
+                            {isTotal ? "TỔNG" : `Khu vực ${s.reg}`}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className={`text-sm font-bold ${labelColor}`}>{s.kh > 0 ? s.kh : "—"}</div>
+                            {hasPrevKhData && <YoyBadge val={s.khYoy} />}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className={`text-sm font-bold ${labelColor}`}>{s.dkm > 0 ? s.dkm.toLocaleString() : "—"}</div>
+                            {hasPrevKhData && <YoyBadge val={s.dkmYoy} />}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className={`text-sm font-bold ${labelColor}`}>{s.avgDkm > 0 ? s.avgDkm.toFixed(1) : "—"}</div>
+                            {hasPrevKhData && <YoyBadge val={s.avgDkmYoy} />}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tfoot>
+                </table>
+              </CardContent>
+            </Card>
+            </>
           );
         })()}
 
