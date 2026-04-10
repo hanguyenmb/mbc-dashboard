@@ -857,25 +857,25 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           return (
             <Card>
               <CardHeader>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <CardTitle>Phân Tích Vị Thế Team — Góc Nhìn CEO</CardTitle>
-                    <div className="text-xs text-slate-400 mt-1 space-y-0.5">
-                      <p>
-                        Ngưỡng <span className="text-slate-300">ĐKM lớn/nhỏ</span> = TB ĐKM cùng kỳ 2025:
-                        <span className="text-white font-semibold ml-1">{Math.round(threshold).toLocaleString()}M</span>
-                        {teamsWithPrev.length < teamData.length && (
-                          <span className="text-slate-500 ml-1">({teamsWithPrev.length}/{teamData.length} team có dữ liệu 2025)</span>
-                        )}
-                      </p>
-                      {isProjected && (
-                        <p className="text-amber-400/80">
-                          Tháng chưa kết thúc ({daysElapsed}/{daysInMonth} ngày) — <span className="text-amber-300">Dự kiến</span> = tốc độ thực tế × {daysInMonth}/{daysElapsed} quy về cuối tháng
-                        </p>
+                <div className="relative pr-32">
+                  <CardTitle>Phân Tích Vị Thế Team — Góc Nhìn CEO</CardTitle>
+                  <div className="text-xs text-slate-400 mt-1 space-y-0.5">
+                    <p>
+                      Ngưỡng <span className="text-slate-300">ĐKM lớn/nhỏ</span> = TB ĐKM cùng kỳ 2025:
+                      <span className="text-white font-semibold ml-1">{Math.round(threshold).toLocaleString()}M</span>
+                      {teamsWithPrev.length < teamData.length && (
+                        <span className="text-slate-500 ml-1">({teamsWithPrev.length}/{teamData.length} team có dữ liệu 2025)</span>
                       )}
-                    </div>
+                    </p>
+                    {isProjected && (
+                      <p className="text-amber-400/80">
+                        Tháng chưa kết thúc ({daysElapsed}/{daysInMonth} ngày) — <span className="text-amber-300">Dự kiến</span> = tốc độ thực tế × {daysInMonth}/{daysElapsed} quy về cuối tháng
+                      </p>
+                    )}
                   </div>
-                  <MiniAiPanel context="ceo_quadrant" label="AI nhận xét" data={{ period: filterLabel, region, paceRatio, teams: teamData }} />
+                  <div className="absolute top-0 right-0">
+                    <MiniAiPanel context="ceo_quadrant" label="AI nhận xét" data={{ period: filterLabel, region, paceRatio, teams: teamData }} />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
