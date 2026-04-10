@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, RadarChart, Radar, PolarGrid,
   PolarAngleAxis, PolarRadiusAxis, Legend, LabelList, ReferenceLine,
-  ScatterChart, Scatter, ZAxis,
+  ComposedChart, Line,
 } from "recharts";
 import { Header, PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
@@ -774,52 +774,58 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           );
         })()}
 
-        {/* Phần 4a: CEO Quadrant Chart */}
+        {/* Phần 4a: Phân Tích Vị Thế Team — Góc Nhìn CEO */}
         {hasPrevYearTeamData && (() => {
-          const bubbleData = displayed.map(t => {
-            const totalDkm  = SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0);
-            const prev      = prevYearTeamMap[t.teamId];
-            const prevDkm   = prev ? SVC_KEYS.reduce((s, sk) => s + ((prev as any)[sk.key] ?? 0), 0) : 0;
-            const yoy       = prevDkm > 0 ? ((totalDkm - prevDkm) / prevDkm * 100) : null;
-            return { name: t.teamName, region: t.region, x: totalDkm, y: yoy ?? 0, z: Math.max(totalDkm, 20), hasYoy: prevDkm > 0 };
-          }).filter(t => t.x > 0);
+          const teamData = displayed.map(t => {
+            const totalDkm = SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0);
+            const prev     = prevYearTeamMap[t.teamId];
+            const prevDkm  = prev ? SVC_KEYS.reduce((s, sk) => s + ((prev as any)[sk.key] ?? 0), 0) : 0;
+            const yoy      = prevDkm > 0 ? ((totalDkm - prevDkm) / prevDkm * 100) : null;
+            return { name: t.teamName, region: t.region, dkm: totalDkm, yoy, hasYoy: prevDkm > 0 };
+          }).filter(t => t.dkm > 0);
 
-          if (bubbleData.length < 2) return null;
+          if (teamData.length < 2) return null;
 
-          const medianX  = [...bubbleData].sort((a,b) => a.x - b.x)[Math.floor(bubbleData.length / 2)].x;
-          const hnData   = bubbleData.filter(t => t.region === "HN");
-          const hcmData  = bubbleData.filter(t => t.region === "HCM");
-
-          // Custom dot with team name label
-          function TeamDot(props: any) {
-            const { cx, cy, payload } = props;
-            if (!cx || !cy) return null;
-            const isHN  = payload.region === "HN";
-            const color = isHN ? "#3b82f6" : "#f97316";
-            const r     = Math.max(18, Math.min(36, Math.sqrt(payload.z / 10)));
-            return (
-              <g>
-                <circle cx={cx} cy={cy} r={r} fill={color} fillOpacity={0.25} stroke={color} strokeWidth={1.5} />
-                <text x={cx} y={cy - r - 5} textAnchor="middle" fill={color} fontSize={10} fontWeight={600}>
-                  {payload.name}
-                </text>
-                <text x={cx} y={cy + 4} textAnchor="middle" fill="#f1f5f9" fontSize={10} fontWeight={700}>
-                  {payload.x.toLocaleString()}M
-                </text>
-                {payload.hasYoy && (
-                  <text x={cx} y={cy + 14} textAnchor="middle" fill={payload.y >= 0 ? "#4ade80" : "#f87171"} fontSize={9}>
-                    {payload.y >= 0 ? "▲" : "▼"}{Math.abs(payload.y).toFixed(0)}%
-                  </text>
-                )}
-              </g>
-            );
-          }
+          const sorted   = [...teamData].sort((a, b) => a.dkm - b.dkm);
+          const medianDkm = sorted[Math.floor(sorted.length / 2)].dkm;
 
           const quadrants = [
-            { x1: 0,       x2: medianX,  y1: 0,    y2:  999, label: "🚀 Tiềm năng",  color: "#a78bfa", anchor: "start"  },
-            { x1: medianX, x2: Infinity, y1: 0,    y2:  999, label: "⭐ Ngôi sao",    color: "#4ade80", anchor: "end"    },
-            { x1: 0,       x2: medianX,  y1: -999, y2:    0, label: "⚠️ Cần chú ý",  color: "#f87171", anchor: "start"  },
-            { x1: medianX, x2: Infinity, y1: -999, y2:    0, label: "🔄 Ổn định",    color: "#fbbf24", anchor: "end"    },
+            {
+              key: "star",
+              label: "⭐ Ngôi Sao",
+              sub: "ĐKM lớn · tăng trưởng tốt",
+              color: "text-green-400",
+              border: "border-green-500/30 bg-green-500/5",
+              chip: "bg-green-500/15 text-green-300 border border-green-500/20",
+              teams: teamData.filter(t => t.dkm >= medianDkm && (t.yoy ?? 0) >= 0),
+            },
+            {
+              key: "potential",
+              label: "🚀 Tiềm Năng",
+              sub: "ĐKM nhỏ · tăng trưởng tốt",
+              color: "text-violet-400",
+              border: "border-violet-500/30 bg-violet-500/5",
+              chip: "bg-violet-500/15 text-violet-300 border border-violet-500/20",
+              teams: teamData.filter(t => t.dkm < medianDkm && (t.yoy ?? 0) >= 0),
+            },
+            {
+              key: "stable",
+              label: "🔄 Ổn Định",
+              sub: "ĐKM lớn · cần bứt phá YoY",
+              color: "text-amber-400",
+              border: "border-amber-500/30 bg-amber-500/5",
+              chip: "bg-amber-500/15 text-amber-300 border border-amber-500/20",
+              teams: teamData.filter(t => t.dkm >= medianDkm && (t.yoy ?? 0) < 0),
+            },
+            {
+              key: "watch",
+              label: "⚠️ Cần Chú Ý",
+              sub: "ĐKM nhỏ · cần cải thiện",
+              color: "text-red-400",
+              border: "border-red-500/30 bg-red-500/5",
+              chip: "bg-red-500/15 text-red-300 border border-red-500/20",
+              teams: teamData.filter(t => t.dkm < medianDkm && (t.yoy ?? 0) < 0),
+            },
           ];
 
           return (
@@ -828,72 +834,136 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <CardTitle>Phân Tích Vị Thế Team — Góc Nhìn CEO</CardTitle>
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 mt-1">
-                      <span>Trục X: Tổng ĐKM (triệu VNĐ) · Trục Y: Tăng trưởng YoY% so 2025</span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"/>HN
-                        <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block ml-1"/>HCM
-                      </span>
-                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Ngưỡng ĐKM median: <span className="text-white font-semibold">{medianDkm.toLocaleString()}M</span>
+                      &nbsp;· Phân loại theo tổng ĐKM so median và tăng trưởng YoY
+                    </p>
                   </div>
-                  <MiniAiPanel context="ceo_quadrant" label="AI nhận xét" data={{ period: filterLabel, region, teams: bubbleData }} />
+                  <MiniAiPanel context="ceo_quadrant" label="AI nhận xét" data={{ period: filterLabel, region, teams: teamData }} />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="relative">
-                  {/* Quadrant labels */}
-                  <div className="absolute inset-0 pointer-events-none z-10 grid grid-cols-2 grid-rows-2" style={{ top: 10, bottom: 30, left: 50, right: 10 }}>
-                    {[
-                      { label: "🚀 Tiềm năng",  sub: "ĐKM nhỏ · tăng nhanh", color: "text-violet-400", border: "border-violet-500/20 bg-violet-500/5"  },
-                      { label: "⭐ Ngôi sao",    sub: "ĐKM lớn · tăng nhanh",  color: "text-green-400",  border: "border-green-500/20  bg-green-500/5"   },
-                      { label: "⚠️ Cần chú ý",  sub: "ĐKM nhỏ · đang giảm",  color: "text-red-400",    border: "border-red-500/20    bg-red-500/5"     },
-                      { label: "🔄 Ổn định",    sub: "ĐKM lớn · cần bứt phá", color: "text-amber-400",  border: "border-amber-500/20  bg-amber-500/5"   },
-                    ].map((q, i) => (
-                      <div key={i} className={`flex flex-col justify-end p-2 m-1 rounded-lg border ${q.border} ${i < 2 ? "" : ""}`}
-                           style={{ alignItems: i % 2 === 0 ? "flex-start" : "flex-end", justifyContent: i < 2 ? "flex-start" : "flex-end" }}>
-                        <span className={`text-[11px] font-bold ${q.color}`}>{q.label}</span>
-                        <span className="text-[10px] text-slate-500">{q.sub}</span>
+                <div className="grid grid-cols-2 gap-3">
+                  {quadrants.map(q => (
+                    <div key={q.key} className={`rounded-xl border p-4 ${q.border}`}>
+                      <div className="mb-3">
+                        <div className={`text-sm font-bold ${q.color}`}>{q.label}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">{q.sub}</div>
                       </div>
-                    ))}
-                  </div>
-
-                  <ResponsiveContainer width="100%" height={340}>
-                    <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 50 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis
-                        type="number" dataKey="x" name="Tổng ĐKM"
-                        tick={{ fill: "#94a3b8", fontSize: 10 }}
-                        tickFormatter={v => `${v.toLocaleString()}M`}
-                        label={{ value: "Tổng ĐKM (triệu VNĐ)", position: "insideBottom", offset: -15, fill: "#64748b", fontSize: 11 }}
-                      />
-                      <YAxis
-                        type="number" dataKey="y" name="YoY%"
-                        tick={{ fill: "#94a3b8", fontSize: 10 }}
-                        tickFormatter={v => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`}
-                        label={{ value: "YoY%", angle: -90, position: "insideLeft", offset: 10, fill: "#64748b", fontSize: 11 }}
-                      />
-                      <ZAxis type="number" dataKey="z" range={[800, 3000]} />
-                      <ReferenceLine x={medianX} stroke="#475569" strokeDasharray="4 4" />
-                      <ReferenceLine y={0}        stroke="#475569" strokeDasharray="4 4" />
-                      <Tooltip
-                        cursor={false}
-                        content={({ payload }) => {
-                          if (!payload?.[0]) return null;
-                          const d = payload[0].payload;
-                          return (
-                            <div className="bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-xs shadow-xl">
-                              <div className="font-bold text-white mb-1">{d.name} <span className={d.region === "HN" ? "text-blue-400" : "text-orange-400"}>{d.region}</span></div>
-                              <div className="text-slate-300">Tổng ĐKM: <span className="text-white font-semibold">{d.x.toLocaleString()}M</span></div>
-                              {d.hasYoy && <div className={d.y >= 0 ? "text-green-400" : "text-red-400"}>YoY: {d.y >= 0 ? "▲" : "▼"}{Math.abs(d.y).toFixed(1)}%</div>}
+                      {q.teams.length === 0 ? (
+                        <div className="text-xs text-slate-600 italic">Không có team nào</div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {q.teams.map(t => (
+                            <div key={t.name} className={`px-2.5 py-1.5 rounded-lg ${q.chip}`}>
+                              <div className="text-xs font-semibold flex items-center gap-1">
+                                {t.name}
+                                <span className={`text-[10px] px-1 rounded ${t.region === "HN" ? "bg-blue-500/20 text-blue-400" : "bg-orange-500/20 text-orange-400"}`}>
+                                  {t.region}
+                                </span>
+                              </div>
+                              <div className="text-[10px] mt-0.5 flex items-center gap-1.5 opacity-90">
+                                <span>{t.dkm.toLocaleString()}M</span>
+                                {t.hasYoy && (
+                                  <span className={(t.yoy ?? 0) >= 0 ? "text-green-400" : "text-red-400"}>
+                                    {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          );
-                        }}
-                      />
-                      {hnData.length  > 0 && <Scatter name="HN"  data={hnData}  shape={<TeamDot />} />}
-                      {hcmData.length > 0 && <Scatter name="HCM" data={hcmData} shape={<TeamDot />} />}
-                    </ScatterChart>
-                  </ResponsiveContainer>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
+                <p className="text-[10px] text-slate-600 mt-3">* Ngưỡng phân loại dựa trên giá trị median tổng ĐKM của tất cả team trong kỳ được chọn</p>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        {/* Phần 4b: Vị Thế Nhóm Dịch Vụ theo Khu Vực */}
+        {hasPrevYearTeamData && (() => {
+          const svcData = SVC_KEYS.map(sk => {
+            const hnTeams  = displayed.filter(t => t.region === "HN");
+            const hcmTeams = displayed.filter(t => t.region === "HCM");
+            const hnDkm    = hnTeams.reduce((s, t) => s + ((t as any)[sk.key] ?? 0), 0);
+            const hcmDkm   = hcmTeams.reduce((s, t) => s + ((t as any)[sk.key] ?? 0), 0);
+            const hnPrevDkm  = hnTeams.reduce((s, t)  => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0);
+            const hcmPrevDkm = hcmTeams.reduce((s, t) => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0);
+            const hnYoy  = hnPrevDkm  > 0 ? ((hnDkm  - hnPrevDkm)  / hnPrevDkm  * 100) : null;
+            const hcmYoy = hcmPrevDkm > 0 ? ((hcmDkm - hcmPrevDkm) / hcmPrevDkm * 100) : null;
+            return { service: sk.label, hnDkm, hcmDkm, hnYoy, hcmYoy };
+          }).filter(d => d.hnDkm > 0 || d.hcmDkm > 0);
+
+          if (svcData.length === 0) return null;
+
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle>Vị Thế Nhóm Dịch Vụ theo Khu Vực</CardTitle>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 mt-0.5">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-2.5 rounded-sm bg-blue-500/70 inline-block"/>HN ĐKM (triệu VNĐ)
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-2.5 rounded-sm bg-orange-500/70 inline-block"/>HCM ĐKM (triệu VNĐ)
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-6 border-t-2 border-dashed border-blue-400"/>HN YoY%
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-6 border-t-2 border-dashed border-orange-400"/>HCM YoY%
+                  </span>
+                  <span className="text-slate-500">· Đường nét đứt trên/dưới 0% = tăng/giảm so cùng kỳ 2025</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <ComposedChart data={svcData} margin={{ top: 10, right: 50, bottom: 5, left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="service" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fill: "#94a3b8", fontSize: 10 }}
+                      tickFormatter={v => `${v.toLocaleString()}M`}
+                      width={60}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fill: "#94a3b8", fontSize: 10 }}
+                      tickFormatter={v => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`}
+                      width={45}
+                    />
+                    <ReferenceLine yAxisId="right" y={0} stroke="#475569" strokeDasharray="4 4" label={{ value: "0%", fill: "#64748b", fontSize: 10, position: "right" }} />
+                    <Tooltip
+                      content={({ payload, label }) => {
+                        if (!payload?.length) return null;
+                        return (
+                          <div className="bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-xs shadow-xl">
+                            <div className="font-bold text-white mb-1.5">{label}</div>
+                            {payload.map((p: any) => (
+                              <div key={p.name} style={{ color: p.color }} className="flex items-center justify-between gap-3">
+                                <span>{p.name}:</span>
+                                <span className="font-semibold">
+                                  {p.name.includes("YoY")
+                                    ? (p.value != null ? `${p.value > 0 ? "+" : ""}${Number(p.value).toFixed(1)}%` : "—")
+                                    : `${Number(p.value).toLocaleString()}M`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar yAxisId="left"  dataKey="hnDkm"  name="HN ĐKM"   fill="#3b82f6" fillOpacity={0.7} radius={[3,3,0,0]} />
+                    <Bar yAxisId="left"  dataKey="hcmDkm" name="HCM ĐKM"  fill="#f97316" fillOpacity={0.7} radius={[3,3,0,0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="hnYoy"  name="HN YoY%"  stroke="#60a5fa" strokeWidth={2} strokeDasharray="5 3" dot={{ fill: "#60a5fa", r: 4 }} connectNulls />
+                    <Line yAxisId="right" type="monotone" dataKey="hcmYoy" name="HCM YoY%" stroke="#fb923c" strokeWidth={2} strokeDasharray="5 3" dot={{ fill: "#fb923c", r: 4 }} connectNulls />
+                  </ComposedChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           );
