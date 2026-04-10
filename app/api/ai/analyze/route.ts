@@ -159,6 +159,85 @@ DANH SÁCH TÁC VỤ:
 ${taskRows || "Không có tác vụ"}`;
   }
 
+  // ─── CEO QUADRANT: Vị thế team theo tăng trưởng × doanh số ────────────────────
+  if (context === "ceo_quadrant") {
+    const { period, teams, region } = data ?? {};
+    const teamRows = (teams ?? []).map((t: any) =>
+      `  ${t.name} [${t.region}]: ĐKM ${t.x.toLocaleString()}M | YoY ${t.hasYoy ? (t.y >= 0 ? "▲" : "▼") + Math.abs(t.y).toFixed(1) + "%" : "—"}`
+    ).join("\n");
+    return `Bạn là CEO của Mắt Bão Corporation (MBC). Nhìn vào ma trận vị thế team (trục X: tổng ĐKM, trục Y: tăng trưởng YoY), hãy phân tích ngắn gọn.
+${STRICT_RULE}
+
+📍 **Ngôi Sao** (ĐKM cao + tăng trưởng tốt) — điểm cần khai thác tiếp
+⚠️ **Cần Chú Ý** (ĐKM thấp + đang giảm) — ưu tiên can thiệp ngay
+🔄 **Ổn Định** (ĐKM cao nhưng tăng chậm) — cần bứt phá
+🚀 **Tiềm Năng** (ĐKM nhỏ nhưng tăng nhanh) — cần đầu tư thêm
+💡 **1-2 hành động CEO** cần làm ngay
+
+DỮ LIỆU VỊ THẾ TEAM — ${period ?? ""}${region && region !== "all" ? ` (${region})` : ""}:
+${teamRows || "Không có dữ liệu"}`;
+  }
+
+  // ─── TREND: Xu hướng nhóm sản phẩm ─────────────────────────────────────────
+  if (context === "trend") {
+    const { period, region, rows, isPaceMonth, paceLabel } = data ?? {};
+    const rowsStr = (rows ?? []).map((r: any) =>
+      `  ${r.label}: ${r.cur > 0 ? r.cur.toLocaleString() + "M" : "—"}${r.projected !== r.cur ? ` (dự báo ~${Math.round(r.projected).toLocaleString()}M)` : ""} | MoM: ${r.mom !== null ? (r.mom >= 0 ? "+" : "") + r.mom.toFixed(1) + "%" : "—"} | YoY: ${r.yoy !== null ? (r.yoy >= 0 ? "▲" : "▼") + Math.abs(r.yoy).toFixed(1) + "%" : "—"} | ${r.status}`
+    ).join("\n");
+    return `Bạn là Giám đốc Sản phẩm của Mắt Bão Corporation (MBC), chuyên phân tích xu hướng dịch vụ cloud & SaaS B2B.
+${STRICT_RULE}
+
+📈 **Đang Bứt Phá** — dịch vụ tăng mạnh, lý do có thể và nên khai thác thế nào
+📉 **Đang Giảm** — dịch vụ sụt giảm, nguy cơ và đề xuất phục hồi
+🎯 **Ưu Tiên Nguồn Lực** — phân bổ sales focus cho tháng tới
+💡 **1 đề xuất chiến lược** dựa trên xu hướng hiện tại
+
+DỮ LIỆU XU HƯỚNG — ${period ?? ""}${region && region !== "all" ? ` (${region})` : ""}${isPaceMonth ? ` · ${paceLabel}` : ""}:
+${rowsStr || "Không có dữ liệu"}`;
+  }
+
+  // ─── HEATMAP: Ma trận team × dịch vụ ────────────────────────────────────────
+  if (context === "heatmap") {
+    const { period, region, teams, benchmark } = data ?? {};
+    const teamRows = (teams ?? []).map((t: any) => {
+      const svcStr = Object.entries(t.services ?? {})
+        .filter(([, v]) => (v as number) > 0)
+        .map(([k, v]) => `${k}: ${(v as number).toLocaleString()}M`)
+        .join(", ");
+      const dkmPct = t.totalDs > 0 ? Math.round((t.totalDkm / t.totalDs) * 100) : 0;
+      return `  ${t.name} [${t.region}]: Tổng ĐKM ${t.totalDkm.toLocaleString()}M | Tỉ lệ ĐKM/DS ${dkmPct}% (benchmark ${benchmark}%) | ${svcStr || "—"}`;
+    }).join("\n");
+    return `Bạn là Trưởng phòng Kinh doanh của Mắt Bão Corporation (MBC), chuyên phân tích hiệu suất cross-sell và phân bổ dịch vụ theo team.
+${STRICT_RULE}
+
+🏆 **Team Nổi Bật** — team nào đang đa dạng dịch vụ, tỉ lệ ĐKM/DS tốt
+⚠️ **Điểm Yếu Cần Bổ Sung** — team/dịch vụ nào đang trống hoặc quá thấp
+🔀 **Cross-sell Opportunities** — team nào đang thiếu dịch vụ mà đối thủ trong cùng vùng đang mạnh
+💡 **2 hành động cụ thể** trưởng phòng cần làm ngay
+
+DỮ LIỆU MA TRẬN — ${period ?? ""}${region && region !== "all" ? ` (${region})` : ""} · Benchmark ĐKM: ${benchmark ?? 40}%:
+${teamRows || "Không có dữ liệu"}`;
+  }
+
+  // ─── KH_REPORT: Báo cáo khách hàng ──────────────────────────────────────────
+  if (context === "kh_report") {
+    const { period, region, rows } = data ?? {};
+    const rowsStr = (rows ?? []).map((r: any) =>
+      `  ${r.name} [${r.region}]: Tổng KH ${r.kh} | DS ${r.ds.toLocaleString()}M | TB DS/KH ${r.avgDs.toFixed(1)}M`
+        + (r.khDkm > 0 ? ` | KH ĐKM ${r.khDkm} | DS ĐKM ${r.dkm.toLocaleString()}M | TB DS ĐKM/KH ${r.avgDkm.toFixed(1)}M` : "")
+    ).join("\n");
+    return `Bạn là chuyên gia CRM & Customer Success của Mắt Bão Corporation (MBC), chuyên phân tích chất lượng khách hàng và giá trị đơn hàng trung bình.
+${STRICT_RULE}
+
+💎 **Team Chất Lượng Cao** — TB DS/KH vượt trội, nên học hỏi cách tiếp cận
+⚠️ **Team Cần Nâng Deal Size** — KH nhiều nhưng DS/KH thấp, đề xuất upsell
+📊 **So Sánh ĐKM vs Tổng KH** — tỉ lệ KH mới vs tổng, sức khỏe acquisition
+💡 **1-2 đề xuất** cải thiện chất lượng khách hàng và DS trung bình
+
+DỮ LIỆU KH — ${period ?? ""}${region && region !== "all" ? ` (${region})` : ""}:
+${rowsStr || "Không có dữ liệu"}`;
+  }
+
   // Fallback
   return `Bạn là chuyên gia phân tích kinh doanh của Mắt Bão Corporation (MBC).
 ${STRICT_RULE}

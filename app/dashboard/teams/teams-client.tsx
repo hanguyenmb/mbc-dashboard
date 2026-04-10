@@ -14,6 +14,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Sparkles, History, TrendingUp, TrendingDown, MapPin } from "lucide-react";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 import { AiHistoryPanel } from "@/components/ai/ai-history-panel";
+import { MiniAiPanel } from "@/components/ai/mini-ai-panel";
 import { TEAM_SERVICE_DATA } from "@/lib/mock-data";
 import type { UserRole, TeamMonthlyData, TeamServiceRecord } from "@/lib/types";
 
@@ -662,15 +663,20 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           return (
             <Card>
               <CardHeader>
-                <CardTitle>Xu Hướng Nhóm Sản Phẩm — Đăng Ký Mới</CardTitle>
-                <div className="flex items-center gap-3 flex-wrap text-xs text-slate-400">
-                  <span>So sánh {curMk}{prevMk ? ` vs ${prevMk}` : ""} · Sparkline {sparkMonths[0] ?? curMk}–{curMk}</span>
-                  {isCurrentMonth && (
-                    <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-medium">
-                      ⏱ Pace {paceLabel} · MoM/YoY tính theo dự báo full-month
-                    </span>
-                  )}
-                  {region !== "all" && <span className="text-blue-400">Khu vực {region}</span>}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle>Xu Hướng Nhóm Sản Phẩm — Đăng Ký Mới</CardTitle>
+                    <div className="flex items-center gap-3 flex-wrap text-xs text-slate-400 mt-1">
+                      <span>So sánh {curMk}{prevMk ? ` vs ${prevMk}` : ""} · Sparkline {sparkMonths[0] ?? curMk}–{curMk}</span>
+                      {isCurrentMonth && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-medium">
+                          ⏱ Pace {paceLabel} · MoM/YoY tính theo dự báo full-month
+                        </span>
+                      )}
+                      {region !== "all" && <span className="text-blue-400">Khu vực {region}</span>}
+                    </div>
+                  </div>
+                  <MiniAiPanel context="trend" label="AI nhận xét" data={{ period: curMk, region, isPaceMonth: isCurrentMonth, paceLabel, rows: trendRows.map(r => ({ label: r.label, cur: r.cur, projected: r.projected, mom: r.mom, yoy: r.yoy, status: r.status })) }} />
                 </div>
               </CardHeader>
               <CardContent className="overflow-x-auto">
@@ -819,13 +825,18 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           return (
             <Card>
               <CardHeader>
-                <CardTitle>Phân Tích Vị Thế Team — Góc Nhìn CEO</CardTitle>
-                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
-                  <span>Trục X: Tổng ĐKM (triệu VNĐ) · Trục Y: Tăng trưởng YoY% so 2025</span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"/>HN
-                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block ml-1"/>HCM
-                  </span>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle>Phân Tích Vị Thế Team — Góc Nhìn CEO</CardTitle>
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 mt-1">
+                      <span>Trục X: Tổng ĐKM (triệu VNĐ) · Trục Y: Tăng trưởng YoY% so 2025</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"/>HN
+                        <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block ml-1"/>HCM
+                      </span>
+                    </div>
+                  </div>
+                  <MiniAiPanel context="ceo_quadrant" label="AI nhận xét" data={{ period: filterLabel, region, teams: bubbleData }} />
                 </div>
               </CardHeader>
               <CardContent>
@@ -891,7 +902,17 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
         {/* Phần 4: Heatmap team × dịch vụ */}
         <Card>
           <CardHeader>
-            <CardTitle>Ma Trận Doanh Số Đăng Ký Mới theo Loại Dịch Vụ (triệu VNĐ)</CardTitle>
+            <div className="flex items-start justify-between gap-3">
+              <CardTitle>Ma Trận Doanh Số Đăng Ký Mới theo Loại Dịch Vụ (triệu VNĐ)</CardTitle>
+              <MiniAiPanel context="heatmap" label="AI nhận xét" data={{
+                period: filterLabel, region, benchmark,
+                teams: displayed.map(t => ({
+                  name: t.teamName, region: t.region,
+                  totalDs: t.revenue, totalDkm: SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0),
+                  services: Object.fromEntries(SVC_KEYS.map(sk => [sk.label, (t as any)[sk.key] ?? 0])),
+                }))
+              }} />
+            </div>
             <div className="flex items-center gap-3 flex-wrap">
               <Badge variant="neutral">Màu càng sáng = doanh số càng cao</Badge>
               <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1">
@@ -1127,10 +1148,18 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             <>
             <Card className="mb-4">
               <CardHeader>
-                <CardTitle>Báo Cáo Khách Hàng — {filterLabel}</CardTitle>
-                <div className="flex items-center gap-3 text-xs text-slate-400">
-                  <span>Tổng Số KH · DS (triệu VNĐ) · TB DS/KH</span>
-                  {hasPrevKhData && <span className="text-amber-400">▲/▼ so cùng kỳ 2025</span>}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle>Báo Cáo Khách Hàng — {filterLabel}</CardTitle>
+                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                      <span>Tổng Số KH · DS (triệu VNĐ) · TB DS/KH</span>
+                      {hasPrevKhData && <span className="text-amber-400">▲/▼ so cùng kỳ 2025</span>}
+                    </div>
+                  </div>
+                  <MiniAiPanel context="kh_report" label="AI nhận xét" data={{
+                    period: filterLabel, region,
+                    rows: rows.map(r => ({ name: r.teamName, region: r.region, kh: r.kh, ds: r.ds, avgDs: r.avgDs, khDkm: (r as any).customerCountDkm ?? 0, dkm: SVC_KEYS.reduce((s, sk) => s + ((r as any)[sk.key] ?? 0), 0), avgDkm: r.avgDs }))
+                  }} />
                 </div>
               </CardHeader>
               <CardContent className="overflow-x-auto">
