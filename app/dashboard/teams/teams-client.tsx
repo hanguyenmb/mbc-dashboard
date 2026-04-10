@@ -776,57 +776,88 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
 
         {/* Phần 4a: Phân Tích Vị Thế Team — Góc Nhìn CEO */}
         {hasPrevYearTeamData && (() => {
+          // Pace projection: normalize partial month to full-month equivalent
+          const now          = new Date();
+          const selMonthNum  = parseInt(selectedMonth.replace("T", ""));
+          const isCurrentMo  = view === "month" && selMonthNum === now.getMonth() + 1;
+          const daysInMonth  = new Date(now.getFullYear(), selMonthNum, 0).getDate();
+          const daysElapsed  = isCurrentMo ? now.getDate() : daysInMonth;
+          const paceRatio    = Math.min(daysElapsed / daysInMonth, 1);
+          const isProjected  = isCurrentMo && paceRatio < 1;
+
           const teamData = displayed.map(t => {
-            const totalDkm = SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0);
-            const prev     = prevYearTeamMap[t.teamId];
-            const prevDkm  = prev ? SVC_KEYS.reduce((s, sk) => s + ((prev as any)[sk.key] ?? 0), 0) : 0;
-            const yoy      = prevDkm > 0 ? ((totalDkm - prevDkm) / prevDkm * 100) : null;
-            return { name: t.teamName, region: t.region, dkm: totalDkm, yoy, hasYoy: prevDkm > 0 };
-          }).filter(t => t.dkm > 0);
+            const rawDkm     = SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0);
+            const projDkm    = isProjected ? rawDkm / paceRatio : rawDkm;
+            const projRev    = isProjected ? t.revenue / paceRatio : t.revenue;
+            const prev       = prevYearTeamMap[t.teamId];
+            const prevDkm    = prev ? SVC_KEYS.reduce((s, sk) => s + ((prev as any)[sk.key] ?? 0), 0) : 0;
+            const yoy        = prevDkm > 0 ? ((projDkm - prevDkm) / prevDkm * 100) : null;
+            const targetPct  = t.target > 0 ? (projRev / t.target * 100) : null;
+            return { name: t.teamName, region: t.region, dkm: projDkm, rawDkm, yoy, hasYoy: prevDkm > 0, targetPct };
+          }).filter(t => t.rawDkm > 0);
 
           if (teamData.length < 2) return null;
 
-          const sorted   = [...teamData].sort((a, b) => a.dkm - b.dkm);
+          const sorted    = [...teamData].sort((a, b) => a.dkm - b.dkm);
           const medianDkm = sorted[Math.floor(sorted.length / 2)].dkm;
 
-          const quadrants = [
-            {
-              key: "star",
-              label: "⭐ Ngôi Sao",
-              sub: "ĐKM lớn · tăng trưởng tốt",
-              color: "text-green-400",
-              border: "border-green-500/30 bg-green-500/5",
-              chip: "bg-green-500/15 text-green-300 border border-green-500/20",
-              teams: teamData.filter(t => t.dkm >= medianDkm && (t.yoy ?? 0) >= 0),
-            },
-            {
-              key: "potential",
-              label: "🚀 Tiềm Năng",
-              sub: "ĐKM nhỏ · tăng trưởng tốt",
-              color: "text-violet-400",
-              border: "border-violet-500/30 bg-violet-500/5",
-              chip: "bg-violet-500/15 text-violet-300 border border-violet-500/20",
-              teams: teamData.filter(t => t.dkm < medianDkm && (t.yoy ?? 0) >= 0),
-            },
-            {
-              key: "stable",
-              label: "🔄 Ổn Định",
-              sub: "ĐKM lớn · cần bứt phá YoY",
-              color: "text-amber-400",
-              border: "border-amber-500/30 bg-amber-500/5",
-              chip: "bg-amber-500/15 text-amber-300 border border-amber-500/20",
-              teams: teamData.filter(t => t.dkm >= medianDkm && (t.yoy ?? 0) < 0),
-            },
-            {
-              key: "watch",
-              label: "⚠️ Cần Chú Ý",
-              sub: "ĐKM nhỏ · cần cải thiện",
-              color: "text-red-400",
-              border: "border-red-500/30 bg-red-500/5",
-              chip: "bg-red-500/15 text-red-300 border border-red-500/20",
-              teams: teamData.filter(t => t.dkm < medianDkm && (t.yoy ?? 0) < 0),
-            },
+          const yoyGroups = [
+            { key: "star",      label: "⭐ Ngôi Sao",      sub: "ĐKM lớn · tăng trưởng tốt",    color: "text-green-400",  border: "border-green-500/30 bg-green-500/5",   chip: "bg-green-500/15 text-green-300 border border-green-500/20",  teams: teamData.filter(t => t.dkm >= medianDkm && (t.yoy ?? 0) >= 0) },
+            { key: "potential", label: "🚀 Tiềm Năng",     sub: "ĐKM nhỏ · tăng trưởng tốt",    color: "text-violet-400", border: "border-violet-500/30 bg-violet-500/5", chip: "bg-violet-500/15 text-violet-300 border border-violet-500/20", teams: teamData.filter(t => t.dkm <  medianDkm && (t.yoy ?? 0) >= 0) },
+            { key: "stable",    label: "🔄 Ổn Định",       sub: "ĐKM lớn · cần bứt phá YoY",    color: "text-amber-400",  border: "border-amber-500/30 bg-amber-500/5",   chip: "bg-amber-500/15 text-amber-300 border border-amber-500/20",  teams: teamData.filter(t => t.dkm >= medianDkm && (t.yoy ?? 0) <  0) },
+            { key: "watch",     label: "⚠️ Cần Chú Ý",    sub: "ĐKM nhỏ · cần cải thiện",      color: "text-red-400",    border: "border-red-500/30 bg-red-500/5",       chip: "bg-red-500/15 text-red-300 border border-red-500/20",        teams: teamData.filter(t => t.dkm <  medianDkm && (t.yoy ?? 0) <  0) },
           ];
+
+          const targetGroups = [
+            { key: "excel",   label: "⭐ Xuất Sắc",         sub: "ĐKM lớn · đạt mục tiêu",       color: "text-green-400",  border: "border-green-500/30 bg-green-500/5",   chip: "bg-green-500/15 text-green-300 border border-green-500/20",  teams: teamData.filter(t => t.dkm >= medianDkm && (t.targetPct ?? 0) >= 100) },
+            { key: "ontrack", label: "🚀 Đang Tốt",         sub: "ĐKM nhỏ · đạt mục tiêu",       color: "text-violet-400", border: "border-violet-500/30 bg-violet-500/5", chip: "bg-violet-500/15 text-violet-300 border border-violet-500/20", teams: teamData.filter(t => t.dkm <  medianDkm && (t.targetPct ?? 0) >= 100) },
+            { key: "push",    label: "💪 Cần Đẩy Mạnh",    sub: "ĐKM lớn · chưa đạt mục tiêu",  color: "text-amber-400",  border: "border-amber-500/30 bg-amber-500/5",   chip: "bg-amber-500/15 text-amber-300 border border-amber-500/20",  teams: teamData.filter(t => t.dkm >= medianDkm && (t.targetPct ?? 0) <  100) },
+            { key: "prio",    label: "⚠️ Ưu Tiên Hỗ Trợ", sub: "ĐKM nhỏ · chưa đạt mục tiêu", color: "text-red-400",    border: "border-red-500/30 bg-red-500/5",       chip: "bg-red-500/15 text-red-300 border border-red-500/20",        teams: teamData.filter(t => t.dkm <  medianDkm && (t.targetPct ?? 0) <  100) },
+          ];
+
+          function QuadGrid({ groups, showYoy, showTarget }: { groups: typeof yoyGroups; showYoy?: boolean; showTarget?: boolean }) {
+            return (
+              <div className="grid grid-cols-2 gap-3">
+                {groups.map(q => (
+                  <div key={q.key} className={`rounded-xl border p-4 ${q.border}`}>
+                    <div className="mb-3">
+                      <div className={`text-sm font-bold ${q.color}`}>{q.label}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">{q.sub}</div>
+                    </div>
+                    {q.teams.length === 0 ? (
+                      <div className="text-xs text-slate-600 italic">Không có team nào</div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {q.teams.map(t => (
+                          <div key={t.name} className={`px-2.5 py-1.5 rounded-lg ${q.chip}`}>
+                            <div className="text-xs font-semibold flex items-center gap-1">
+                              {t.name}
+                              <span className={`text-[10px] px-1 rounded ${t.region === "HN" ? "bg-blue-500/20 text-blue-400" : "bg-orange-500/20 text-orange-400"}`}>
+                                {t.region}
+                              </span>
+                            </div>
+                            <div className="text-[10px] mt-0.5 flex items-center gap-1.5 opacity-90">
+                              <span>{Math.round(t.dkm).toLocaleString()}M{isProjected ? "*" : ""}</span>
+                              {showYoy && t.hasYoy && (
+                                <span className={(t.yoy ?? 0) >= 0 ? "text-green-400" : "text-red-400"}>
+                                  {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
+                                </span>
+                              )}
+                              {showTarget && t.targetPct != null && (
+                                <span className={t.targetPct >= 100 ? "text-green-400" : "text-red-400"}>
+                                  {Math.round(t.targetPct)}%MT
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          }
 
           return (
             <Card>
@@ -835,49 +866,33 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   <div>
                     <CardTitle>Phân Tích Vị Thế Team — Góc Nhìn CEO</CardTitle>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Ngưỡng ĐKM median: <span className="text-white font-semibold">{medianDkm.toLocaleString()}M</span>
-                      &nbsp;· Phân loại theo tổng ĐKM so median và tăng trưởng YoY
+                      Ngưỡng ĐKM median: <span className="text-white font-semibold">{Math.round(medianDkm).toLocaleString()}M</span>
+                      {isProjected && (
+                        <span className="ml-2 text-amber-400">· * Quy chiếu theo tốc độ {daysElapsed}/{daysInMonth} ngày</span>
+                      )}
                     </p>
                   </div>
-                  <MiniAiPanel context="ceo_quadrant" label="AI nhận xét" data={{ period: filterLabel, region, teams: teamData }} />
+                  <MiniAiPanel context="ceo_quadrant" label="AI nhận xét" data={{ period: filterLabel, region, paceRatio, teams: teamData }} />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
-                  {quadrants.map(q => (
-                    <div key={q.key} className={`rounded-xl border p-4 ${q.border}`}>
-                      <div className="mb-3">
-                        <div className={`text-sm font-bold ${q.color}`}>{q.label}</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">{q.sub}</div>
-                      </div>
-                      {q.teams.length === 0 ? (
-                        <div className="text-xs text-slate-600 italic">Không có team nào</div>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {q.teams.map(t => (
-                            <div key={t.name} className={`px-2.5 py-1.5 rounded-lg ${q.chip}`}>
-                              <div className="text-xs font-semibold flex items-center gap-1">
-                                {t.name}
-                                <span className={`text-[10px] px-1 rounded ${t.region === "HN" ? "bg-blue-500/20 text-blue-400" : "bg-orange-500/20 text-orange-400"}`}>
-                                  {t.region}
-                                </span>
-                              </div>
-                              <div className="text-[10px] mt-0.5 flex items-center gap-1.5 opacity-90">
-                                <span>{t.dkm.toLocaleString()}M</span>
-                                {t.hasYoy && (
-                                  <span className={(t.yoy ?? 0) >= 0 ? "text-green-400" : "text-red-400"}>
-                                    {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+              <CardContent className="space-y-6">
+                <div>
+                  <div className="text-xs font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                    <span className="w-1 h-4 rounded bg-blue-400 inline-block"/>
+                    So với cùng kỳ 2025 (YoY)
+                  </div>
+                  <QuadGrid groups={yoyGroups} showYoy />
                 </div>
-                <p className="text-[10px] text-slate-600 mt-3">* Ngưỡng phân loại dựa trên giá trị median tổng ĐKM của tất cả team trong kỳ được chọn</p>
+                <div>
+                  <div className="text-xs font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                    <span className="w-1 h-4 rounded bg-green-400 inline-block"/>
+                    So với mục tiêu tháng
+                  </div>
+                  <QuadGrid groups={targetGroups} showTarget />
+                </div>
+                <p className="text-[10px] text-slate-600">
+                  * Ngưỡng phân loại: median ĐKM {Math.round(medianDkm).toLocaleString()}M{isProjected ? ` · Giá trị đã quy chiếu tốc độ ${daysElapsed}/${daysInMonth} ngày trong tháng` : ""}
+                </p>
               </CardContent>
             </Card>
           );
