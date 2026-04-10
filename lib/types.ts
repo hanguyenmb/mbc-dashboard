@@ -107,7 +107,23 @@ export interface TeamServiceRecord {
   transferGws: number;
   saleAi: number;
   elastic: number;
+  [key: string]: any;    // dynamic service fields
 }
+
+export interface ServiceConfig {
+  key: string;    // stable field key (used in TeamServiceRecord)
+  label: string;  // display name — editable
+  color: string;  // chart color
+}
+
+export const DEFAULT_SERVICE_CONFIG: ServiceConfig[] = [
+  { key: "hostMail",    label: "Host/Mail",    color: "#60A5FA" },
+  { key: "msgws",       label: "MS/GWS",       color: "#34D399" },
+  { key: "tenMien",     label: "Tên miền",     color: "#FCD34D" },
+  { key: "transferGws", label: "Transfer GWS", color: "#C084FC" },
+  { key: "saleAi",      label: "Sale AI",      color: "#F87171" },
+  { key: "elastic",     label: "Elastic",      color: "#38BDF8" },
+];
 
 export type TeamMonthlyData = { month: string; teams: TeamServiceRecord[]; prevYearRevenue?: number }[];
 

@@ -7,6 +7,7 @@ import {
   SERVICE_GROUPS,
   TEAM_SERVICE_DATA,
 } from "@/lib/mock-data";
+import { DEFAULT_SERVICE_CONFIG } from "@/lib/types";
 
 const FALLBACKS: Record<DataKey, unknown> = {
   monthly_data:    MONTHLY_DATA,
@@ -15,6 +16,7 @@ const FALLBACKS: Record<DataKey, unknown> = {
   service_groups:  SERVICE_GROUPS,
   team_service:      TEAM_SERVICE_DATA,
   team_service_prev: TEAM_SERVICE_DATA,
+  service_config:    DEFAULT_SERVICE_CONFIG,
   users:             [],
 };
 

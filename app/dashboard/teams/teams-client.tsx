@@ -16,7 +16,8 @@ import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 import { AiHistoryPanel } from "@/components/ai/ai-history-panel";
 import { MiniAiPanel } from "@/components/ai/mini-ai-panel";
 import { TEAM_SERVICE_DATA } from "@/lib/mock-data";
-import type { UserRole, TeamMonthlyData, TeamServiceRecord } from "@/lib/types";
+import type { UserRole, TeamMonthlyData, TeamServiceRecord, ServiceConfig } from "@/lib/types";
+import { DEFAULT_SERVICE_CONFIG } from "@/lib/types";
 
 interface MonthlyRow { month: string; cumKy: number; hn: number | null; hcm: number | null; hnPrev?: number | null; hcmPrev?: number | null; [k: string]: any; }
 
@@ -26,16 +27,8 @@ interface TeamsClientProps {
   teamServiceData: TeamMonthlyData;
   teamPrevData: TeamMonthlyData;
   monthlyData: MonthlyRow[];
+  serviceConfig?: ServiceConfig[];
 }
-
-const SVC_KEYS: { key: string; label: string; color: string }[] = [
-  { key: "hostMail",    label: "Host/Mail",   color: "#60A5FA" },
-  { key: "msgws",       label: "MS/GWS",      color: "#34D399" },
-  { key: "tenMien",     label: "Tên miền",    color: "#FCD34D" },
-  { key: "transferGws", label: "Transfer GWS",color: "#C084FC" },
-  { key: "saleAi",      label: "Sale AI",     color: "#F87171" },
-  { key: "elastic",     label: "Elastic",     color: "#38BDF8" },
-];
 
 const QUARTER_MONTHS: Record<number, string[]> = {
   1: ["T1","T2","T3"], 2: ["T4","T5","T6"],
@@ -81,7 +74,8 @@ function RegionCard({ label, teams }: { label: string; teams: TeamServiceRecord[
   );
 }
 
-export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, monthlyData }: TeamsClientProps) {
+export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, monthlyData, serviceConfig }: TeamsClientProps) {
+  const SVC_KEYS: ServiceConfig[] = serviceConfig?.length ? serviceConfig : DEFAULT_SERVICE_CONFIG;
   const [showAI, setShowAI] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [region, setRegion] = useState<"all" | "HN" | "HCM">("all");
