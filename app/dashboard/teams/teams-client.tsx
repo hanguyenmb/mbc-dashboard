@@ -894,7 +894,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                 {vals.map((v, i) => (
                   <div key={i} className="w-[4px] rounded-sm"
                     style={{ height: `${Math.max(2, Math.round((v / max) * 14))}px`,
-                             backgroundColor: i === vals.length - 1 ? "#60a5fa" : "#334155" }} />
+                             backgroundColor: i === vals.length - 1 ? "#60a5fa" : "#475569" }} />
                 ))}
               </div>
             );
