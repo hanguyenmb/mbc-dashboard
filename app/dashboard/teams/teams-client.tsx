@@ -85,6 +85,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
   const [openDropdown, setOpenDropdown] = useState<"month" | "quarter" | null>(null);
   const [benchmark, setBenchmark] = useState(40);
   const [trendTeamId, setTrendTeamId] = useState<string | null>(null);
+  const [radarTeamId, setRadarTeamId] = useState<string | null>(null);
   const rankingRef = useRef<HTMLDivElement>(null);
 
   const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
@@ -192,20 +193,27 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
     return entry;
   });
 
-  // Radar chart per region
-  const radarHN = SVC_KEYS.map(s => ({
-    subject: s.label,
-    value: hnTeams.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0),
-  }));
-  const radarHCM = SVC_KEYS.map(s => ({
-    subject: s.label,
-    value: hcmTeams.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0),
-  }));
-  const radarData = SVC_KEYS.map((s, i) => ({
-    subject: s.label,
-    HN:  radarHN[i].value,
-    HCM: radarHCM[i].value,
-  }));
+  // Radar chart — HN vs HCM tổng hợp, hoặc 1 team vs toàn khu vực
+  const radarSelectedTeam = radarTeamId ? displayed.find(t => t.teamId === radarTeamId) ?? null : null;
+  const radarData = SVC_KEYS.map(s => {
+    if (radarSelectedTeam) {
+      // Mode: team vs khu vực của team đó
+      const regionTeams = displayed.filter(t => t.region === radarSelectedTeam.region);
+      const regionAvg = regionTeams.length > 0
+        ? regionTeams.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0) / regionTeams.length
+        : 0;
+      return {
+        subject: s.label,
+        [radarSelectedTeam.teamName]: (radarSelectedTeam as any)[s.key] ?? 0,
+        [`TB ${radarSelectedTeam.region}`]: regionAvg,
+      };
+    }
+    return {
+      subject: s.label,
+      HN:  hnTeams.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0),
+      HCM: hcmTeams.reduce((sum, t) => sum + ((t as any)[s.key] ?? 0), 0),
+    };
+  });
 
   const TEAM_COLORS = ["#3b82f6","#10b981","#f59e0b","#8b5cf6","#ef4444","#06b6d4","#f97316","#ec4899"];
 
@@ -487,7 +495,29 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle>Radar: Thế Mạnh Dịch Vụ Đăng Ký Mới HN vs HCM</CardTitle>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle>
+                    {radarSelectedTeam
+                      ? `Radar: ${radarSelectedTeam.teamName} vs TB ${radarSelectedTeam.region}`
+                      : "Radar: Thế Mạnh Dịch Vụ Đăng Ký Mới HN vs HCM"}
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {radarSelectedTeam ? `So sánh team với trung bình khu vực ${radarSelectedTeam.region}` : "So sánh tổng ĐKM theo loại dịch vụ giữa 2 khu vực"}
+                  </p>
+                </div>
+                {/* Team dropdown */}
+                <select
+                  value={radarTeamId ?? ""}
+                  onChange={e => setRadarTeamId(e.target.value || null)}
+                  className="text-xs bg-slate-800 border border-slate-600 rounded-lg px-2.5 py-1.5 text-slate-300 focus:outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="">HN vs HCM</option>
+                  {[...hnTeams, ...hcmTeams].map(t => (
+                    <option key={t.teamId} value={t.teamId}>{t.teamName} ({t.region})</option>
+                  ))}
+                </select>
+              </div>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={280}>
@@ -495,8 +525,20 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   <PolarGrid stroke="#334155" />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: "#94a3b8", fontSize: 11 }} />
                   <PolarRadiusAxis tick={{ fill: "#475569", fontSize: 9 }} />
-                  <Radar name="HN" dataKey="HN" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
-                  <Radar name="HCM" dataKey="HCM" stroke="#f97316" fill="#f97316" fillOpacity={0.3} />
+                  {radarSelectedTeam ? (
+                    <>
+                      <Radar name={radarSelectedTeam.teamName} dataKey={radarSelectedTeam.teamName}
+                        stroke={radarSelectedTeam.region === "HN" ? "#3b82f6" : "#f97316"}
+                        fill={radarSelectedTeam.region === "HN" ? "#3b82f6" : "#f97316"} fillOpacity={0.35} />
+                      <Radar name={`TB ${radarSelectedTeam.region}`} dataKey={`TB ${radarSelectedTeam.region}`}
+                        stroke="#94a3b8" fill="#94a3b8" fillOpacity={0.15} strokeDasharray="4 3" />
+                    </>
+                  ) : (
+                    <>
+                      <Radar name="HN"  dataKey="HN"  stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                      <Radar name="HCM" dataKey="HCM" stroke="#f97316" fill="#f97316" fillOpacity={0.3} />
+                    </>
+                  )}
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toLocaleString()}M`]} />
                 </RadarChart>
