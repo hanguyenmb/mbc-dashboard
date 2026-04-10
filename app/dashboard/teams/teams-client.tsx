@@ -582,25 +582,36 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
               .reduce((s, t) => s + ((t as any)[svcKey] ?? 0), 0);
           }
 
-          const lastIdx   = monthsWithData.length - 1;
-          const curMk     = monthsWithData[lastIdx];
-          const prevMk    = lastIdx > 0 ? monthsWithData[lastIdx - 1] : null;
-          const sparkMonths = monthsWithData.slice(-6);
+          // Dùng tháng đang chọn nếu có data, nếu không thì lấy tháng gần nhất có data
+          const curMk     = monthsWithData.includes(selectedMonth) ? selectedMonth : monthsWithData[monthsWithData.length - 1];
+          const curMkIdx  = monthsWithData.indexOf(curMk);
+          const prevMk    = curMkIdx > 0 ? monthsWithData[curMkIdx - 1] : null;
+          const sparkMonths = monthsWithData.slice(Math.max(0, curMkIdx - 5), curMkIdx + 1);
+
+          // Pace projection: nếu tháng hiện tại chưa kết thúc, chiếu full-month theo ngày đã trôi
+          const todayMonth = `T${new Date().getMonth() + 1}`;
+          const isCurrentMonth = curMk === todayMonth;
+          const daysElapsed  = new Date().getDate();
+          const daysInMonth  = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+          const paceRatio    = daysElapsed / daysInMonth;   // 0 < paceRatio ≤ 1
+          const paceLabel    = `${daysElapsed}/${daysInMonth} ngày`;
 
           const trendRows = SVC_KEYS.map(s => {
-            const sparkVals = sparkMonths.map(mk => svcSum(mk, s.key, src));
-            const cur       = svcSum(curMk,  s.key, src);
-            const prev      = prevMk ? svcSum(prevMk, s.key, src) : null;
-            const prevYear  = svcSum(curMk,  s.key, srcPrev);
-            const mom = (cur > 0 && prev != null && prev > 0) ? ((cur - prev) / prev * 100) : null;
-            const yoy = (cur > 0 && prevYear > 0)             ? ((cur - prevYear) / prevYear * 100) : null;
+            const sparkVals  = sparkMonths.map(mk => svcSum(mk, s.key, src));
+            const cur        = svcSum(curMk, s.key, src);
+            // Nếu đang trong tháng hiện tại, chiếu full-month theo pace
+            const projected  = isCurrentMonth && paceRatio > 0 ? cur / paceRatio : cur;
+            const prev       = prevMk ? svcSum(prevMk, s.key, src) : null;
+            const prevYear   = svcSum(curMk, s.key, srcPrev);
+            const mom = (projected > 0 && prev != null && prev > 0) ? ((projected - prev) / prev * 100) : null;
+            const yoy = (projected > 0 && prevYear > 0)             ? ((projected - prevYear) / prevYear * 100) : null;
             const status: "spike" | "up" | "stable" | "down" =
-              mom === null   ? "stable"
-              : mom > 50    ? "spike"
-              : mom > 10    ? "up"
-              : mom < -10   ? "down"
+              mom === null ? "stable"
+              : mom > 50  ? "spike"
+              : mom > 10  ? "up"
+              : mom < -10 ? "down"
               : "stable";
-            return { ...s, sparkVals, cur, prev, prevYear, mom, yoy, status };
+            return { ...s, sparkVals, cur, projected, prev, prevYear, mom, yoy, status };
           });
 
           const maxSpark = Math.max(...trendRows.flatMap(r => r.sparkVals), 1);
@@ -651,9 +662,14 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             <Card>
               <CardHeader>
                 <CardTitle>Xu Hướng Nhóm Sản Phẩm — Đăng Ký Mới</CardTitle>
-                <div className="text-xs text-slate-400">
-                  So sánh {curMk}{prevMk ? ` vs ${prevMk}` : ""} · Sparkline {sparkMonths[0]}–{curMk}
-                  {region !== "all" && <span className="ml-2 text-blue-400">Khu vực {region}</span>}
+                <div className="flex items-center gap-3 flex-wrap text-xs text-slate-400">
+                  <span>So sánh {curMk}{prevMk ? ` vs ${prevMk}` : ""} · Sparkline {sparkMonths[0] ?? curMk}–{curMk}</span>
+                  {isCurrentMonth && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-medium">
+                      ⏱ Pace {paceLabel} · MoM/YoY tính theo dự báo full-month
+                    </span>
+                  )}
+                  {region !== "all" && <span className="text-blue-400">Khu vực {region}</span>}
                 </div>
               </CardHeader>
               <CardContent className="overflow-x-auto">
@@ -662,7 +678,10 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     <tr className="border-b border-slate-700">
                       <th className="text-left py-2 px-3 text-slate-400 w-28">Nhóm SP</th>
                       <th className="text-center py-2 px-3 text-slate-400">Xu hướng</th>
-                      <th className="text-right py-2 px-3 text-slate-300 font-medium">{curMk} (M)</th>
+                      <th className="text-right py-2 px-3 text-slate-300 font-medium">
+                        {curMk}{isCurrentMonth ? " thực tế" : ""} (M)
+                      </th>
+                      {isCurrentMonth && <th className="text-right py-2 px-3 text-amber-400 font-medium">Dự báo (M)</th>}
                       {prevMk && <th className="text-right py-2 px-3 text-slate-400">{prevMk} (M)</th>}
                       <th className="text-right py-2 px-3 text-amber-400 font-medium">MoM</th>
                       <th className="text-right py-2 px-3 text-purple-400 font-medium">YoY 2025</th>
@@ -681,6 +700,11 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                         <td className="py-2.5 px-3 text-right font-semibold text-white tabular-nums">
                           {r.cur > 0 ? r.cur.toLocaleString() : "—"}
                         </td>
+                        {isCurrentMonth && (
+                          <td className="py-2.5 px-3 text-right tabular-nums text-amber-300 font-semibold">
+                            {r.projected > 0 ? `~${Math.round(r.projected).toLocaleString()}` : "—"}
+                          </td>
+                        )}
                         {prevMk && (
                           <td className="py-2.5 px-3 text-right text-slate-400 tabular-nums">
                             {r.prev != null && r.prev > 0 ? r.prev.toLocaleString() : "—"}
@@ -705,17 +729,22 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                       <td className="py-2 px-3 text-right font-bold text-white tabular-nums">
                         {trendRows.reduce((s,r) => s + r.cur, 0).toLocaleString()}
                       </td>
+                      {isCurrentMonth && (
+                        <td className="py-2 px-3 text-right font-bold text-amber-300 tabular-nums">
+                          ~{Math.round(trendRows.reduce((s,r) => s + r.projected, 0)).toLocaleString()}
+                        </td>
+                      )}
                       {prevMk && (
                         <td className="py-2 px-3 text-right font-semibold text-slate-400 tabular-nums">
                           {trendRows.reduce((s,r) => s + (r.prev ?? 0), 0).toLocaleString()}
                         </td>
                       )}
                       {(() => {
-                        const totCur  = trendRows.reduce((s,r) => s + r.cur, 0);
+                        const totProj = trendRows.reduce((s,r) => s + r.projected, 0);
                         const totPrev = trendRows.reduce((s,r) => s + (r.prev ?? 0), 0);
                         const totYoy  = trendRows.reduce((s,r) => s + r.prevYear, 0);
-                        const momTot  = totPrev > 0 ? ((totCur - totPrev) / totPrev * 100) : null;
-                        const yoyTot  = totYoy  > 0 ? ((totCur - totYoy)  / totYoy  * 100) : null;
+                        const momTot  = totPrev > 0 ? ((totProj - totPrev) / totPrev * 100) : null;
+                        const yoyTot  = totYoy  > 0 ? ((totProj - totYoy)  / totYoy  * 100) : null;
                         return (
                           <>
                             <td className="py-2 px-3 text-right">
