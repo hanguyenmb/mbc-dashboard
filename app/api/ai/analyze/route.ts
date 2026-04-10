@@ -256,24 +256,43 @@ export async function POST(req: NextRequest) {
     const { context, data } = await req.json();
     const prompt = buildPrompt(context, data);
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 4096 },
+    });
+
+    const isOverload = (msg: string) =>
+      msg.includes("high demand") || msg.includes("overload") ||
+      msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("Resource has been exhausted");
+
+    let lastError = "Gemini API error";
+    for (let attempt = 0; attempt < 4; attempt++) {
+      if (attempt > 0) {
+        // Exponential backoff: 1s, 2s, 4s
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+      }
+
+      const res = await fetch(GEMINI_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 4096 },
-        }),
+        body,
+      });
+
+      const json = await res.json();
+
+      if (res.ok) {
+        const parts = json.candidates?.[0]?.content?.parts ?? [];
+        const text = parts.filter((p: any) => !p.thought).map((p: any) => p.text ?? "").join("");
+        return NextResponse.json({ analysis: text });
       }
-    );
 
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error?.message || "Gemini API error");
+      lastError = json.error?.message || "Gemini API error";
+      // Chỉ retry nếu lỗi overload, lỗi khác thì break ngay
+      if (!isOverload(lastError)) break;
+    }
 
-    const parts = json.candidates?.[0]?.content?.parts ?? [];
-    const text = parts.filter((p: any) => !p.thought).map((p: any) => p.text ?? "").join("");
-    return NextResponse.json({ analysis: text });
+    throw new Error(lastError);
   } catch (err: any) {
     console.error("AI analyze error:", err);
     return NextResponse.json({ error: err.message || "Lỗi AI" }, { status: 500 });
