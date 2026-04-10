@@ -787,26 +787,29 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             const prevDkm    = prev ? SVC_KEYS.reduce((s, sk) => s + ((prev as any)[sk.key] ?? 0), 0) : 0;
             const yoy        = prevDkm > 0 ? ((projDkm - prevDkm) / prevDkm * 100) : null;
             const targetPct  = t.target > 0 ? (projRev / t.target * 100) : null;
-            return { name: t.teamName, region: t.region, dkm: projDkm, rawDkm, yoy, hasYoy: prevDkm > 0, targetPct };
+            return { name: t.teamName, region: t.region, dkm: projDkm, rawDkm, prevDkm, yoy, hasYoy: prevDkm > 0, targetPct };
           }).filter(t => t.rawDkm > 0);
 
           if (teamData.length < 2) return null;
 
-          const sorted    = [...teamData].sort((a, b) => a.dkm - b.dkm);
-          const medianDkm = sorted[Math.floor(sorted.length / 2)].dkm;
+          // Ngưỡng = trung bình ĐKM cùng kỳ năm trước (chỉ tính team có dữ liệu prevYear)
+          const teamsWithPrev = teamData.filter(t => t.prevDkm > 0);
+          const threshold = teamsWithPrev.length > 0
+            ? teamsWithPrev.reduce((s, t) => s + t.prevDkm, 0) / teamsWithPrev.length
+            : teamData.reduce((s, t) => s + t.dkm, 0) / teamData.length; // fallback: avg current
 
           const yoyGroups = [
-            { key: "star",      label: "⭐ Ngôi Sao",      sub: "ĐKM lớn · tăng trưởng tốt",    color: "text-green-400",  border: "border-green-500/30 bg-green-500/5",   chip: "bg-green-500/15 text-green-300 border border-green-500/20",  teams: teamData.filter(t => t.dkm >= medianDkm && (t.yoy ?? 0) >= 0) },
-            { key: "potential", label: "🚀 Tiềm Năng",     sub: "ĐKM nhỏ · tăng trưởng tốt",    color: "text-violet-400", border: "border-violet-500/30 bg-violet-500/5", chip: "bg-violet-500/15 text-violet-300 border border-violet-500/20", teams: teamData.filter(t => t.dkm <  medianDkm && (t.yoy ?? 0) >= 0) },
-            { key: "stable",    label: "🔄 Ổn Định",       sub: "ĐKM lớn · cần bứt phá YoY",    color: "text-amber-400",  border: "border-amber-500/30 bg-amber-500/5",   chip: "bg-amber-500/15 text-amber-300 border border-amber-500/20",  teams: teamData.filter(t => t.dkm >= medianDkm && (t.yoy ?? 0) <  0) },
-            { key: "watch",     label: "⚠️ Cần Chú Ý",    sub: "ĐKM nhỏ · cần cải thiện",      color: "text-red-400",    border: "border-red-500/30 bg-red-500/5",       chip: "bg-red-500/15 text-red-300 border border-red-500/20",        teams: teamData.filter(t => t.dkm <  medianDkm && (t.yoy ?? 0) <  0) },
+            { key: "star",      label: "⭐ Ngôi Sao",      sub: "ĐKM lớn · tăng trưởng tốt",    color: "text-green-400",  border: "border-green-500/30 bg-green-500/5",   chip: "bg-green-500/15 text-green-300 border border-green-500/20",  teams: teamData.filter(t => t.dkm >= threshold && (t.yoy ?? 0) >= 0) },
+            { key: "potential", label: "🚀 Tiềm Năng",     sub: "ĐKM nhỏ · tăng trưởng tốt",    color: "text-violet-400", border: "border-violet-500/30 bg-violet-500/5", chip: "bg-violet-500/15 text-violet-300 border border-violet-500/20", teams: teamData.filter(t => t.dkm <  threshold && (t.yoy ?? 0) >= 0) },
+            { key: "stable",    label: "🔄 Ổn Định",       sub: "ĐKM lớn · cần bứt phá YoY",    color: "text-amber-400",  border: "border-amber-500/30 bg-amber-500/5",   chip: "bg-amber-500/15 text-amber-300 border border-amber-500/20",  teams: teamData.filter(t => t.dkm >= threshold && (t.yoy ?? 0) <  0) },
+            { key: "watch",     label: "⚠️ Cần Chú Ý",    sub: "ĐKM nhỏ · cần cải thiện",      color: "text-red-400",    border: "border-red-500/30 bg-red-500/5",       chip: "bg-red-500/15 text-red-300 border border-red-500/20",        teams: teamData.filter(t => t.dkm <  threshold && (t.yoy ?? 0) <  0) },
           ];
 
           const targetGroups = [
-            { key: "excel",   label: "⭐ Xuất Sắc",         sub: "ĐKM lớn · đạt mục tiêu",       color: "text-green-400",  border: "border-green-500/30 bg-green-500/5",   chip: "bg-green-500/15 text-green-300 border border-green-500/20",  teams: teamData.filter(t => t.dkm >= medianDkm && (t.targetPct ?? 0) >= 100) },
-            { key: "ontrack", label: "🚀 Đang Tốt",         sub: "ĐKM nhỏ · đạt mục tiêu",       color: "text-violet-400", border: "border-violet-500/30 bg-violet-500/5", chip: "bg-violet-500/15 text-violet-300 border border-violet-500/20", teams: teamData.filter(t => t.dkm <  medianDkm && (t.targetPct ?? 0) >= 100) },
-            { key: "push",    label: "💪 Cần Đẩy Mạnh",    sub: "ĐKM lớn · chưa đạt mục tiêu",  color: "text-amber-400",  border: "border-amber-500/30 bg-amber-500/5",   chip: "bg-amber-500/15 text-amber-300 border border-amber-500/20",  teams: teamData.filter(t => t.dkm >= medianDkm && (t.targetPct ?? 0) <  100) },
-            { key: "prio",    label: "⚠️ Ưu Tiên Hỗ Trợ", sub: "ĐKM nhỏ · chưa đạt mục tiêu", color: "text-red-400",    border: "border-red-500/30 bg-red-500/5",       chip: "bg-red-500/15 text-red-300 border border-red-500/20",        teams: teamData.filter(t => t.dkm <  medianDkm && (t.targetPct ?? 0) <  100) },
+            { key: "excel",   label: "⭐ Xuất Sắc",         sub: "ĐKM lớn · đạt mục tiêu",       color: "text-green-400",  border: "border-green-500/30 bg-green-500/5",   chip: "bg-green-500/15 text-green-300 border border-green-500/20",  teams: teamData.filter(t => t.dkm >= threshold && (t.targetPct ?? 0) >= 100) },
+            { key: "ontrack", label: "🚀 Đang Tốt",         sub: "ĐKM nhỏ · đạt mục tiêu",       color: "text-violet-400", border: "border-violet-500/30 bg-violet-500/5", chip: "bg-violet-500/15 text-violet-300 border border-violet-500/20", teams: teamData.filter(t => t.dkm <  threshold && (t.targetPct ?? 0) >= 100) },
+            { key: "push",    label: "💪 Cần Đẩy Mạnh",    sub: "ĐKM lớn · chưa đạt mục tiêu",  color: "text-amber-400",  border: "border-amber-500/30 bg-amber-500/5",   chip: "bg-amber-500/15 text-amber-300 border border-amber-500/20",  teams: teamData.filter(t => t.dkm >= threshold && (t.targetPct ?? 0) <  100) },
+            { key: "prio",    label: "⚠️ Ưu Tiên Hỗ Trợ", sub: "ĐKM nhỏ · chưa đạt mục tiêu", color: "text-red-400",    border: "border-red-500/30 bg-red-500/5",       chip: "bg-red-500/15 text-red-300 border border-red-500/20",        teams: teamData.filter(t => t.dkm <  threshold && (t.targetPct ?? 0) <  100) },
           ];
 
           function QuadGrid({ groups, showYoy, showTarget }: { groups: typeof yoyGroups; showYoy?: boolean; showTarget?: boolean }) {
@@ -879,7 +882,11 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     <CardTitle>Phân Tích Vị Thế Team — Góc Nhìn CEO</CardTitle>
                     <div className="text-xs text-slate-400 mt-1 space-y-0.5">
                       <p>
-                        Phân loại: <span className="text-slate-300">ĐKM lớn/nhỏ</span> = so tổng DS đăng ký mới của team với median ({Math.round(medianDkm).toLocaleString()}M{isProjected ? " dự kiến" : ""})
+                        Ngưỡng <span className="text-slate-300">ĐKM lớn/nhỏ</span> = TB ĐKM cùng kỳ 2025:
+                        <span className="text-white font-semibold ml-1">{Math.round(threshold).toLocaleString()}M</span>
+                        {teamsWithPrev.length < teamData.length && (
+                          <span className="text-slate-500 ml-1">({teamsWithPrev.length}/{teamData.length} team có dữ liệu 2025)</span>
+                        )}
                       </p>
                       {isProjected && (
                         <p className="text-amber-400/80">
@@ -907,7 +914,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   <QuadGrid groups={targetGroups} showTarget />
                 </div>
                 <p className="text-[10px] text-slate-600">
-                  * YoY và % mục tiêu tính trên giá trị <span className="text-amber-400/70">dự kiến</span> (quy chiếu tốc độ {daysElapsed}/{daysInMonth} ngày) để so sánh công bằng với cùng kỳ và mục tiêu cả tháng
+                  * Ngưỡng phân loại = TB ĐKM tháng {selectedMonth}/2025 của tất cả team ({teamsWithPrev.length} team có dữ liệu).
+                  {isProjected && ` · Giá trị dự kiến quy chiếu tốc độ ${daysElapsed}/${daysInMonth} ngày — YoY và %MT tính trên số dự kiến để so sánh công bằng.`}
                 </p>
               </CardContent>
             </Card>
