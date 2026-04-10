@@ -559,6 +559,185 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           </Card>
         </div>
 
+        {/* Phần 3b: Xu Hướng Nhóm Sản Phẩm */}
+        {(() => {
+          const MONTHS_ORDER = ["T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12"];
+          const regionSource = (source: TeamMonthlyData) =>
+            source.map(m => ({
+              ...m,
+              teams: region === "all" ? m.teams : m.teams.filter(t => t.region === region),
+            }));
+          const src     = regionSource(allMonths);
+          const srcPrev = regionSource(allPrevMonths);
+
+          const monthsWithData = MONTHS_ORDER.filter(mk =>
+            src.find(m => m.month === mk)?.teams.some(t =>
+              SVC_KEYS.some(s => (t as any)[s.key] > 0)
+            )
+          );
+          if (monthsWithData.length === 0) return null;
+
+          function svcSum(monthKey: string, svcKey: string, source: TeamMonthlyData) {
+            return (source.find(m => m.month === monthKey)?.teams ?? [])
+              .reduce((s, t) => s + ((t as any)[svcKey] ?? 0), 0);
+          }
+
+          const lastIdx   = monthsWithData.length - 1;
+          const curMk     = monthsWithData[lastIdx];
+          const prevMk    = lastIdx > 0 ? monthsWithData[lastIdx - 1] : null;
+          const sparkMonths = monthsWithData.slice(-6);
+
+          const trendRows = SVC_KEYS.map(s => {
+            const sparkVals = sparkMonths.map(mk => svcSum(mk, s.key, src));
+            const cur       = svcSum(curMk,  s.key, src);
+            const prev      = prevMk ? svcSum(prevMk, s.key, src) : null;
+            const prevYear  = svcSum(curMk,  s.key, srcPrev);
+            const mom = (cur > 0 && prev != null && prev > 0) ? ((cur - prev) / prev * 100) : null;
+            const yoy = (cur > 0 && prevYear > 0)             ? ((cur - prevYear) / prevYear * 100) : null;
+            const status: "spike" | "up" | "stable" | "down" =
+              mom === null   ? "stable"
+              : mom > 50    ? "spike"
+              : mom > 10    ? "up"
+              : mom < -10   ? "down"
+              : "stable";
+            return { ...s, sparkVals, cur, prev, prevYear, mom, yoy, status };
+          });
+
+          const maxSpark = Math.max(...trendRows.flatMap(r => r.sparkVals), 1);
+
+          function Sparkline({ vals, color }: { vals: number[]; color: string }) {
+            const h = 28, w = 72, n = vals.length;
+            if (n < 2) return <span className="text-slate-600 text-xs">—</span>;
+            const pts = vals.map((v, i) => {
+              const x = (i / (n - 1)) * w;
+              const y = h - (v / maxSpark) * h;
+              return `${x},${y}`;
+            }).join(" ");
+            return (
+              <svg width={w} height={h} className="inline-block">
+                <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5"
+                  strokeLinejoin="round" strokeLinecap="round" opacity={0.8} />
+                {vals[n-1] > 0 && (
+                  <circle cx={(n-1)/(n-1)*w} cy={h-(vals[n-1]/maxSpark)*h} r="2.5" fill={color} />
+                )}
+              </svg>
+            );
+          }
+
+          function StatusBadge({ status, mom }: { status: string; mom: number | null }) {
+            const cfg = {
+              spike:  { icon: "🚀", label: "Đột biến", cls: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" },
+              up:     { icon: "▲",  label: "Tăng",     cls: "bg-green-500/20  text-green-300  border-green-500/30"  },
+              stable: { icon: "●",  label: "Ổn định",  cls: "bg-slate-500/20  text-slate-400  border-slate-500/30"  },
+              down:   { icon: "▼",  label: "Giảm",     cls: "bg-red-500/20    text-red-300    border-red-500/30"    },
+            }[status] ?? { icon: "●", label: "—", cls: "bg-slate-500/20 text-slate-400 border-slate-500/30" };
+            return (
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${cfg.cls}`}>
+                {cfg.icon} {mom !== null ? `${mom > 0 ? "+" : ""}${mom.toFixed(0)}%` : cfg.label}
+              </span>
+            );
+          }
+
+          function YoyCell({ yoy }: { yoy: number | null }) {
+            if (yoy === null) return <span className="text-slate-600">—</span>;
+            return (
+              <span className={`text-xs font-semibold ${yoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {yoy >= 0 ? "▲" : "▼"}{Math.abs(yoy).toFixed(0)}%
+              </span>
+            );
+          }
+
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle>Xu Hướng Nhóm Sản Phẩm — Đăng Ký Mới</CardTitle>
+                <div className="text-xs text-slate-400">
+                  So sánh {curMk}{prevMk ? ` vs ${prevMk}` : ""} · Sparkline {sparkMonths[0]}–{curMk}
+                  {region !== "all" && <span className="ml-2 text-blue-400">Khu vực {region}</span>}
+                </div>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <table className="w-full text-xs" style={{ minWidth: 560 }}>
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-2 px-3 text-slate-400 w-28">Nhóm SP</th>
+                      <th className="text-center py-2 px-3 text-slate-400">Xu hướng</th>
+                      <th className="text-right py-2 px-3 text-slate-300 font-medium">{curMk} (M)</th>
+                      {prevMk && <th className="text-right py-2 px-3 text-slate-400">{prevMk} (M)</th>}
+                      <th className="text-right py-2 px-3 text-amber-400 font-medium">MoM</th>
+                      <th className="text-right py-2 px-3 text-purple-400 font-medium">YoY 2025</th>
+                      <th className="text-center py-2 px-3 text-slate-400">Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trendRows
+                      .sort((a, b) => (b.mom ?? -999) - (a.mom ?? -999))
+                      .map(r => (
+                      <tr key={r.key} className="border-b border-slate-800 hover:bg-slate-800/30">
+                        <td className="py-2.5 px-3 font-semibold" style={{ color: r.color }}>{r.label}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          <Sparkline vals={r.sparkVals} color={r.color} />
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-semibold text-white tabular-nums">
+                          {r.cur > 0 ? r.cur.toLocaleString() : "—"}
+                        </td>
+                        {prevMk && (
+                          <td className="py-2.5 px-3 text-right text-slate-400 tabular-nums">
+                            {r.prev != null && r.prev > 0 ? r.prev.toLocaleString() : "—"}
+                          </td>
+                        )}
+                        <td className="py-2.5 px-3 text-right">
+                          {r.mom !== null
+                            ? <span className={`font-semibold ${r.mom >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                {r.mom >= 0 ? "+" : ""}{r.mom.toFixed(1)}%
+                              </span>
+                            : <span className="text-slate-600">—</span>}
+                        </td>
+                        <td className="py-2.5 px-3 text-right"><YoyCell yoy={r.yoy} /></td>
+                        <td className="py-2.5 px-3 text-center"><StatusBadge status={r.status} mom={r.mom} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-slate-600 bg-slate-800/50">
+                      <td className="py-2 px-3 font-bold text-white">TỔNG ĐKM</td>
+                      <td />
+                      <td className="py-2 px-3 text-right font-bold text-white tabular-nums">
+                        {trendRows.reduce((s,r) => s + r.cur, 0).toLocaleString()}
+                      </td>
+                      {prevMk && (
+                        <td className="py-2 px-3 text-right font-semibold text-slate-400 tabular-nums">
+                          {trendRows.reduce((s,r) => s + (r.prev ?? 0), 0).toLocaleString()}
+                        </td>
+                      )}
+                      {(() => {
+                        const totCur  = trendRows.reduce((s,r) => s + r.cur, 0);
+                        const totPrev = trendRows.reduce((s,r) => s + (r.prev ?? 0), 0);
+                        const totYoy  = trendRows.reduce((s,r) => s + r.prevYear, 0);
+                        const momTot  = totPrev > 0 ? ((totCur - totPrev) / totPrev * 100) : null;
+                        const yoyTot  = totYoy  > 0 ? ((totCur - totYoy)  / totYoy  * 100) : null;
+                        return (
+                          <>
+                            <td className="py-2 px-3 text-right">
+                              {momTot !== null
+                                ? <span className={`font-bold ${momTot >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                    {momTot >= 0 ? "+" : ""}{momTot.toFixed(1)}%
+                                  </span>
+                                : <span className="text-slate-600">—</span>}
+                            </td>
+                            <td className="py-2 px-3 text-right"><YoyCell yoy={yoyTot} /></td>
+                            <td />
+                          </>
+                        );
+                      })()}
+                    </tr>
+                  </tfoot>
+                </table>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* Phần 4: Heatmap team × dịch vụ */}
         <Card>
           <CardHeader>
