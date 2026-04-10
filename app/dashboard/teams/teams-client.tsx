@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, RadarChart, Radar, PolarGrid,
   PolarAngleAxis, PolarRadiusAxis, Legend, LabelList, ReferenceLine,
+  ScatterChart, Scatter, ZAxis,
 } from "recharts";
 import { Header, PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
@@ -762,6 +763,126 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     </tr>
                   </tfoot>
                 </table>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        {/* Phần 4a: CEO Quadrant Chart */}
+        {hasPrevYearTeamData && (() => {
+          const bubbleData = displayed.map(t => {
+            const totalDkm  = SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0);
+            const prev      = prevYearTeamMap[t.teamId];
+            const prevDkm   = prev ? SVC_KEYS.reduce((s, sk) => s + ((prev as any)[sk.key] ?? 0), 0) : 0;
+            const yoy       = prevDkm > 0 ? ((totalDkm - prevDkm) / prevDkm * 100) : null;
+            return { name: t.teamName, region: t.region, x: totalDkm, y: yoy ?? 0, z: Math.max(totalDkm, 20), hasYoy: prevDkm > 0 };
+          }).filter(t => t.x > 0);
+
+          if (bubbleData.length < 2) return null;
+
+          const medianX  = [...bubbleData].sort((a,b) => a.x - b.x)[Math.floor(bubbleData.length / 2)].x;
+          const hnData   = bubbleData.filter(t => t.region === "HN");
+          const hcmData  = bubbleData.filter(t => t.region === "HCM");
+
+          // Custom dot with team name label
+          function TeamDot(props: any) {
+            const { cx, cy, payload } = props;
+            if (!cx || !cy) return null;
+            const isHN  = payload.region === "HN";
+            const color = isHN ? "#3b82f6" : "#f97316";
+            const r     = Math.max(18, Math.min(36, Math.sqrt(payload.z / 10)));
+            return (
+              <g>
+                <circle cx={cx} cy={cy} r={r} fill={color} fillOpacity={0.25} stroke={color} strokeWidth={1.5} />
+                <text x={cx} y={cy - r - 5} textAnchor="middle" fill={color} fontSize={10} fontWeight={600}>
+                  {payload.name}
+                </text>
+                <text x={cx} y={cy + 4} textAnchor="middle" fill="#f1f5f9" fontSize={10} fontWeight={700}>
+                  {payload.x.toLocaleString()}M
+                </text>
+                {payload.hasYoy && (
+                  <text x={cx} y={cy + 14} textAnchor="middle" fill={payload.y >= 0 ? "#4ade80" : "#f87171"} fontSize={9}>
+                    {payload.y >= 0 ? "▲" : "▼"}{Math.abs(payload.y).toFixed(0)}%
+                  </text>
+                )}
+              </g>
+            );
+          }
+
+          const quadrants = [
+            { x1: 0,       x2: medianX,  y1: 0,    y2:  999, label: "🚀 Tiềm năng",  color: "#a78bfa", anchor: "start"  },
+            { x1: medianX, x2: Infinity, y1: 0,    y2:  999, label: "⭐ Ngôi sao",    color: "#4ade80", anchor: "end"    },
+            { x1: 0,       x2: medianX,  y1: -999, y2:    0, label: "⚠️ Cần chú ý",  color: "#f87171", anchor: "start"  },
+            { x1: medianX, x2: Infinity, y1: -999, y2:    0, label: "🔄 Ổn định",    color: "#fbbf24", anchor: "end"    },
+          ];
+
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle>Phân Tích Vị Thế Team — Góc Nhìn CEO</CardTitle>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
+                  <span>Trục X: Tổng ĐKM (triệu VNĐ) · Trục Y: Tăng trưởng YoY% so 2025</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"/>HN
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block ml-1"/>HCM
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="relative">
+                  {/* Quadrant labels */}
+                  <div className="absolute inset-0 pointer-events-none z-10 grid grid-cols-2 grid-rows-2" style={{ top: 10, bottom: 30, left: 50, right: 10 }}>
+                    {[
+                      { label: "🚀 Tiềm năng",  sub: "ĐKM nhỏ · tăng nhanh", color: "text-violet-400", border: "border-violet-500/20 bg-violet-500/5"  },
+                      { label: "⭐ Ngôi sao",    sub: "ĐKM lớn · tăng nhanh",  color: "text-green-400",  border: "border-green-500/20  bg-green-500/5"   },
+                      { label: "⚠️ Cần chú ý",  sub: "ĐKM nhỏ · đang giảm",  color: "text-red-400",    border: "border-red-500/20    bg-red-500/5"     },
+                      { label: "🔄 Ổn định",    sub: "ĐKM lớn · cần bứt phá", color: "text-amber-400",  border: "border-amber-500/20  bg-amber-500/5"   },
+                    ].map((q, i) => (
+                      <div key={i} className={`flex flex-col justify-end p-2 m-1 rounded-lg border ${q.border} ${i < 2 ? "" : ""}`}
+                           style={{ alignItems: i % 2 === 0 ? "flex-start" : "flex-end", justifyContent: i < 2 ? "flex-start" : "flex-end" }}>
+                        <span className={`text-[11px] font-bold ${q.color}`}>{q.label}</span>
+                        <span className="text-[10px] text-slate-500">{q.sub}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <ResponsiveContainer width="100%" height={340}>
+                    <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 50 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis
+                        type="number" dataKey="x" name="Tổng ĐKM"
+                        tick={{ fill: "#94a3b8", fontSize: 10 }}
+                        tickFormatter={v => `${v.toLocaleString()}M`}
+                        label={{ value: "Tổng ĐKM (triệu VNĐ)", position: "insideBottom", offset: -15, fill: "#64748b", fontSize: 11 }}
+                      />
+                      <YAxis
+                        type="number" dataKey="y" name="YoY%"
+                        tick={{ fill: "#94a3b8", fontSize: 10 }}
+                        tickFormatter={v => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`}
+                        label={{ value: "YoY%", angle: -90, position: "insideLeft", offset: 10, fill: "#64748b", fontSize: 11 }}
+                      />
+                      <ZAxis type="number" dataKey="z" range={[800, 3000]} />
+                      <ReferenceLine x={medianX} stroke="#475569" strokeDasharray="4 4" />
+                      <ReferenceLine y={0}        stroke="#475569" strokeDasharray="4 4" />
+                      <Tooltip
+                        cursor={false}
+                        content={({ payload }) => {
+                          if (!payload?.[0]) return null;
+                          const d = payload[0].payload;
+                          return (
+                            <div className="bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-xs shadow-xl">
+                              <div className="font-bold text-white mb-1">{d.name} <span className={d.region === "HN" ? "text-blue-400" : "text-orange-400"}>{d.region}</span></div>
+                              <div className="text-slate-300">Tổng ĐKM: <span className="text-white font-semibold">{d.x.toLocaleString()}M</span></div>
+                              {d.hasYoy && <div className={d.y >= 0 ? "text-green-400" : "text-red-400"}>YoY: {d.y >= 0 ? "▲" : "▼"}{Math.abs(d.y).toFixed(1)}%</div>}
+                            </div>
+                          );
+                        }}
+                      />
+                      {hnData.length  > 0 && <Scatter name="HN"  data={hnData}  shape={<TeamDot />} />}
+                      {hcmData.length > 0 && <Scatter name="HCM" data={hcmData} shape={<TeamDot />} />}
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           );
