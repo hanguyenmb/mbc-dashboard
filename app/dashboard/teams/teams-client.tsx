@@ -84,6 +84,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
   const [selectedQuarter, setSelectedQuarter] = useState(1);
   const [openDropdown, setOpenDropdown] = useState<"month" | "quarter" | null>(null);
   const [benchmark, setBenchmark] = useState(40);
+  const [trendTeamId, setTrendTeamId] = useState<string | null>(null);
   const rankingRef = useRef<HTMLDivElement>(null);
 
   const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
@@ -558,13 +559,26 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
         {/* Phần 3b: Xu Hướng Nhóm Sản Phẩm */}
         {(() => {
           const MONTHS_ORDER = ["T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12"];
-          const regionSource = (source: TeamMonthlyData) =>
+
+          // Lọc source theo region, và theo team nếu đang chọn team cụ thể
+          const filterSource = (source: TeamMonthlyData) =>
             source.map(m => ({
               ...m,
-              teams: region === "all" ? m.teams : m.teams.filter(t => t.region === region),
+              teams: m.teams.filter(t =>
+                (region === "all" || t.region === region) &&
+                (trendTeamId === null || t.teamId === trendTeamId)
+              ),
             }));
-          const src     = regionSource(allMonths);
-          const srcPrev = regionSource(allPrevMonths);
+          const src     = filterSource(allMonths);
+          const srcPrev = filterSource(allPrevMonths);
+
+          // Danh sách team để hiện tab (theo region filter)
+          const trendTeamList = (() => {
+            const regionFiltered = region === "all" ? allMonths : allMonths.map(m => ({ ...m, teams: m.teams.filter(t => t.region === region) }));
+            const map: Record<string, { teamId: string; teamName: string; region: string }> = {};
+            regionFiltered.forEach(m => m.teams.forEach(t => { if (!map[t.teamId]) map[t.teamId] = { teamId: t.teamId, teamName: t.teamName, region: t.region }; }));
+            return Object.values(map);
+          })();
 
           const monthsWithData = MONTHS_ORDER.filter(mk =>
             src.find(m => m.month === mk)?.teams.some(t =>
@@ -578,36 +592,34 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
               .reduce((s, t) => s + ((t as any)[svcKey] ?? 0), 0);
           }
 
-          // Dùng tháng đang chọn nếu có data, nếu không thì lấy tháng gần nhất có data
-          const curMk     = monthsWithData.includes(selectedMonth) ? selectedMonth : monthsWithData[monthsWithData.length - 1];
-          const curMkIdx  = monthsWithData.indexOf(curMk);
-          const prevMk    = curMkIdx > 0 ? monthsWithData[curMkIdx - 1] : null;
+          const curMk      = monthsWithData.includes(selectedMonth) ? selectedMonth : monthsWithData[monthsWithData.length - 1];
+          const curMkIdx   = monthsWithData.indexOf(curMk);
+          const prevMk     = curMkIdx > 0 ? monthsWithData[curMkIdx - 1] : null;
           const sparkMonths = monthsWithData.slice(Math.max(0, curMkIdx - 5), curMkIdx + 1);
 
-          // Pace projection: nếu tháng hiện tại chưa kết thúc, chiếu full-month theo ngày đã trôi
-          const todayMonth = `T${new Date().getMonth() + 1}`;
+          const todayMonth   = `T${new Date().getMonth() + 1}`;
           const isCurrentMonth = curMk === todayMonth;
           const daysElapsed  = new Date().getDate();
           const daysInMonth  = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-          const paceRatio    = daysElapsed / daysInMonth;   // 0 < paceRatio ≤ 1
+          const paceRatio    = daysElapsed / daysInMonth;
           const paceLabel    = `${daysElapsed}/${daysInMonth} ngày`;
 
           const trendRows = SVC_KEYS.map(s => {
-            const sparkVals  = sparkMonths.map(mk => svcSum(mk, s.key, src));
-            const cur        = svcSum(curMk, s.key, src);
-            // Nếu đang trong tháng hiện tại, chiếu full-month theo pace
-            const projected  = isCurrentMonth && paceRatio > 0 ? cur / paceRatio : cur;
-            const prev       = prevMk ? svcSum(prevMk, s.key, src) : null;
-            const prevYear   = svcSum(curMk, s.key, srcPrev);
+            const sparkVals = sparkMonths.map(mk => svcSum(mk, s.key, src));
+            const cur       = svcSum(curMk, s.key, src);
+            const projected = isCurrentMonth && paceRatio > 0 ? cur / paceRatio : cur;
+            const prev      = prevMk ? svcSum(prevMk, s.key, src) : null;
+            const prevYear  = svcSum(curMk, s.key, srcPrev);
             const mom = (projected > 0 && prev != null && prev > 0) ? ((projected - prev) / prev * 100) : null;
             const yoy = (projected > 0 && prevYear > 0)             ? ((projected - prevYear) / prevYear * 100) : null;
-            const status: "spike" | "up" | "stable" | "down" =
-              mom === null ? "stable"
-              : mom > 50  ? "spike"
-              : mom > 10  ? "up"
-              : mom < -10 ? "down"
-              : "stable";
-            return { ...s, sparkVals, cur, projected, prev, prevYear, mom, yoy, status };
+            // Signal: synthesize MoM + YoY
+            const signal: "green" | "yellow" | "red" | "new" =
+              cur === 0 && prevYear === 0 ? "new"
+              : mom === null && yoy === null ? "yellow"
+              : (mom ?? 0) >= 0 && (yoy ?? 0) >= 0 ? "green"
+              : (mom ?? 0) <  0 && (yoy ?? 0) <  0 ? "red"
+              : "yellow";
+            return { ...s, sparkVals, cur, projected, prev, prevYear, mom, yoy, signal };
           });
 
           const maxSpark = Math.max(...trendRows.flatMap(r => r.sparkVals), 1);
@@ -615,50 +627,43 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           function Sparkline({ vals, color }: { vals: number[]; color: string }) {
             const h = 28, w = 72, n = vals.length;
             if (n < 2) return <span className="text-slate-600 text-xs">—</span>;
-            const pts = vals.map((v, i) => {
-              const x = (i / (n - 1)) * w;
-              const y = h - (v / maxSpark) * h;
-              return `${x},${y}`;
-            }).join(" ");
+            const pts = vals.map((v, i) => `${(i/(n-1))*w},${h-(v/maxSpark)*h}`).join(" ");
             return (
               <svg width={w} height={h} className="inline-block">
-                <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5"
-                  strokeLinejoin="round" strokeLinecap="round" opacity={0.8} />
-                {vals[n-1] > 0 && (
-                  <circle cx={(n-1)/(n-1)*w} cy={h-(vals[n-1]/maxSpark)*h} r="2.5" fill={color} />
-                )}
+                <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity={0.8} />
+                {vals[n-1] > 0 && <circle cx={(n-1)/(n-1)*w} cy={h-(vals[n-1]/maxSpark)*h} r="2.5" fill={color} />}
               </svg>
             );
           }
 
-          function StatusBadge({ status, mom }: { status: string; mom: number | null }) {
+          function SignalBadge({ signal, mom, yoy }: { signal: string; mom: number | null; yoy: number | null }) {
             const cfg = {
-              spike:  { icon: "🚀", label: "Đột biến", cls: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" },
-              up:     { icon: "▲",  label: "Tăng",     cls: "bg-green-500/20  text-green-300  border-green-500/30"  },
-              stable: { icon: "●",  label: "Ổn định",  cls: "bg-slate-500/20  text-slate-400  border-slate-500/30"  },
-              down:   { icon: "▼",  label: "Giảm",     cls: "bg-red-500/20    text-red-300    border-red-500/30"    },
-            }[status] ?? { icon: "●", label: "—", cls: "bg-slate-500/20 text-slate-400 border-slate-500/30" };
+              green:  { dot: "bg-green-400",  label: "Tăng trưởng", cls: "bg-green-500/15 text-green-300 border-green-500/30"    },
+              yellow: { dot: "bg-amber-400",  label: "Theo dõi",    cls: "bg-amber-500/15 text-amber-300 border-amber-500/30"    },
+              red:    { dot: "bg-red-400",    label: "Cảnh báo",    cls: "bg-red-500/15   text-red-300   border-red-500/30"      },
+              new:    { dot: "bg-slate-400",  label: "Mới/Trống",   cls: "bg-slate-500/15 text-slate-400 border-slate-500/30"    },
+            }[signal] ?? { dot: "bg-slate-400", label: "—", cls: "bg-slate-500/15 text-slate-400 border-slate-500/30" };
             return (
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${cfg.cls}`}>
-                {cfg.icon} {mom !== null ? `${mom > 0 ? "+" : ""}${mom.toFixed(0)}%` : cfg.label}
-              </span>
+              <div className={`inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg border text-[10px] font-medium min-w-[72px] ${cfg.cls}`}>
+                <div className="flex items-center gap-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                  <span className="font-semibold">{cfg.label}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] opacity-80">
+                  {mom !== null && <span>MoM {mom >= 0 ? "+" : ""}{mom.toFixed(0)}%</span>}
+                  {yoy !== null && <span>YoY {yoy >= 0 ? "▲" : "▼"}{Math.abs(yoy).toFixed(0)}%</span>}
+                </div>
+              </div>
             );
           }
 
-          function YoyCell({ yoy }: { yoy: number | null }) {
-            if (yoy === null) return <span className="text-slate-600">—</span>;
-            return (
-              <span className={`text-xs font-semibold ${yoy >= 0 ? "text-green-400" : "text-red-400"}`}>
-                {yoy >= 0 ? "▲" : "▼"}{Math.abs(yoy).toFixed(0)}%
-              </span>
-            );
-          }
+          const selectedTeam = trendTeamList.find(t => t.teamId === trendTeamId);
 
           return (
             <Card>
               <CardHeader>
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <CardTitle>Xu Hướng Nhóm Sản Phẩm — Đăng Ký Mới</CardTitle>
                     <div className="flex items-center gap-3 flex-wrap text-xs text-slate-400 mt-1">
                       <span>So sánh {curMk}{prevMk ? ` vs ${prevMk}` : ""} · Sparkline {sparkMonths[0] ?? curMk}–{curMk}</span>
@@ -667,10 +672,30 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                           ⏱ Pace {paceLabel} · MoM/YoY tính theo dự báo full-month
                         </span>
                       )}
-                      {region !== "all" && <span className="text-blue-400">Khu vực {region}</span>}
+                    </div>
+                    {/* Team filter tabs */}
+                    <div className="flex flex-wrap gap-1 mt-3">
+                      <button
+                        onClick={() => setTrendTeamId(null)}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${trendTeamId === null ? "bg-slate-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}
+                      >
+                        Tổng hợp
+                      </button>
+                      {trendTeamList.map(t => (
+                        <button
+                          key={t.teamId}
+                          onClick={() => setTrendTeamId(t.teamId)}
+                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${trendTeamId === t.teamId
+                            ? t.region === "HN" ? "bg-blue-600 text-white" : "bg-orange-600 text-white"
+                            : "bg-slate-800 text-slate-400 hover:text-white"}`}
+                        >
+                          {t.teamName}
+                          <span className={`ml-1 text-[10px] opacity-70 ${t.region === "HN" ? "text-blue-300" : "text-orange-300"}`}>{t.region}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  <MiniAiPanel context="trend" label="AI nhận xét" data={{ period: curMk, region, isPaceMonth: isCurrentMonth, paceLabel, rows: trendRows.map(r => ({ label: r.label, cur: r.cur, projected: r.projected, mom: r.mom, yoy: r.yoy, status: r.status })) }} />
+                  <MiniAiPanel context="trend" label="AI nhận xét" data={{ period: curMk, region, team: selectedTeam?.teamName ?? "Tổng hợp", isPaceMonth: isCurrentMonth, paceLabel, rows: trendRows.map(r => ({ label: r.label, cur: r.cur, projected: r.projected, mom: r.mom, yoy: r.yoy, signal: r.signal })) }} />
                 </div>
               </CardHeader>
               <CardContent className="overflow-x-auto">
@@ -682,16 +707,17 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                       <th className="text-right py-2 px-3 text-slate-300 font-medium">
                         {curMk}{isCurrentMonth ? " thực tế" : ""} (M)
                       </th>
-                      {isCurrentMonth && <th className="text-right py-2 px-3 text-amber-400 font-medium">Dự báo (M)</th>}
-                      {prevMk && <th className="text-right py-2 px-3 text-slate-400">{prevMk} (M)</th>}
-                      <th className="text-right py-2 px-3 text-amber-400 font-medium">MoM</th>
-                      <th className="text-right py-2 px-3 text-purple-400 font-medium">YoY 2025</th>
-                      <th className="text-center py-2 px-3 text-slate-400">Trạng thái</th>
+                      {isCurrentMonth && <th className="text-right py-2 px-3 text-amber-400/70 font-medium">Dự báo (M)</th>}
+                      {prevMk && <th className="text-right py-2 px-3 text-slate-500">{prevMk} (M)</th>}
+                      <th className="text-center py-2 px-3 text-slate-400 font-medium">Tín hiệu</th>
                     </tr>
                   </thead>
                   <tbody>
                     {trendRows
-                      .sort((a, b) => (b.mom ?? -999) - (a.mom ?? -999))
+                      .sort((a, b) => {
+                        const order = { red: 0, yellow: 1, green: 2, new: 3 };
+                        return (order[a.signal] ?? 3) - (order[b.signal] ?? 3);
+                      })
                       .map(r => (
                       <tr key={r.key} className="border-b border-slate-800 hover:bg-slate-800/30">
                         <td className="py-2.5 px-3 font-semibold" style={{ color: r.color }}>{r.label}</td>
@@ -702,24 +728,18 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                           {r.cur > 0 ? r.cur.toLocaleString() : "—"}
                         </td>
                         {isCurrentMonth && (
-                          <td className="py-2.5 px-3 text-right tabular-nums text-amber-300 font-semibold">
+                          <td className="py-2.5 px-3 text-right tabular-nums text-amber-300/80 font-medium">
                             {r.projected > 0 ? `~${Math.round(r.projected).toLocaleString()}` : "—"}
                           </td>
                         )}
                         {prevMk && (
-                          <td className="py-2.5 px-3 text-right text-slate-400 tabular-nums">
+                          <td className="py-2.5 px-3 text-right text-slate-500 tabular-nums">
                             {r.prev != null && r.prev > 0 ? r.prev.toLocaleString() : "—"}
                           </td>
                         )}
-                        <td className="py-2.5 px-3 text-right">
-                          {r.mom !== null
-                            ? <span className={`font-semibold ${r.mom >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                {r.mom >= 0 ? "+" : ""}{r.mom.toFixed(1)}%
-                              </span>
-                            : <span className="text-slate-600">—</span>}
+                        <td className="py-2.5 px-3 text-center">
+                          <SignalBadge signal={r.signal} mom={r.mom} yoy={r.yoy} />
                         </td>
-                        <td className="py-2.5 px-3 text-right"><YoyCell yoy={r.yoy} /></td>
-                        <td className="py-2.5 px-3 text-center"><StatusBadge status={r.status} mom={r.mom} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -746,18 +766,13 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                         const totYoy  = trendRows.reduce((s,r) => s + r.prevYear, 0);
                         const momTot  = totPrev > 0 ? ((totProj - totPrev) / totPrev * 100) : null;
                         const yoyTot  = totYoy  > 0 ? ((totProj - totYoy)  / totYoy  * 100) : null;
+                        const sig: "green" | "yellow" | "red" = momTot !== null && yoyTot !== null
+                          ? momTot >= 0 && yoyTot >= 0 ? "green" : momTot < 0 && yoyTot < 0 ? "red" : "yellow"
+                          : "yellow";
                         return (
-                          <>
-                            <td className="py-2 px-3 text-right">
-                              {momTot !== null
-                                ? <span className={`font-bold ${momTot >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                    {momTot >= 0 ? "+" : ""}{momTot.toFixed(1)}%
-                                  </span>
-                                : <span className="text-slate-600">—</span>}
-                            </td>
-                            <td className="py-2 px-3 text-right"><YoyCell yoy={yoyTot} /></td>
-                            <td />
-                          </>
+                          <td className="py-2 px-3 text-center">
+                            <SignalBadge signal={sig} mom={momTot} yoy={yoyTot} />
+                          </td>
                         );
                       })()}
                     </tr>
