@@ -829,24 +829,42 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {q.teams.map(t => (
-                          <div key={t.name} className={`px-2.5 py-1.5 rounded-lg ${q.chip}`}>
+                          <div key={t.name} className={`px-2.5 py-2 rounded-lg ${q.chip}`}>
                             <div className="text-xs font-semibold flex items-center gap-1">
                               {t.name}
                               <span className={`text-[10px] px-1 rounded ${t.region === "HN" ? "bg-blue-500/20 text-blue-400" : "bg-orange-500/20 text-orange-400"}`}>
                                 {t.region}
                               </span>
                             </div>
+                            {/* Row: actual → projected */}
+                            <div className="text-[10px] mt-1 flex items-center gap-1 opacity-90">
+                              <span className="text-slate-400">Thực:</span>
+                              <span className="font-medium">{Math.round(t.rawDkm).toLocaleString()}M</span>
+                              {isProjected && (
+                                <>
+                                  <span className="text-slate-600">→</span>
+                                  <span className="text-amber-300 font-medium">{Math.round(t.dkm).toLocaleString()}M</span>
+                                  <span className="text-slate-500">dự kiến</span>
+                                </>
+                              )}
+                            </div>
+                            {/* Row: YoY or target */}
                             <div className="text-[10px] mt-0.5 flex items-center gap-1.5 opacity-90">
-                              <span>{Math.round(t.dkm).toLocaleString()}M{isProjected ? "*" : ""}</span>
                               {showYoy && t.hasYoy && (
-                                <span className={(t.yoy ?? 0) >= 0 ? "text-green-400" : "text-red-400"}>
-                                  {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
-                                </span>
+                                <>
+                                  <span className="text-slate-400">YoY:</span>
+                                  <span className={(t.yoy ?? 0) >= 0 ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
+                                    {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
+                                  </span>
+                                </>
                               )}
                               {showTarget && t.targetPct != null && (
-                                <span className={t.targetPct >= 100 ? "text-green-400" : "text-red-400"}>
-                                  {Math.round(t.targetPct)}%MT
-                                </span>
+                                <>
+                                  <span className="text-slate-400">Mục tiêu:</span>
+                                  <span className={t.targetPct >= 100 ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
+                                    {Math.round(t.targetPct)}%
+                                  </span>
+                                </>
                               )}
                             </div>
                           </div>
@@ -865,12 +883,16 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <CardTitle>Phân Tích Vị Thế Team — Góc Nhìn CEO</CardTitle>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Ngưỡng ĐKM median: <span className="text-white font-semibold">{Math.round(medianDkm).toLocaleString()}M</span>
+                    <div className="text-xs text-slate-400 mt-1 space-y-0.5">
+                      <p>
+                        Phân loại: <span className="text-slate-300">ĐKM lớn/nhỏ</span> = so tổng DS đăng ký mới của team với median ({Math.round(medianDkm).toLocaleString()}M{isProjected ? " dự kiến" : ""})
+                      </p>
                       {isProjected && (
-                        <span className="ml-2 text-amber-400">· * Quy chiếu theo tốc độ {daysElapsed}/{daysInMonth} ngày</span>
+                        <p className="text-amber-400/80">
+                          Tháng chưa kết thúc ({daysElapsed}/{daysInMonth} ngày) — <span className="text-amber-300">Dự kiến</span> = tốc độ thực tế × {daysInMonth}/{daysElapsed} quy về cuối tháng
+                        </p>
                       )}
-                    </p>
+                    </div>
                   </div>
                   <MiniAiPanel context="ceo_quadrant" label="AI nhận xét" data={{ period: filterLabel, region, paceRatio, teams: teamData }} />
                 </div>
@@ -891,7 +913,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   <QuadGrid groups={targetGroups} showTarget />
                 </div>
                 <p className="text-[10px] text-slate-600">
-                  * Ngưỡng phân loại: median ĐKM {Math.round(medianDkm).toLocaleString()}M{isProjected ? ` · Giá trị đã quy chiếu tốc độ ${daysElapsed}/${daysInMonth} ngày trong tháng` : ""}
+                  * YoY và % mục tiêu tính trên giá trị <span className="text-amber-400/70">dự kiến</span> (quy chiếu tốc độ {daysElapsed}/{daysInMonth} ngày) để so sánh công bằng với cùng kỳ và mục tiêu cả tháng
                 </p>
               </CardContent>
             </Card>
