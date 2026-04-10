@@ -782,12 +782,10 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           const teamData = displayed.map(t => {
             const rawDkm     = SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0);
             const projDkm    = isProjected ? rawDkm / paceRatio : rawDkm;
-            const projRev    = isProjected ? t.revenue / paceRatio : t.revenue;
             const prev       = prevYearTeamMap[t.teamId];
             const prevDkm    = prev ? SVC_KEYS.reduce((s, sk) => s + ((prev as any)[sk.key] ?? 0), 0) : 0;
             const yoy        = prevDkm > 0 ? ((projDkm - prevDkm) / prevDkm * 100) : null;
-            const targetPct  = t.target > 0 ? (projRev / t.target * 100) : null;
-            return { name: t.teamName, region: t.region, dkm: projDkm, rawDkm, prevDkm, yoy, hasYoy: prevDkm > 0, targetPct };
+            return { name: t.teamName, region: t.region, dkm: projDkm, rawDkm, prevDkm, yoy, hasYoy: prevDkm > 0 };
           }).filter(t => t.rawDkm > 0);
 
           if (teamData.length < 2) return null;
@@ -805,14 +803,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             { key: "watch",     label: "⚠️ Cần Chú Ý",    sub: "ĐKM nhỏ · cần cải thiện",      color: "text-red-400",    border: "border-red-500/30 bg-red-500/5",       chip: "bg-red-500/15 text-red-300 border border-red-500/20",        teams: teamData.filter(t => t.dkm <  threshold && (t.yoy ?? 0) <  0) },
           ];
 
-          const targetGroups = [
-            { key: "excel",   label: "⭐ Xuất Sắc",         sub: "ĐKM lớn · đạt mục tiêu",       color: "text-green-400",  border: "border-green-500/30 bg-green-500/5",   chip: "bg-green-500/15 text-green-300 border border-green-500/20",  teams: teamData.filter(t => t.dkm >= threshold && (t.targetPct ?? 0) >= 100) },
-            { key: "ontrack", label: "🚀 Đang Tốt",         sub: "ĐKM nhỏ · đạt mục tiêu",       color: "text-violet-400", border: "border-violet-500/30 bg-violet-500/5", chip: "bg-violet-500/15 text-violet-300 border border-violet-500/20", teams: teamData.filter(t => t.dkm <  threshold && (t.targetPct ?? 0) >= 100) },
-            { key: "push",    label: "💪 Cần Đẩy Mạnh",    sub: "ĐKM lớn · chưa đạt mục tiêu",  color: "text-amber-400",  border: "border-amber-500/30 bg-amber-500/5",   chip: "bg-amber-500/15 text-amber-300 border border-amber-500/20",  teams: teamData.filter(t => t.dkm >= threshold && (t.targetPct ?? 0) <  100) },
-            { key: "prio",    label: "⚠️ Ưu Tiên Hỗ Trợ", sub: "ĐKM nhỏ · chưa đạt mục tiêu", color: "text-red-400",    border: "border-red-500/30 bg-red-500/5",       chip: "bg-red-500/15 text-red-300 border border-red-500/20",        teams: teamData.filter(t => t.dkm <  threshold && (t.targetPct ?? 0) <  100) },
-          ];
-
-          function QuadGrid({ groups, showYoy, showTarget }: { groups: typeof yoyGroups; showYoy?: boolean; showTarget?: boolean }) {
+          function QuadGrid({ groups, showYoy }: { groups: typeof yoyGroups; showYoy?: boolean }) {
             return (
               <div className="grid grid-cols-2 gap-3">
                 {groups.map(q => (
@@ -845,25 +836,14 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                 </>
                               )}
                             </div>
-                            {/* Row: YoY or target */}
-                            <div className="text-[10px] mt-0.5 flex items-center gap-1.5 opacity-90">
-                              {showYoy && t.hasYoy && (
-                                <>
-                                  <span className="text-slate-400">YoY:</span>
-                                  <span className={(t.yoy ?? 0) >= 0 ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
-                                    {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
-                                  </span>
-                                </>
-                              )}
-                              {showTarget && t.targetPct != null && (
-                                <>
-                                  <span className="text-slate-400">Mục tiêu:</span>
-                                  <span className={t.targetPct >= 100 ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
-                                    {Math.round(t.targetPct)}%
-                                  </span>
-                                </>
-                              )}
-                            </div>
+                            {t.hasYoy && (
+                              <div className="text-[10px] mt-0.5 flex items-center gap-1.5 opacity-90">
+                                <span className="text-slate-400">YoY:</span>
+                                <span className={(t.yoy ?? 0) >= 0 ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
+                                  {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -898,24 +878,11 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   <MiniAiPanel context="ceo_quadrant" label="AI nhận xét" data={{ period: filterLabel, region, paceRatio, teams: teamData }} />
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <div className="text-xs font-semibold text-slate-300 mb-3 flex items-center gap-2">
-                    <span className="w-1 h-4 rounded bg-blue-400 inline-block"/>
-                    So với cùng kỳ 2025 (YoY)
-                  </div>
-                  <QuadGrid groups={yoyGroups} showYoy />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-300 mb-3 flex items-center gap-2">
-                    <span className="w-1 h-4 rounded bg-green-400 inline-block"/>
-                    So với mục tiêu tháng
-                  </div>
-                  <QuadGrid groups={targetGroups} showTarget />
-                </div>
-                <p className="text-[10px] text-slate-600">
-                  * Ngưỡng phân loại = TB ĐKM tháng {selectedMonth}/2025 của tất cả team ({teamsWithPrev.length} team có dữ liệu).
-                  {isProjected && ` · Giá trị dự kiến quy chiếu tốc độ ${daysElapsed}/${daysInMonth} ngày — YoY và %MT tính trên số dự kiến để so sánh công bằng.`}
+              <CardContent>
+                <QuadGrid groups={yoyGroups} showYoy />
+                <p className="text-[10px] text-slate-600 mt-3">
+                  * Ngưỡng phân loại = TB ĐKM tháng {selectedMonth}/2025 ({teamsWithPrev.length} team có dữ liệu).
+                  {isProjected && ` · Giá trị dự kiến quy chiếu tốc độ ${daysElapsed}/${daysInMonth} ngày.`}
                 </p>
               </CardContent>
             </Card>
