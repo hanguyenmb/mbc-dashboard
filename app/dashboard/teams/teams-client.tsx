@@ -566,14 +566,14 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             );
           }
 
-          function KpiBar({ pct }: { pct: number | null }) {
+          function KpiBar({ pct, projected }: { pct: number | null; projected?: boolean }) {
             if (pct === null) return null;
             const capped = Math.min(pct, 100);
             const color = pct >= 90 ? "#22c55e" : pct >= 70 ? "#f59e0b" : "#ef4444";
             return (
               <div>
                 <div className="flex justify-between items-center mb-0.5">
-                  <span className="text-[10px] text-slate-500">KPI tháng</span>
+                  <span className="text-[10px] text-slate-500">{projected ? "KPI dự kiến cuối tháng" : "KPI tháng"}</span>
                   <span className="text-[11px] font-semibold font-mono" style={{ color }}>{pct}%</span>
                 </div>
                 <div className="h-[3px] bg-slate-700 rounded-full overflow-hidden">
@@ -669,11 +669,17 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                 </div>
                                 {/* KPI bar */}
                                 {t.target > 0 && (
-                                  <div className="mb-2 text-[10px] text-slate-500">
-                                    KPI tháng: {Math.round(t.rawRev).toLocaleString()}M / {t.target.toLocaleString()}M
+                                  <div className="mb-1 flex items-center justify-between text-[10px]">
+                                    <span className="text-slate-500">DS thực: <span className="text-slate-300 font-mono">{Math.round(t.rawRev).toLocaleString()}M</span></span>
+                                    {isProjected && (
+                                      <span className="text-slate-500">Dự kiến: <span className="text-amber-300 font-mono">~{Math.round(t.projRev).toLocaleString()}M</span> / {t.target.toLocaleString()}M</span>
+                                    )}
+                                    {!isProjected && (
+                                      <span className="text-slate-500">Mục tiêu: <span className="text-slate-300 font-mono">{t.target.toLocaleString()}M</span></span>
+                                    )}
                                   </div>
                                 )}
-                                <KpiBar pct={t.kpiPct} />
+                                <KpiBar pct={t.kpiPct} projected={isProjected} />
                                 {/* Stats row */}
                                 <div className="grid grid-cols-3 gap-1.5 mt-2">
                                   {[
