@@ -513,6 +513,27 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             });
           }
 
+          // ── Tính ratio ĐKM/DS cùng kỳ theo region, loại trừ Reseller ────────────
+          const isReseller = (name: string) => name.toLowerCase().includes("reseller");
+
+          // Dùng prevYearTeams (cùng tháng/quý cùng kỳ 2025)
+          const prevHnNormal  = prevYearTeams.filter(t => t.region === "HN"  && !isReseller(t.teamName));
+          const prevHcmNormal = prevYearTeams.filter(t => t.region === "HCM" && !isReseller(t.teamName));
+
+          const sumDkm = (arr: typeof prevYearTeams) =>
+            arr.reduce((s, t) => s + SVC_KEYS.reduce((ss, sk) => ss + ((t as any)[sk.key] ?? 0), 0), 0);
+          const sumRev = (arr: typeof prevYearTeams) =>
+            arr.reduce((s, t) => s + t.revenue, 0);
+
+          const hnPrevDkmTotal  = sumDkm(prevHnNormal);
+          const hnPrevRevTotal  = sumRev(prevHnNormal);
+          const hcmPrevDkmTotal = sumDkm(prevHcmNormal);
+          const hcmPrevRevTotal = sumRev(prevHcmNormal);
+
+          // ratio × 1.1 (năm nay tập trung ĐKM hơn), cap tại 0.95 để tránh bất thường
+          const ratioHN  = hnPrevRevTotal  > 0 ? Math.min((hnPrevDkmTotal  / hnPrevRevTotal)  * 1.1, 0.95) : null;
+          const ratioHCM = hcmPrevRevTotal > 0 ? Math.min((hcmPrevDkmTotal / hcmPrevRevTotal) * 1.1, 0.95) : null;
+
           const teamData = displayed.map(t => {
             const rawDkm  = SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0);
             const projDkm = isProjected ? rawDkm / paceRatio : rawDkm;
@@ -520,41 +541,69 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             const prev    = prevYearTeamMap[t.teamId];
             const prevDkm = prev ? SVC_KEYS.reduce((s, sk) => s + ((prev as any)[sk.key] ?? 0), 0) : 0;
             const yoy     = prevDkm > 0 ? ((projDkm - prevDkm) / prevDkm * 100) : null;
-            const kpiPct  = t.target > 0 ? Math.round(projRev / t.target * 100) : null;
             const sparkVals = teamSparkVals(t.teamId);
-            // Confidence: based on days elapsed
             const confidence: "Cao" | "Trung bình" | "Thấp" =
               paceRatio >= 0.5 ? "Cao" : paceRatio >= 0.3 ? "Trung bình" : "Thấp";
-            // BASE flag: YoY > 80% but prevDkm was unusually low (< 60% of threshold)
-            const isSmallScale = rawDkm > 0 && rawDkm < 30; // <30M = quy mô nhỏ
+
+            // ── Tính mục tiêu ĐKM ước tính ──────────────────────────────────
+            let dkmTarget: number | null = null;
+            let dkmTargetRatio: number | null = null;
+            let dkmTargetNote = "";
+            if (t.target > 0) {
+              if (isReseller(t.teamName)) {
+                // Reseller: dùng ratio của chính team năm ngoái, không nhân 1.1
+                const prevRevTeam = prev?.revenue ?? 0;
+                if (prevRevTeam > 0 && prevDkm > 0) {
+                  dkmTargetRatio = prevDkm / prevRevTeam;
+                  dkmTarget = dkmTargetRatio * t.target;
+                  dkmTargetNote = `Reseller · tỉ lệ CK25: ${(dkmTargetRatio * 100).toFixed(0)}%`;
+                }
+              } else {
+                const ratio = t.region === "HN" ? ratioHN : ratioHCM;
+                if (ratio !== null) {
+                  dkmTargetRatio = ratio;
+                  dkmTarget = ratio * t.target;
+                  dkmTargetNote = `Tỉ lệ ${t.region} CK25×1.1: ${(ratio * 100).toFixed(0)}%`;
+                }
+              }
+            }
+
+            // % đạt mục tiêu ĐKM (dùng projDkm so với dkmTarget)
+            const dkmKpiPct = dkmTarget && dkmTarget > 0 ? Math.round(projDkm / dkmTarget * 100) : null;
+            // % đạt mục tiêu DS tổng (dùng projRev so với target)
+            const kpiPct = t.target > 0 ? Math.round(projRev / t.target * 100) : null;
+
             return {
               id: t.teamId, name: t.teamName, region: t.region,
               rawDkm, projDkm, rawRev: t.revenue, projRev, target: t.target,
-              prevDkm, yoy, hasYoy: prevDkm > 0, kpiPct, sparkVals, confidence, isSmallScale,
+              prevDkm, yoy, hasYoy: prevDkm > 0,
+              kpiPct, dkmKpiPct, dkmTarget, dkmTargetNote,
+              sparkVals, confidence,
             };
           }).filter(t => t.rawDkm > 0 || t.rawRev > 0);
 
           if (teamData.length < 2) return null;
 
-          const teamsWithPrev = teamData.filter(t => t.prevDkm > 0);
-          const threshold = teamsWithPrev.length > 0
-            ? teamsWithPrev.reduce((s, t) => s + t.prevDkm, 0) / teamsWithPrev.length
-            : teamData.reduce((s, t) => s + t.projDkm, 0) / teamData.length;
+          const totalRaw   = teamData.reduce((s, t) => s + t.rawDkm, 0);
+          const totalProj  = teamData.reduce((s, t) => s + t.projDkm, 0);
 
-          const totalRaw  = teamData.reduce((s, t) => s + t.rawDkm, 0);
-          const totalProj = teamData.reduce((s, t) => s + t.projDkm, 0);
-          const starCount = teamData.filter(t => (t.yoy ?? 0) >= 0).length;
-          const watchCount = teamData.filter(t => t.hasYoy && (t.yoy ?? 0) < 0).length;
+          // Xếp ô: trục 1 = YoY ĐKM, trục 2 = % đạt mục tiêu ĐKM ước tính (≥80% = đạt)
+          const DKM_KPI_THRESHOLD = 80;
+          const inGoodDkm = (t: typeof teamData[0]) => t.dkmKpiPct !== null ? t.dkmKpiPct >= DKM_KPI_THRESHOLD : t.projDkm >= totalProj / teamData.length;
+          const inGoodYoy = (t: typeof teamData[0]) => (t.yoy ?? 0) >= 0;
 
-          // Sort: ô tích cực → ĐKM dự kiến cao nhất lên trên; ô tiêu cực → YoY tệ nhất (âm nhất) lên trên
-          const sortDesc = (a: typeof teamData[0], b: typeof teamData[0]) => b.projDkm - a.projDkm;
+          const starCount  = teamData.filter(t => inGoodYoy(t) && inGoodDkm(t)).length;
+          const watchCount = teamData.filter(t => !inGoodYoy(t) || !inGoodDkm(t)).length;
+
+          // Sort: tích cực → % đạt ĐKM cao nhất; tiêu cực → YoY âm nhất lên trước
+          const sortDesc  = (a: typeof teamData[0], b: typeof teamData[0]) => (b.dkmKpiPct ?? b.projDkm) - (a.dkmKpiPct ?? a.projDkm);
           const sortWorst = (a: typeof teamData[0], b: typeof teamData[0]) => (a.yoy ?? 0) - (b.yoy ?? 0);
 
           const quadGroups = [
-            { key: "star",      label: "⭐ Ngôi Sao",   sub: "ĐKM lớn · tăng trưởng tốt",  borderCls: "border-green-600/40",  headCls: "text-green-400",  bgCls: "bg-green-500/5",  teams: teamData.filter(t => t.projDkm >= threshold && (t.yoy ?? 0) >= 0).sort(sortDesc) },
-            { key: "potential", label: "🔄 Ổn Định",    sub: "ĐKM nhỏ · tăng trưởng tốt",  borderCls: "border-violet-600/40", headCls: "text-violet-400", bgCls: "bg-violet-500/5", teams: teamData.filter(t => t.projDkm <  threshold && (t.yoy ?? 0) >= 0).sort(sortDesc) },
-            { key: "stable",    label: "⚠️ Chú Ý",     sub: "ĐKM lớn · cần bứt phá YoY",  borderCls: "border-amber-600/40",  headCls: "text-amber-400",  bgCls: "bg-amber-500/5",  teams: teamData.filter(t => t.projDkm >= threshold && (t.yoy ?? 0) <  0).sort(sortWorst) },
-            { key: "watch",     label: "🚨 Khẩn Cấp",  sub: "ĐKM nhỏ · cần cải thiện",    borderCls: "border-red-600/40",    headCls: "text-red-400",    bgCls: "bg-red-500/5",    teams: teamData.filter(t => t.projDkm <  threshold && (t.yoy ?? 0) <  0).sort(sortWorst) },
+            { key: "star",      label: "⭐ Ngôi Sao",  sub: "YoY tốt · đang đạt KPI ĐKM",        borderCls: "border-green-600/40",  headCls: "text-green-400",  bgCls: "bg-green-500/5",  teams: teamData.filter(t =>  inGoodYoy(t) &&  inGoodDkm(t)).sort(sortDesc)  },
+            { key: "potential", label: "🔄 Ổn Định",   sub: "YoY tốt · KPI ĐKM cần cải thiện",   borderCls: "border-violet-600/40", headCls: "text-violet-400", bgCls: "bg-violet-500/5", teams: teamData.filter(t =>  inGoodYoy(t) && !inGoodDkm(t)).sort(sortDesc)  },
+            { key: "stable",    label: "⚠️ Chú Ý",    sub: "KPI ĐKM ổn · nhưng YoY đang giảm",  borderCls: "border-amber-600/40",  headCls: "text-amber-400",  bgCls: "bg-amber-500/5",  teams: teamData.filter(t => !inGoodYoy(t) &&  inGoodDkm(t)).sort(sortWorst) },
+            { key: "watch",     label: "🚨 Khẩn Cấp", sub: "YoY giảm · KPI ĐKM chưa đạt",       borderCls: "border-red-600/40",    headCls: "text-red-400",    bgCls: "bg-red-500/5",    teams: teamData.filter(t => !inGoodYoy(t) && !inGoodDkm(t)).sort(sortWorst) },
           ];
 
           function MiniSparkline({ vals }: { vals: number[] }) {
@@ -594,8 +643,11 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                 <div className="relative pr-32">
                   <h2 className="text-sm font-bold text-white">Phân Tích Vị Thế Team — Góc Nhìn CEO</h2>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Ngưỡng ĐKM lớn/nhỏ = TB ĐKM cùng kỳ 2025:
-                    <span className="text-white font-semibold ml-1">{Math.round(threshold).toLocaleString()}M</span>
+                    Mục tiêu ĐKM ước tính = tỉ lệ ĐKM/DS cùng kỳ 2025 × 1.1 × mục tiêu DS tháng
+                    <span className="text-slate-500 mx-1.5">·</span>
+                    {ratioHN !== null && <span className="text-slate-300">HN {(ratioHN * 100).toFixed(0)}%</span>}
+                    {ratioHN !== null && ratioHCM !== null && <span className="text-slate-600 mx-1">·</span>}
+                    {ratioHCM !== null && <span className="text-slate-300">HCM {(ratioHCM * 100).toFixed(0)}%</span>}
                     <span className="text-slate-500 mx-1.5">·</span>
                     Dữ liệu {filterLabel}/2026
                   </p>
@@ -627,15 +679,15 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
 
                 {/* Legend strip */}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 rounded-lg border border-slate-700/50 bg-slate-800/40 text-[11px] text-slate-400">
-                  <span>Màu thanh KPI:</span>
-                  <span><span className="text-green-400 font-bold">■</span> ≥90% đạt tốt</span>
-                  <span><span className="text-amber-400 font-bold">■</span> 70–89% theo dõi</span>
-                  <span><span className="text-red-400 font-bold">■</span> &lt;70% rủi ro</span>
+                  <span>% đạt mục tiêu ĐKM:</span>
+                  <span><span className="text-green-400 font-bold">■</span> ≥80% đạt</span>
+                  <span><span className="text-amber-400 font-bold">■</span> 60–79% cần đẩy</span>
+                  <span><span className="text-red-400 font-bold">■</span> &lt;60% rủi ro</span>
                   <span className="text-slate-500">·</span>
-                  <span>Trend: 4 tháng gần nhất</span>
+                  <span>Xếp ô: YoY ĐKM × % mục tiêu ĐKM (ngưỡng 80%)</span>
                   <span className="text-slate-500">·</span>
                   <span className="px-1.5 py-0.5 rounded border border-amber-600/40 text-amber-400 text-[10px] font-mono">BASE↓</span>
-                  <span>= cùng kỳ 2025 base thấp bất thường</span>
+                  <span>= YoY cao do cùng kỳ 2025 bất thường thấp</span>
                 </div>
 
                 {/* Quad grid */}
@@ -649,7 +701,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                       ) : (
                         <div className="flex flex-col gap-2">
                           {q.teams.map(t => {
-                            const baseFlag = t.hasYoy && (t.yoy ?? 0) > 80 && t.prevDkm < threshold * 0.6;
+                            const baseFlag = t.hasYoy && (t.yoy ?? 0) > 80 && t.dkmTarget !== null && t.prevDkm < (t.dkmTarget ?? 0) * 0.5;
                             return (
                               <div key={t.id} className="rounded-lg bg-slate-800/70 border border-slate-700/50 px-3 py-2.5">
                                 {/* Top row: name + tags + trend + yoy */}
@@ -686,22 +738,47 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                 <KpiBar pct={t.kpiPct} projected={isProjected} />
                                 {/* Stats row — DS Đăng Ký Mới */}
                                 <div className="text-[9px] text-slate-600 mt-2 mb-1 uppercase tracking-wide">Doanh số Đăng Ký Mới</div>
-                                <div className="grid grid-cols-3 gap-1.5">
-                                  {[
-                                    { l: "ĐKM thực tế",  v: `${Math.round(t.rawDkm).toLocaleString()}M` },
-                                    { l: "ĐKM dự kiến",  v: isProjected ? `~${Math.round(t.projDkm).toLocaleString()}M` : "—" },
-                                    { l: isProjected ? "Độ tin cậy dự kiến" : "—",
-                                      v: isProjected ? t.confidence : "—",
-                                      sub: isProjected ? (t.confidence === "Cao" ? `Đã qua ≥50% số ngày` : t.confidence === "Trung bình" ? `Đã qua 30–49% số ngày` : `Mới qua <30% số ngày`) : "",
-                                      cls: t.confidence === "Cao" ? "text-green-400" : t.confidence === "Trung bình" ? "text-amber-400" : "text-red-400" },
-                                  ].map((s, i) => (
-                                    <div key={i} className="rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
-                                      <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">{s.l}</div>
-                                      <div className={`text-[11px] font-medium font-mono ${(s as any).cls ?? "text-slate-200"}`}>{s.v}</div>
-                                      {(s as any).sub && <div className="text-[9px] text-slate-600 mt-0.5">{(s as any).sub}</div>}
-                                    </div>
-                                  ))}
+                                <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+                                  <div className="rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
+                                    <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">ĐKM thực tế</div>
+                                    <div className="text-[11px] font-medium font-mono text-slate-200">{Math.round(t.rawDkm).toLocaleString()}M</div>
+                                  </div>
+                                  <div className="rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
+                                    <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">ĐKM dự kiến</div>
+                                    <div className="text-[11px] font-medium font-mono text-amber-300">{isProjected ? `~${Math.round(t.projDkm).toLocaleString()}M` : `${Math.round(t.projDkm).toLocaleString()}M`}</div>
+                                  </div>
                                 </div>
+                                {/* ĐKM vs mục tiêu ước tính */}
+                                {t.dkmTarget !== null && (
+                                  <div className="rounded bg-slate-900/80 border border-slate-700/40 px-2 py-1.5">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-[9px] text-slate-500 uppercase tracking-wide">% đạt mục tiêu ĐKM ước tính</span>
+                                      <span className={`text-[11px] font-bold font-mono ${(t.dkmKpiPct ?? 0) >= 80 ? "text-green-400" : (t.dkmKpiPct ?? 0) >= 60 ? "text-amber-400" : "text-red-400"}`}>
+                                        {t.dkmKpiPct ?? "—"}%
+                                      </span>
+                                    </div>
+                                    <div className="h-[3px] bg-slate-700 rounded-full overflow-hidden mb-1">
+                                      <div className="h-full rounded-full transition-all"
+                                        style={{ width: `${Math.min(t.dkmKpiPct ?? 0, 100)}%`,
+                                                 backgroundColor: (t.dkmKpiPct ?? 0) >= 80 ? "#22c55e" : (t.dkmKpiPct ?? 0) >= 60 ? "#f59e0b" : "#ef4444" }} />
+                                    </div>
+                                    <div className="text-[9px] text-slate-600">
+                                      Mục tiêu ĐKM ước tính: {Math.round(t.dkmTarget).toLocaleString()}M · {t.dkmTargetNote}
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Confidence */}
+                                {isProjected && (
+                                  <div className="mt-1.5 rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
+                                    <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">Độ tin cậy dự kiến</div>
+                                    <div className={`text-[11px] font-medium font-mono ${t.confidence === "Cao" ? "text-green-400" : t.confidence === "Trung bình" ? "text-amber-400" : "text-red-400"}`}>
+                                      {t.confidence}
+                                    </div>
+                                    <div className="text-[9px] text-slate-600 mt-0.5">
+                                      {t.confidence === "Cao" ? "Đã qua ≥50% số ngày" : t.confidence === "Trung bình" ? "Đã qua 30–49% số ngày" : "Mới qua <30% số ngày"}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -713,16 +790,11 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
 
                 {/* Legend footer */}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 py-2 rounded-lg border border-slate-700/50 bg-slate-800/40 text-[11px] text-slate-400">
-                  <span><span className="inline-block w-2 h-2 rounded-sm bg-green-500 mr-1"/>KPI ≥ 90% — đạt tốt</span>
-                  <span><span className="inline-block w-2 h-2 rounded-sm bg-amber-500 mr-1"/>KPI 70–89% — cần theo dõi</span>
-                  <span><span className="inline-block w-2 h-2 rounded-sm bg-red-500 mr-1"/>KPI &lt;70% — rủi ro</span>
-                  <span><span className="inline-block w-2 h-2 rounded-sm bg-blue-400 mr-1"/>Sparkline xu hướng 4 tháng</span>
+                  <span><span className="inline-block w-2 h-2 rounded-sm bg-blue-400 mr-1"/>Sparkline xu hướng ĐKM 4 tháng gần nhất</span>
                   <span className="px-1 py-0.5 rounded border border-amber-600/40 text-amber-400 text-[10px] font-mono">BASE↓</span>
-                  <span>YoY cao do cùng kỳ 2025 bất thường</span>
-                  <span><span className="px-1 py-0.5 rounded bg-red-900/40 text-red-400 text-[10px] font-mono">Thấp</span></span>
-                  <span><span className="px-1 py-0.5 rounded bg-amber-900/40 text-amber-400 text-[10px] font-mono">Trung bình</span></span>
-                  <span><span className="px-1 py-0.5 rounded bg-green-900/40 text-green-400 text-[10px] font-mono">Cao</span></span>
-                  <span>Confidence dự kiến cuối tháng</span>
+                  <span>YoY cao bất thường do cùng kỳ 2025 base thấp</span>
+                  <span className="text-slate-500">·</span>
+                  <span>Mục tiêu ĐKM = tỉ lệ ĐKM/DS CK2025 × 1.1 × KH tháng · Reseller dùng tỉ lệ riêng không nhân 1.1</span>
                 </div>
               </CardContent>
             </Card>
