@@ -569,7 +569,11 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             }
 
             // % đạt mục tiêu ĐKM (dùng projDkm so với dkmTarget)
-            const dkmKpiPct = dkmTarget && dkmTarget > 0 ? Math.round(projDkm / dkmTarget * 100) : null;
+            // So rawDkm vs kỳ vọng tại thời điểm hiện tại (dkmTarget × pace)
+            // → team đang đúng tốc độ = 100%, nhanh hơn > 100%, chậm hơn < 100%
+            const dkmKpiPct = dkmTarget && dkmTarget > 0
+              ? Math.round(rawDkm / (dkmTarget * paceRatio) * 100)
+              : null;
             // % đạt mục tiêu DS tổng (dùng projRev so với target)
             const kpiPct = t.target > 0 ? Math.round(projRev / t.target * 100) : null;
 
@@ -605,7 +609,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             const raw    = ts.reduce((s, t) => s + t.rawDkm, 0);
             const proj   = ts.reduce((s, t) => s + t.projDkm, 0);
             const target = ts.reduce((s, t) => s + (t.dkmTarget ?? 0), 0);
-            const pct    = target > 0 ? Math.round(proj / target * 100) : null;
+            // Dùng pace-adjusted: raw vs (target × pace)
+            const pct    = target > 0 ? Math.round(raw / (target * paceRatio) * 100) : null;
             const prevTotal = ts.reduce((s, t) => s + t.prevDkm, 0);
             const yoy    = prevTotal > 0 ? Math.round((proj - prevTotal) / prevTotal * 100) : null;
             return { reg, raw, proj, target, pct, yoy };
@@ -766,12 +771,12 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
 
                 {/* Legend strip */}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 rounded-lg border border-slate-700/50 bg-slate-800/40 text-[11px] text-slate-400">
-                  <span>% đạt mục tiêu ĐKM:</span>
-                  <span><span className="text-green-400 font-bold">■</span> ≥80% đạt</span>
-                  <span><span className="text-amber-400 font-bold">■</span> 60–79% cần đẩy</span>
-                  <span><span className="text-red-400 font-bold">■</span> &lt;60% rủi ro</span>
+                  <span>Tốc độ ĐKM:</span>
+                  <span><span className="text-green-400 font-bold">■</span> ≥80% đúng tiến độ</span>
+                  <span><span className="text-amber-400 font-bold">■</span> 60–79% hơi chậm</span>
+                  <span><span className="text-red-400 font-bold">■</span> &lt;60% chậm đáng kể</span>
                   <span className="text-slate-500">·</span>
-                  <span>Xếp ô: YoY ĐKM × % mục tiêu ĐKM (ngưỡng 80%)</span>
+                  <span>Xếp ô: YoY ĐKM × tốc độ vs kỳ vọng (ngưỡng 80%)</span>
                   <span className="text-slate-500">·</span>
                   <span className="px-1.5 py-0.5 rounded border border-amber-600/40 text-amber-400 text-[10px] font-mono">BASE↓</span>
                   <span>= YoY cao do cùng kỳ 2025 bất thường thấp</span>
@@ -825,7 +830,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                 {t.dkmTarget !== null && (
                                   <div className="rounded bg-slate-900/80 border border-slate-700/40 px-2 py-1.5 mb-1.5">
                                     <div className="flex items-center justify-between mb-1">
-                                      <span className="text-[9px] text-slate-500 uppercase tracking-wide">% đạt mục tiêu ĐKM ước tính</span>
+                                      <span className="text-[9px] text-slate-500 uppercase tracking-wide">Tốc độ ĐKM vs kỳ vọng ({daysElapsed}/{daysInMonth} ngày)</span>
                                       <span className={`text-[11px] font-bold font-mono ${(t.dkmKpiPct ?? 0) >= 80 ? "text-green-400" : (t.dkmKpiPct ?? 0) >= 60 ? "text-amber-400" : "text-red-400"}`}>
                                         {t.dkmKpiPct ?? "—"}%
                                       </span>
@@ -836,7 +841,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                                  backgroundColor: (t.dkmKpiPct ?? 0) >= 80 ? "#22c55e" : (t.dkmKpiPct ?? 0) >= 60 ? "#f59e0b" : "#ef4444" }} />
                                     </div>
                                     <div className="text-[9px] text-slate-600">
-                                      Mục tiêu ĐKM ước tính: {Math.round(t.dkmTarget).toLocaleString()}M · {t.dkmTargetNote}
+                                      Kỳ vọng đến nay: {Math.round(t.dkmTarget * paceRatio).toLocaleString()}M · Mục tiêu cả tháng: {Math.round(t.dkmTarget).toLocaleString()}M · {t.dkmTargetNote}
                                     </div>
                                   </div>
                                 )}
