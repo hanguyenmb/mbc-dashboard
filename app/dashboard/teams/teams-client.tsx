@@ -1061,16 +1061,26 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
 
         {/* Phần 4b: Vị Thế Nhóm Dịch Vụ theo Khu Vực */}
         {hasPrevYearTeamData && (() => {
+          const now4b        = new Date();
+          const selMo4b      = parseInt(selectedMonth.replace("T", ""));
+          const isCurMo4b    = view === "month" && selMo4b === now4b.getMonth() + 1;
+          const daysInMo4b   = new Date(now4b.getFullYear(), selMo4b, 0).getDate();
+          const daysElapsed4b = isCurMo4b ? now4b.getDate() : daysInMo4b;
+          const pace4b        = Math.min(daysElapsed4b / daysInMo4b, 1);
+          const proj4b = (v: number) => isCurMo4b && pace4b < 1 ? v / pace4b : v;
+
           const svcData = SVC_KEYS.map(sk => {
             const hnTeams  = displayed.filter(t => t.region === "HN");
             const hcmTeams = displayed.filter(t => t.region === "HCM");
-            const hnDkm    = hnTeams.reduce((s, t) => s + ((t as any)[sk.key] ?? 0), 0);
-            const hcmDkm   = hcmTeams.reduce((s, t) => s + ((t as any)[sk.key] ?? 0), 0);
+            const hnRaw    = hnTeams.reduce((s, t) => s + ((t as any)[sk.key] ?? 0), 0);
+            const hcmRaw   = hcmTeams.reduce((s, t) => s + ((t as any)[sk.key] ?? 0), 0);
+            const hnDkm    = proj4b(hnRaw);
+            const hcmDkm   = proj4b(hcmRaw);
             const hnPrevDkm  = hnTeams.reduce((s, t)  => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0);
             const hcmPrevDkm = hcmTeams.reduce((s, t) => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0);
             const hnYoy  = hnPrevDkm  > 0 ? ((hnDkm  - hnPrevDkm)  / hnPrevDkm  * 100) : null;
             const hcmYoy = hcmPrevDkm > 0 ? ((hcmDkm - hcmPrevDkm) / hcmPrevDkm * 100) : null;
-            return { service: sk.label, hnDkm, hcmDkm, hnYoy, hcmYoy };
+            return { service: sk.label, hnDkm: Math.round(hnDkm), hcmDkm: Math.round(hcmDkm), hnYoy, hcmYoy };
           }).filter(d => d.hnDkm > 0 || d.hcmDkm > 0);
 
           if (svcData.length === 0) return null;
@@ -1093,6 +1103,9 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     <span className="inline-block w-6 border-t-2 border-dashed border-orange-400"/>HCM YoY%
                   </span>
                   <span className="text-slate-500">· Đường nét đứt trên/dưới 0% = tăng/giảm so cùng kỳ 2025</span>
+                  {isCurMo4b && pace4b < 1 && (
+                    <span className="text-amber-400/80">⚠ Tháng chưa kết thúc — DS đã quy đổi theo tốc độ {daysElapsed4b}/{daysInMo4b} ngày (ước tính ±15%)</span>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
