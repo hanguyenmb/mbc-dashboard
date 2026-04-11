@@ -612,10 +612,10 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                 {/* Summary strip */}
                 <div className="grid grid-cols-4 gap-2">
                   {[
-                    { label: "TỔNG THỰC TẾ",      val: `${Math.round(totalRaw).toLocaleString()}M`,  sub: `${daysElapsed} ngày đầu tháng`, cls: "text-blue-400" },
-                    { label: "TỔNG DỰ KIẾN",       val: isProjected ? `${Math.round(totalProj).toLocaleString()}M` : "—", sub: "Cuối tháng (ước tính)", cls: "text-white" },
-                    { label: "NGÔI SAO / TIỀM NĂNG", val: `${starCount} team`,  sub: "Tăng trưởng YoY tốt",  cls: "text-green-400" },
-                    { label: "CẦN CHÚ Ý",          val: `${watchCount} team`, sub: "YoY âm, cần can thiệp", cls: "text-red-400" },
+                    { label: "ĐKM THỰC TẾ",        val: `${Math.round(totalRaw).toLocaleString()}M`,  sub: `Doanh số ĐKM · ${daysElapsed} ngày đầu tháng`, cls: "text-blue-400" },
+                    { label: "ĐKM DỰ KIẾN",        val: isProjected ? `${Math.round(totalProj).toLocaleString()}M` : "—", sub: "Doanh số ĐKM · cuối tháng (ước tính)", cls: "text-white" },
+                    { label: "NGÔI SAO / ỔN ĐỊNH", val: `${starCount} team`,  sub: "YoY tốt — đang tăng trưởng",  cls: "text-green-400" },
+                    { label: "CHÚ Ý / KHẨN CẤP",  val: `${watchCount} team`, sub: "YoY âm — cần can thiệp", cls: "text-red-400" },
                   ].map((s, i) => (
                     <div key={i} className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-3 py-2.5">
                       <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wide mb-1">{s.label}</div>
