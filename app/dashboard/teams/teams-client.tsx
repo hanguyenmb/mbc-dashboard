@@ -667,12 +667,12 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                     )}
                                   </div>
                                 </div>
-                                {/* KPI bar */}
+                                {/* KPI bar — DS tổng (ĐKM + Gia hạn) */}
                                 {t.target > 0 && (
                                   <div className="mb-1 flex items-center justify-between text-[10px]">
-                                    <span className="text-slate-500">DS thực: <span className="text-slate-300 font-mono">{Math.round(t.rawRev).toLocaleString()}M</span></span>
+                                    <span className="text-slate-500">DS tổng thực: <span className="text-slate-300 font-mono">{Math.round(t.rawRev).toLocaleString()}M</span></span>
                                     {isProjected && (
-                                      <span className="text-slate-500">Dự kiến: <span className="text-amber-300 font-mono">~{Math.round(t.projRev).toLocaleString()}M</span> / {t.target.toLocaleString()}M</span>
+                                      <span className="text-slate-500">Dự kiến cuối tháng: <span className="text-amber-300 font-mono">~{Math.round(t.projRev).toLocaleString()}M</span> / {t.target.toLocaleString()}M</span>
                                     )}
                                     {!isProjected && (
                                       <span className="text-slate-500">Mục tiêu: <span className="text-slate-300 font-mono">{t.target.toLocaleString()}M</span></span>
@@ -680,17 +680,21 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                   </div>
                                 )}
                                 <KpiBar pct={t.kpiPct} projected={isProjected} />
-                                {/* Stats row */}
-                                <div className="grid grid-cols-3 gap-1.5 mt-2">
+                                {/* Stats row — DS Đăng Ký Mới */}
+                                <div className="text-[9px] text-slate-600 mt-2 mb-1 uppercase tracking-wide">Doanh số Đăng Ký Mới</div>
+                                <div className="grid grid-cols-3 gap-1.5">
                                   {[
-                                    { l: "THỰC TẾ",  v: `${Math.round(t.rawDkm).toLocaleString()}M` },
-                                    { l: "DỰ KIẾN",  v: isProjected ? `${Math.round(t.projDkm).toLocaleString()}M` : "—" },
-                                    { l: "CONFIDENCE", v: isProjected ? t.confidence : "—",
+                                    { l: "ĐKM thực tế",  v: `${Math.round(t.rawDkm).toLocaleString()}M` },
+                                    { l: "ĐKM dự kiến",  v: isProjected ? `~${Math.round(t.projDkm).toLocaleString()}M` : "—" },
+                                    { l: isProjected ? "Độ tin cậy dự kiến" : "—",
+                                      v: isProjected ? t.confidence : "—",
+                                      sub: isProjected ? (t.confidence === "Cao" ? `≥50% tháng qua` : t.confidence === "Trung bình" ? `≥30% tháng qua` : `<30% tháng qua`) : "",
                                       cls: t.confidence === "Cao" ? "text-green-400" : t.confidence === "Trung bình" ? "text-amber-400" : "text-red-400" },
                                   ].map((s, i) => (
                                     <div key={i} className="rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
                                       <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">{s.l}</div>
                                       <div className={`text-[11px] font-medium font-mono ${(s as any).cls ?? "text-slate-200"}`}>{s.v}</div>
+                                      {(s as any).sub && <div className="text-[9px] text-slate-600 mt-0.5">{(s as any).sub}</div>}
                                     </div>
                                   ))}
                                 </div>
