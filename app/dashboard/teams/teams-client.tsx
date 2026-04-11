@@ -1227,41 +1227,43 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
 
           return (
             <Card>
-              <CardHeader>
-                <div className="relative pr-32">
-                  <CardTitle>Xu Hướng Nhóm Sản Phẩm — Đăng Ký Mới</CardTitle>
-                  <div className="flex items-center gap-3 flex-wrap text-xs text-slate-400 mt-1">
-                    <span>So sánh {curMk}{prevMk ? ` vs ${prevMk}` : ""} · Sparkline {sparkMonths[0] ?? curMk}–{curMk}</span>
-                    {isCurrentMonth && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-medium">
-                        ⏱ Pace {paceLabel} · MoM/YoY tính theo dự báo full-month
-                      </span>
-                    )}
+              <CardHeader className="flex-col items-start gap-0">
+                <div className="flex items-start justify-between gap-3 w-full">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-sm font-semibold text-slate-200">Xu Hướng Nhóm Sản Phẩm — Đăng Ký Mới</CardTitle>
+                    <div className="flex items-center gap-3 flex-wrap text-xs text-slate-400 mt-1">
+                      <span>So sánh {curMk}{prevMk ? ` vs ${prevMk}` : ""} · Sparkline {sparkMonths[0] ?? curMk}–{curMk}</span>
+                      {isCurrentMonth && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-medium">
+                          ⏱ Pace {paceLabel} · MoM/YoY tính theo dự báo full-month
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {/* Team filter tabs */}
-                  <div className="flex flex-wrap gap-1 mt-3">
-                    <button
-                      onClick={() => setTrendTeamId(null)}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${trendTeamId === null ? "bg-slate-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}
-                    >
-                      Tổng hợp
-                    </button>
-                    {trendTeamList.map(t => (
-                      <button
-                        key={t.teamId}
-                        onClick={() => setTrendTeamId(t.teamId)}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${trendTeamId === t.teamId
-                          ? t.region === "HN" ? "bg-blue-600 text-white" : "bg-orange-600 text-white"
-                          : "bg-slate-800 text-slate-400 hover:text-white"}`}
-                      >
-                        {t.teamName}
-                        <span className={`ml-1 text-[10px] opacity-70 ${t.region === "HN" ? "text-blue-300" : "text-orange-300"}`}>{t.region}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="absolute top-0 right-0">
+                  <div className="flex-shrink-0">
                     <MiniAiPanel context="trend" label="AI nhận xét" data={{ period: curMk, region, team: selectedTeam?.teamName ?? "Tổng hợp", isPaceMonth: isCurrentMonth, paceLabel, rows: trendRows.map(r => ({ label: r.label, cur: r.cur, projected: r.projected, mom: r.mom, yoy: r.yoy, signal: r.signal })) }} />
                   </div>
+                </div>
+                {/* Team filter tabs */}
+                <div className="flex flex-wrap gap-1 mt-3">
+                  <button
+                    onClick={() => setTrendTeamId(null)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${trendTeamId === null ? "bg-slate-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}
+                  >
+                    Tổng hợp
+                  </button>
+                  {trendTeamList.map(t => (
+                    <button
+                      key={t.teamId}
+                      onClick={() => setTrendTeamId(t.teamId)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${trendTeamId === t.teamId
+                        ? t.region === "HN" ? "bg-blue-600 text-white" : "bg-orange-600 text-white"
+                        : "bg-slate-800 text-slate-400 hover:text-white"}`}
+                    >
+                      {t.teamName}
+                      <span className={`ml-1 text-[10px] opacity-70 ${t.region === "HN" ? "text-blue-300" : "text-orange-300"}`}>{t.region}</span>
+                    </button>
+                  ))}
                 </div>
               </CardHeader>
               <CardContent className="overflow-x-auto">
