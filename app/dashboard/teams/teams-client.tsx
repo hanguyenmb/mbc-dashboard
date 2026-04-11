@@ -595,6 +595,24 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           const starCount  = teamData.filter(t => inGoodYoy(t) && inGoodDkm(t)).length;
           const watchCount = teamData.filter(t => !inGoodYoy(t) || !inGoodDkm(t)).length;
 
+          // Tổng mục tiêu ĐKM ước tính (chỉ tính team có dkmTarget)
+          const totalDkmTarget = teamData.reduce((s, t) => s + (t.dkmTarget ?? 0), 0);
+          const totalDkmKpiPct = totalDkmTarget > 0 ? Math.round(totalProj / totalDkmTarget * 100) : null;
+
+          // Breakdown HN / HCM
+          const mkRegionSummary = (reg: "HN" | "HCM") => {
+            const ts = teamData.filter(t => t.region === reg);
+            const raw    = ts.reduce((s, t) => s + t.rawDkm, 0);
+            const proj   = ts.reduce((s, t) => s + t.projDkm, 0);
+            const target = ts.reduce((s, t) => s + (t.dkmTarget ?? 0), 0);
+            const pct    = target > 0 ? Math.round(proj / target * 100) : null;
+            const prevTotal = ts.reduce((s, t) => s + t.prevDkm, 0);
+            const yoy    = prevTotal > 0 ? Math.round((proj - prevTotal) / prevTotal * 100) : null;
+            return { reg, raw, proj, target, pct, yoy };
+          };
+          const hnSummary  = mkRegionSummary("HN");
+          const hcmSummary = mkRegionSummary("HCM");
+
           // Sort: tích cực → % đạt ĐKM cao nhất; tiêu cực → YoY âm nhất lên trước
           const sortDesc  = (a: typeof teamData[0], b: typeof teamData[0]) => (b.dkmKpiPct ?? b.projDkm) - (a.dkmKpiPct ?? a.projDkm);
           const sortWorst = (a: typeof teamData[0], b: typeof teamData[0]) => (a.yoy ?? 0) - (b.yoy ?? 0);
@@ -661,20 +679,89 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   </div>
                 </div>
 
-                {/* Summary strip */}
+                {/* Summary strip — row 1: tổng */}
                 <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { label: "ĐKM THỰC TẾ",        val: `${Math.round(totalRaw).toLocaleString()}M`,  sub: `Doanh số ĐKM · ${daysElapsed} ngày đầu tháng`, cls: "text-blue-400" },
-                    { label: "ĐKM DỰ KIẾN",        val: isProjected ? `${Math.round(totalProj).toLocaleString()}M` : "—", sub: "Doanh số ĐKM · cuối tháng (ước tính)", cls: "text-white" },
-                    { label: "NGÔI SAO / ỔN ĐỊNH", val: `${starCount} team`,  sub: "YoY tốt — đang tăng trưởng",  cls: "text-green-400" },
-                    { label: "CHÚ Ý / KHẨN CẤP",  val: `${watchCount} team`, sub: "YoY âm — cần can thiệp", cls: "text-red-400" },
-                  ].map((s, i) => (
-                    <div key={i} className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-3 py-2.5">
-                      <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wide mb-1">{s.label}</div>
-                      <div className={`text-xl font-bold leading-none ${s.cls}`}>{s.val}</div>
-                      <div className="text-[11px] text-slate-400 mt-1">{s.sub}</div>
+                  {/* ĐKM Thực tế */}
+                  <div className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-3 py-2.5">
+                    <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wide mb-1">ĐKM Thực tế</div>
+                    <div className="text-xl font-bold leading-none text-blue-400">{Math.round(totalRaw).toLocaleString()}M</div>
+                    <div className="text-[11px] text-slate-400 mt-1">{daysElapsed} ngày đầu tháng</div>
+                  </div>
+                  {/* ĐKM Dự kiến + % mục tiêu */}
+                  <div className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-3 py-2.5">
+                    <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wide mb-1">ĐKM Dự kiến</div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-bold leading-none text-white">{isProjected ? `${Math.round(totalProj).toLocaleString()}M` : `${Math.round(totalRaw).toLocaleString()}M`}</span>
+                      {totalDkmKpiPct !== null && (
+                        <span className={`text-sm font-bold font-mono ${totalDkmKpiPct >= 80 ? "text-green-400" : totalDkmKpiPct >= 60 ? "text-amber-400" : "text-red-400"}`}>
+                          {totalDkmKpiPct}%
+                        </span>
+                      )}
                     </div>
-                  ))}
+                    <div className="text-[11px] text-slate-400 mt-1">
+                      {totalDkmTarget > 0 ? `/ ${Math.round(totalDkmTarget).toLocaleString()}M mục tiêu ĐKM` : "cuối tháng (ước tính)"}
+                    </div>
+                    {totalDkmTarget > 0 && (
+                      <div className="mt-1.5 h-[3px] bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${Math.min(totalDkmKpiPct ?? 0, 100)}%`, backgroundColor: (totalDkmKpiPct ?? 0) >= 80 ? "#22c55e" : (totalDkmKpiPct ?? 0) >= 60 ? "#f59e0b" : "#ef4444" }} />
+                      </div>
+                    )}
+                  </div>
+                  {/* Ngôi Sao / Ổn Định */}
+                  <div className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-3 py-2.5">
+                    <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wide mb-1">Ngôi Sao / Ổn Định</div>
+                    <div className="text-xl font-bold leading-none text-green-400">{starCount} team</div>
+                    <div className="text-[11px] text-slate-400 mt-1">YoY tốt — đang tăng trưởng</div>
+                  </div>
+                  {/* Chú Ý / Khẩn Cấp */}
+                  <div className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-3 py-2.5">
+                    <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wide mb-1">Chú Ý / Khẩn Cấp</div>
+                    <div className="text-xl font-bold leading-none text-red-400">{watchCount} team</div>
+                    <div className="text-[11px] text-slate-400 mt-1">YoY âm — cần can thiệp</div>
+                  </div>
+                </div>
+
+                {/* Summary strip — row 2: HN vs HCM */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[hnSummary, hcmSummary].map(s => {
+                    const pctColor = (s.pct ?? 0) >= 80 ? "text-green-400" : (s.pct ?? 0) >= 60 ? "text-amber-400" : "text-red-400";
+                    const barColor = (s.pct ?? 0) >= 80 ? "#22c55e" : (s.pct ?? 0) >= 60 ? "#f59e0b" : "#ef4444";
+                    const regColor = s.reg === "HN" ? "text-blue-400 bg-blue-500/10 border-blue-500/30" : "text-orange-400 bg-orange-500/10 border-orange-500/30";
+                    return (
+                      <div key={s.reg} className={`rounded-lg border px-3 py-2.5 ${regColor}`}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-mono uppercase tracking-wide font-bold">Khu vực {s.reg}</span>
+                          {s.yoy !== null && (
+                            <span className={`text-[11px] font-semibold font-mono ${s.yoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                              {s.yoy >= 0 ? "▲" : "▼"}{Math.abs(s.yoy)}% YoY
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-baseline gap-3">
+                          <div>
+                            <div className="text-[9px] text-slate-500 uppercase mb-0.5">Thực tế</div>
+                            <div className="text-sm font-bold text-slate-200">{Math.round(s.raw).toLocaleString()}M</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] text-slate-500 uppercase mb-0.5">Dự kiến</div>
+                            <div className="text-sm font-bold text-white">{Math.round(s.proj).toLocaleString()}M</div>
+                          </div>
+                          {s.target > 0 && (
+                            <div className="flex-1">
+                              <div className="flex justify-between items-center mb-0.5">
+                                <span className="text-[9px] text-slate-500 uppercase">Mục tiêu ĐKM</span>
+                                <span className={`text-[11px] font-bold font-mono ${pctColor}`}>{s.pct ?? "—"}%</span>
+                              </div>
+                              <div className="h-[3px] bg-slate-700/60 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${Math.min(s.pct ?? 0, 100)}%`, backgroundColor: barColor }} />
+                              </div>
+                              <div className="text-[9px] text-slate-500 mt-0.5">/ {Math.round(s.target).toLocaleString()}M</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Legend strip */}
