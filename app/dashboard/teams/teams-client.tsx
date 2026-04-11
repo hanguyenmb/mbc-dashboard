@@ -86,6 +86,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
   const [benchmark, setBenchmark] = useState(40);
   const [trendTeamId, setTrendTeamId] = useState<string | null>(null);
   const [radarTeamId, setRadarTeamId] = useState<string | null>(null);
+  const [expandedCeoTeam, setExpandedCeoTeam] = useState<string | null>(null);
   const rankingRef = useRef<HTMLDivElement>(null);
 
   const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
@@ -787,17 +788,22 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   {quadGroups.map(q => (
                     <div key={q.key} className={`rounded-xl border p-4 ${q.borderCls} ${q.bgCls}`}>
                       <div className={`text-sm font-bold ${q.headCls} mb-0.5`}>{q.label}</div>
-                      <div className="text-[11px] text-slate-500 mb-3">{q.sub}</div>
+                      <div className="text-[11px] text-slate-500 mb-3">{q.sub} · {q.teams.length} team</div>
                       {q.teams.length === 0 ? (
                         <div className="text-xs text-slate-600 italic">Không có team nào</div>
                       ) : (
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-1.5">
                           {q.teams.map(t => {
+                            const isExpanded = expandedCeoTeam === t.id;
                             const baseFlag = t.hasYoy && (t.yoy ?? 0) > 80 && t.dkmTarget !== null && t.prevDkm < (t.dkmTarget ?? 0) * 0.5;
+                            const dkmPctColor = (t.dkmKpiPct ?? 0) >= 80 ? "text-green-400" : (t.dkmKpiPct ?? 0) >= 60 ? "text-amber-400" : "text-red-400";
                             return (
-                              <div key={t.id} className="rounded-lg bg-slate-800/70 border border-slate-700/50 px-3 py-2.5">
-                                {/* Top row: name + tags + trend + yoy */}
-                                <div className="flex items-center justify-between mb-2">
+                              <div key={t.id} className="rounded-lg bg-slate-800/70 border border-slate-700/50 overflow-hidden">
+                                {/* Summary row — always visible, click to expand */}
+                                <button
+                                  onClick={() => setExpandedCeoTeam(isExpanded ? null : t.id)}
+                                  className="w-full px-3 py-2 flex items-center justify-between hover:bg-slate-700/40 transition-colors text-left"
+                                >
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-xs font-semibold text-white">{t.name}</span>
                                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${t.region === "HN" ? "bg-green-900/60 text-green-400" : "bg-blue-900/60 text-blue-400"}`}>
@@ -806,58 +812,64 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                     {baseFlag && <span className="text-[9px] px-1 py-0.5 rounded border border-amber-600/40 text-amber-400 font-mono">BASE↓</span>}
                                   </div>
                                   <div className="flex items-center gap-2">
+                                    {t.dkmKpiPct !== null && (
+                                      <span className={`text-[10px] font-bold font-mono ${dkmPctColor}`}>{t.dkmKpiPct}%</span>
+                                    )}
                                     <MiniSparkline vals={t.sparkVals} />
                                     {t.hasYoy && (
                                       <span className={`text-[11px] font-semibold font-mono ${(t.yoy ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
                                         {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
                                       </span>
                                     )}
+                                    <span className="text-slate-600 text-[10px]">{isExpanded ? "▲" : "▼"}</span>
                                   </div>
-                                </div>
-                                {/* Stats row — DS Đăng Ký Mới */}
-                                <div className="text-[9px] text-slate-600 mt-1 mb-1 uppercase tracking-wide">Doanh số Đăng Ký Mới</div>
-                                <div className="grid grid-cols-2 gap-1.5 mb-1.5">
-                                  <div className="rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
-                                    <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">ĐKM thực tế</div>
-                                    <div className="text-[11px] font-medium font-mono text-slate-200">{Math.round(t.rawDkm).toLocaleString()}M</div>
-                                  </div>
-                                  <div className="rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
-                                    <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">ĐKM dự kiến</div>
-                                    <div className="text-[11px] font-medium font-mono text-amber-300">{isProjected ? `~${Math.round(t.projDkm).toLocaleString()}M` : `${Math.round(t.projDkm).toLocaleString()}M`}</div>
-                                  </div>
-                                </div>
-                                {/* ĐKM vs mục tiêu ước tính */}
-                                {t.dkmTarget !== null && (
-                                  <div className="rounded bg-slate-900/80 border border-slate-700/40 px-2 py-1.5 mb-1.5">
-                                    <div className="flex items-center justify-between mb-1">
-                                      <span className="text-[9px] text-slate-500 uppercase tracking-wide">Tốc độ ĐKM vs kỳ vọng ({daysElapsed}/{daysInMonth} ngày)</span>
-                                      <span className={`text-[11px] font-bold font-mono ${(t.dkmKpiPct ?? 0) >= 80 ? "text-green-400" : (t.dkmKpiPct ?? 0) >= 60 ? "text-amber-400" : "text-red-400"}`}>
-                                        {t.dkmKpiPct ?? "—"}%
-                                      </span>
+                                </button>
+
+                                {/* Detail panel — only when expanded */}
+                                {isExpanded && (
+                                  <div className="px-3 pb-3 pt-1 border-t border-slate-700/50 space-y-1.5">
+                                    {/* ĐKM */}
+                                    <div className="text-[9px] text-slate-600 uppercase tracking-wide">Doanh số Đăng Ký Mới</div>
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                      <div className="rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
+                                        <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">ĐKM thực tế</div>
+                                        <div className="text-[11px] font-medium font-mono text-slate-200">{Math.round(t.rawDkm).toLocaleString()}M</div>
+                                      </div>
+                                      <div className="rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
+                                        <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">ĐKM dự kiến</div>
+                                        <div className="text-[11px] font-medium font-mono text-amber-300">{isProjected ? `~${Math.round(t.projDkm).toLocaleString()}M` : `${Math.round(t.projDkm).toLocaleString()}M`}</div>
+                                      </div>
                                     </div>
-                                    <div className="h-[3px] bg-slate-700 rounded-full overflow-hidden mb-1">
-                                      <div className="h-full rounded-full transition-all"
-                                        style={{ width: `${Math.min(t.dkmKpiPct ?? 0, 100)}%`,
-                                                 backgroundColor: (t.dkmKpiPct ?? 0) >= 80 ? "#22c55e" : (t.dkmKpiPct ?? 0) >= 60 ? "#f59e0b" : "#ef4444" }} />
-                                    </div>
-                                    <div className="text-[9px] text-slate-600">
-                                      Kỳ vọng đến nay: {Math.round(t.dkmTarget * paceRatio).toLocaleString()}M · Mục tiêu cả tháng: {Math.round(t.dkmTarget).toLocaleString()}M · {t.dkmTargetNote}
-                                    </div>
-                                  </div>
-                                )}
-                                {/* KPI DS tổng — đặt cuối */}
-                                {t.target > 0 && (
-                                  <div className="rounded bg-slate-900/80 border border-slate-700/40 px-2 py-1.5">
-                                    <div className="mb-1 flex items-center justify-between text-[10px]">
-                                      <span className="text-slate-500">DS tổng thực: <span className="text-slate-300 font-mono">{Math.round(t.rawRev).toLocaleString()}M</span></span>
-                                      {isProjected && (
-                                        <span className="text-slate-500">Dự kiến: <span className="text-amber-300 font-mono">~{Math.round(t.projRev).toLocaleString()}M</span> / {t.target.toLocaleString()}M</span>
-                                      )}
-                                      {!isProjected && (
-                                        <span className="text-slate-500">Mục tiêu: <span className="text-slate-300 font-mono">{t.target.toLocaleString()}M</span></span>
-                                      )}
-                                    </div>
-                                    <KpiBar pct={t.kpiPct} projected={isProjected} />
+                                    {/* ĐKM vs mục tiêu */}
+                                    {t.dkmTarget !== null && (
+                                      <div className="rounded bg-slate-900/80 border border-slate-700/40 px-2 py-1.5">
+                                        <div className="flex items-center justify-between mb-1">
+                                          <span className="text-[9px] text-slate-500 uppercase tracking-wide">Tốc độ ĐKM vs kỳ vọng ({daysElapsed}/{daysInMonth} ngày)</span>
+                                          <span className={`text-[11px] font-bold font-mono ${dkmPctColor}`}>{t.dkmKpiPct ?? "—"}%</span>
+                                        </div>
+                                        <div className="h-[3px] bg-slate-700 rounded-full overflow-hidden mb-1">
+                                          <div className="h-full rounded-full transition-all"
+                                            style={{ width: `${Math.min(t.dkmKpiPct ?? 0, 100)}%`,
+                                                     backgroundColor: (t.dkmKpiPct ?? 0) >= 80 ? "#22c55e" : (t.dkmKpiPct ?? 0) >= 60 ? "#f59e0b" : "#ef4444" }} />
+                                        </div>
+                                        <div className="text-[9px] text-slate-600">
+                                          Kỳ vọng đến nay: {Math.round(t.dkmTarget * paceRatio).toLocaleString()}M · Cả tháng: {Math.round(t.dkmTarget).toLocaleString()}M · {t.dkmTargetNote}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {/* KPI DS tổng */}
+                                    {t.target > 0 && (
+                                      <div className="rounded bg-slate-900/80 border border-slate-700/40 px-2 py-1.5">
+                                        <div className="mb-1 flex items-center justify-between text-[10px]">
+                                          <span className="text-slate-500">DS tổng thực: <span className="text-slate-300 font-mono">{Math.round(t.rawRev).toLocaleString()}M</span></span>
+                                          {isProjected
+                                            ? <span className="text-slate-500">Dự kiến: <span className="text-amber-300 font-mono">~{Math.round(t.projRev).toLocaleString()}M</span> / {t.target.toLocaleString()}M</span>
+                                            : <span className="text-slate-500">Mục tiêu: <span className="text-slate-300 font-mono">{t.target.toLocaleString()}M</span></span>
+                                          }
+                                        </div>
+                                        <KpiBar pct={t.kpiPct} projected={isProjected} />
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
