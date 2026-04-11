@@ -94,6 +94,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
     { key: "transferGws", label: "Transfer GWS",       color: "#8B5CF6" },
     { key: "saleAi",      label: "Sale AI",            color: "#EF4444" },
     { key: "elastic",     label: "Elastic",            color: "#06B6D4" },
+    { key: "cloudServer", label: "Cloud Server",        color: "#F97316" },
   ] as const;
 
   // Donut: lọc theo bộ lọc đang chọn

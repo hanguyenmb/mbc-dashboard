@@ -5,7 +5,7 @@ import { getData, getLastUpdated } from "@/lib/db";
 import { MONTHLY_DATA, SERVICE_MONTHLY, REVENUE_TYPE, TEAM_SERVICE_DATA } from "@/lib/mock-data";
 import type { TeamMonthlyData } from "@/lib/types";
 
-const SVC_FIELDS = ["hostMail","msgws","tenMien","transferGws","saleAi","elastic"] as const;
+const SVC_FIELDS = ["hostMail","msgws","tenMien","transferGws","saleAi","elastic","cloudServer"] as const;
 
 function deriveServiceMonthly(teamMonthlyData: TeamMonthlyData): typeof SERVICE_MONTHLY {
   return teamMonthlyData.map(({ month, teams }) => {

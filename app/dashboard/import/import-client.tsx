@@ -33,7 +33,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
   const [monthlyData, setMonthlyData] = useState<typeof MONTHLY_DATA>([...MONTHLY_DATA]);
   const [revenueData, setRevenueData] = useState<typeof REVENUE_TYPE>([...REVENUE_TYPE]);
   const [teamData, setTeamData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t })) })));
-  const [teamPrevData, setTeamPrevData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 })) })));
+  const [teamPrevData, setTeamPrevData] = useState<TeamMonthlyData>(TEAM_SERVICE_DATA.map(m => ({ ...m, teams: m.teams.map(t => ({ ...t, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0, cloudServer: 0 })) })));
   const [teamMonth, setTeamMonth] = useState(`T${new Date().getMonth() + 1}`);
   const [teamYear, setTeamYear] = useState<"2026" | "prev">("2026");
   const [revenueYear, setRevenueYear] = useState<"2026" | "prev">("2026");
@@ -63,7 +63,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
           const oldTeams = r4.data as TeamServiceRecord[];
           currentTeamData = TEAM_SERVICE_DATA.map(m => ({
             ...m,
-            teams: oldTeams.map(t => ({ ...t, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 })),
+            teams: oldTeams.map(t => ({ ...t, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0, cloudServer: 0 })),
           }));
         } else {
           currentTeamData = r4.data as TeamMonthlyData;
@@ -84,7 +84,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
             const pt = prevMonth?.teams.find(t => t.teamId === ct.teamId);
             return pt
               ? { ...pt, teamName: ct.teamName, region: ct.region }
-              : { ...ct, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
+              : { ...ct, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0, cloudServer: 0 };
           }),
         };
       });
@@ -332,7 +332,7 @@ export function ImportClient({ userEmail }: { userEmail: string }) {
                 const addTeam = () => {
                   if (isPrev) return;
                   const svcFields = Object.fromEntries(serviceConfig.map(s => [s.key, 0]));
-                  const newTeam: TeamServiceRecord = { teamId: `team_${Date.now()}`, teamName: "Team mới", region: "HN", revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0, ...svcFields };
+                  const newTeam: TeamServiceRecord = { teamId: `team_${Date.now()}`, teamName: "Team mới", region: "HN", revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0, cloudServer: 0, ...svcFields };
                   setTeamData(d => d.map(m => ({ ...m, teams: [...m.teams, { ...newTeam }] })));
                 };
 

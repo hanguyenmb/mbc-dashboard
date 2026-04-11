@@ -76,6 +76,8 @@ function RegionCard({ label, teams }: { label: string; teams: TeamServiceRecord[
 
 export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, monthlyData, serviceConfig }: TeamsClientProps) {
   const SVC_KEYS: ServiceConfig[] = serviceConfig?.length ? serviceConfig : DEFAULT_SERVICE_CONFIG;
+  // Elastic không cộng vào tổng ĐKM (đã có trong Cloud Server, để riêng theo dõi)
+  const DKM_SVC_KEYS = SVC_KEYS.filter(s => s.key !== 'elastic');
   const [showAI, setShowAI] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [region, setRegion] = useState<"all" | "HN" | "HCM">("all");
@@ -99,17 +101,18 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
       const teams = source.find(m => m.month === mk)?.teams ?? [];
       for (const t of teams) {
         if (!map[t.teamId]) {
-          map[t.teamId] = { ...t, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0 };
+          map[t.teamId] = { ...t, revenue: 0, target: 0, customerCount: 0, hostMail: 0, msgws: 0, tenMien: 0, transferGws: 0, saleAi: 0, elastic: 0, cloudServer: 0 };
         }
         map[t.teamId].revenue        += t.revenue;
         map[t.teamId].target         += t.target;
         map[t.teamId].customerCount  += (t.customerCount ?? 0);
         map[t.teamId].hostMail       += t.hostMail;
-        map[t.teamId].msgws       += t.msgws;
-        map[t.teamId].tenMien     += t.tenMien;
-        map[t.teamId].transferGws += t.transferGws;
-        map[t.teamId].saleAi      += t.saleAi;
-        map[t.teamId].elastic     += t.elastic;
+        map[t.teamId].msgws          += t.msgws;
+        map[t.teamId].tenMien        += t.tenMien;
+        map[t.teamId].transferGws    += t.transferGws;
+        map[t.teamId].saleAi         += t.saleAi;
+        map[t.teamId].elastic        += t.elastic;
+        map[t.teamId].cloudServer    += (t.cloudServer ?? 0);
       }
     }
     return Object.values(map);
@@ -510,7 +513,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           function teamSparkVals(teamId: string): number[] {
             return sparkKeys.map(mk => {
               const t = allMonths.find(m => m.month === mk)?.teams.find(t => t.teamId === teamId);
-              return t ? SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0) : 0;
+              return t ? DKM_SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0) : 0;
             });
           }
 
@@ -522,7 +525,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           const prevHcmNormal = prevYearTeams.filter(t => t.region === "HCM" && !isReseller(t.teamName));
 
           const sumDkm = (arr: typeof prevYearTeams) =>
-            arr.reduce((s, t) => s + SVC_KEYS.reduce((ss, sk) => ss + ((t as any)[sk.key] ?? 0), 0), 0);
+            arr.reduce((s, t) => s + DKM_SVC_KEYS.reduce((ss, sk) => ss + ((t as any)[sk.key] ?? 0), 0), 0);
           const sumRev = (arr: typeof prevYearTeams) =>
             arr.reduce((s, t) => s + t.revenue, 0);
 
@@ -536,11 +539,11 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           const ratioHCM = hcmPrevRevTotal > 0 ? Math.min((hcmPrevDkmTotal / hcmPrevRevTotal) * 1.1, 0.95) : null;
 
           const teamData = displayed.map(t => {
-            const rawDkm  = SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0);
+            const rawDkm  = DKM_SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0);
             const projDkm = isProjected ? rawDkm / paceRatio : rawDkm;
             const projRev = isProjected ? t.revenue / paceRatio : t.revenue;
             const prev    = prevYearTeamMap[t.teamId];
-            const prevDkm = prev ? SVC_KEYS.reduce((s, sk) => s + ((prev as any)[sk.key] ?? 0), 0) : 0;
+            const prevDkm = prev ? DKM_SVC_KEYS.reduce((s, sk) => s + ((prev as any)[sk.key] ?? 0), 0) : 0;
             const yoy     = prevDkm > 0 ? ((projDkm - prevDkm) / prevDkm * 100) : null;
             const sparkVals = teamSparkVals(t.teamId);
             const confidence: "Cao" | "Trung bình" | "Thấp" =
@@ -1360,7 +1363,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                 period: filterLabel, region, benchmark,
                 teams: displayed.map(t => ({
                   name: t.teamName, region: t.region,
-                  totalDs: t.revenue, totalDkm: SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0),
+                  totalDs: t.revenue, totalDkm: DKM_SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0),
                   services: Object.fromEntries(SVC_KEYS.map(sk => [sk.label, (t as any)[sk.key] ?? 0])),
                 }))
               }} />
@@ -1403,10 +1406,10 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     maxSvc[s.key] = Math.max(...displayed.map(t => (t as any)[s.key] ?? 0), 1);
                   });
                   return displayed.map((team) => {
-                    const svcTotal = SVC_KEYS.reduce((sum, s) => sum + ((team as any)[s.key] ?? 0), 0);
+                    const svcTotal = DKM_SVC_KEYS.reduce((sum, s) => sum + ((team as any)[s.key] ?? 0), 0);
                     const ratio = team.revenue > 0 ? Math.round((svcTotal / team.revenue) * 100) : 0;
                     const prev = prevYearTeamMap[team.teamId];
-                    const prevSvcTotal = SVC_KEYS.reduce((sum, s) => sum + ((prev as any)?.[s.key] ?? 0), 0);
+                    const prevSvcTotal = DKM_SVC_KEYS.reduce((sum, s) => sum + ((prev as any)?.[s.key] ?? 0), 0);
                     const dkmYoy = (svcTotal > 0 && prevSvcTotal > 0) ? ((svcTotal - prevSvcTotal) / prevSvcTotal * 100) : null;
                     return (
                       <tr key={team.teamId} className="border-b border-slate-800 hover:bg-slate-800/30">
@@ -1463,8 +1466,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   const regTeams = reg === "all" ? displayed : displayed.filter(t => t.region === reg);
                   if (regTeams.length === 0) return null;
                   const regDs = regTeams.reduce((s, t) => s + t.revenue, 0);
-                  const regSvc = regTeams.reduce((sum, t) => sum + SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0), 0);
-                  const prevRegSvc = regTeams.reduce((sum, t) => sum + SVC_KEYS.reduce((s, sk) => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0), 0);
+                  const regSvc = regTeams.reduce((sum, t) => sum + DKM_SVC_KEYS.reduce((s, sk) => s + ((t as any)[sk.key] ?? 0), 0), 0);
+                  const prevRegSvc = regTeams.reduce((sum, t) => sum + DKM_SVC_KEYS.reduce((s, sk) => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0), 0);
                   const regRatio = regDs > 0 ? Math.round((regSvc / regDs) * 100) : 0;
                   const regDkmYoy = (regSvc > 0 && prevRegSvc > 0) ? ((regSvc - prevRegSvc) / prevRegSvc * 100) : null;
                   const isTotal = reg === "all";

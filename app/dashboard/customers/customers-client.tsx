@@ -109,8 +109,9 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
   const dkmRows = rows.map(r => {
     const khDkm = (r as any).customerCountDkm ?? 0;
     const prevKhDkm = (prevYearTeamMap[r.teamId] as any)?.customerCountDkm ?? 0;
-    const dkm = SVC_KEYS.reduce((s, sk) => s + ((r as any)[sk.key] ?? 0), 0);
-    const prevDkm = SVC_KEYS.reduce((s, sk) => s + ((prevYearTeamMap[r.teamId] as any)?.[sk.key] ?? 0), 0);
+    const DKM_SVC_KEYS = SVC_KEYS.filter(s => s.key !== 'elastic');
+    const dkm = DKM_SVC_KEYS.reduce((s, sk) => s + ((r as any)[sk.key] ?? 0), 0);
+    const prevDkm = DKM_SVC_KEYS.reduce((s, sk) => s + ((prevYearTeamMap[r.teamId] as any)?.[sk.key] ?? 0), 0);
     const avgDkm = khDkm > 0 ? dkm / khDkm : 0;
     const prevAvgDkm = prevKhDkm > 0 ? prevDkm / prevKhDkm : 0;
     const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)       ? ((khDkm - prevKhDkm)   / prevKhDkm  * 100) : null;

@@ -107,6 +107,7 @@ export interface TeamServiceRecord {
   transferGws: number;
   saleAi: number;
   elastic: number;
+  cloudServer: number;
   [key: string]: any;    // dynamic service fields
 }
 
@@ -123,6 +124,7 @@ export const DEFAULT_SERVICE_CONFIG: ServiceConfig[] = [
   { key: "transferGws", label: "Transfer GWS", color: "#C084FC" },
   { key: "saleAi",      label: "Sale AI",      color: "#F87171" },
   { key: "elastic",     label: "Elastic",      color: "#38BDF8" },
+  { key: "cloudServer", label: "Cloud Server", color: "#F97316" },
 ];
 
 export type TeamMonthlyData = { month: string; teams: TeamServiceRecord[]; prevYearRevenue?: number }[];
