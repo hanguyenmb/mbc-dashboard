@@ -809,21 +809,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                     )}
                                   </div>
                                 </div>
-                                {/* KPI bar — DS tổng (ĐKM + Gia hạn) */}
-                                {t.target > 0 && (
-                                  <div className="mb-1 flex items-center justify-between text-[10px]">
-                                    <span className="text-slate-500">DS tổng thực: <span className="text-slate-300 font-mono">{Math.round(t.rawRev).toLocaleString()}M</span></span>
-                                    {isProjected && (
-                                      <span className="text-slate-500">Dự kiến cuối tháng: <span className="text-amber-300 font-mono">~{Math.round(t.projRev).toLocaleString()}M</span> / {t.target.toLocaleString()}M</span>
-                                    )}
-                                    {!isProjected && (
-                                      <span className="text-slate-500">Mục tiêu: <span className="text-slate-300 font-mono">{t.target.toLocaleString()}M</span></span>
-                                    )}
-                                  </div>
-                                )}
-                                <KpiBar pct={t.kpiPct} projected={isProjected} />
                                 {/* Stats row — DS Đăng Ký Mới */}
-                                <div className="text-[9px] text-slate-600 mt-2 mb-1 uppercase tracking-wide">Doanh số Đăng Ký Mới</div>
+                                <div className="text-[9px] text-slate-600 mt-1 mb-1 uppercase tracking-wide">Doanh số Đăng Ký Mới</div>
                                 <div className="grid grid-cols-2 gap-1.5 mb-1.5">
                                   <div className="rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
                                     <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">ĐKM thực tế</div>
@@ -836,7 +823,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                 </div>
                                 {/* ĐKM vs mục tiêu ước tính */}
                                 {t.dkmTarget !== null && (
-                                  <div className="rounded bg-slate-900/80 border border-slate-700/40 px-2 py-1.5">
+                                  <div className="rounded bg-slate-900/80 border border-slate-700/40 px-2 py-1.5 mb-1.5">
                                     <div className="flex items-center justify-between mb-1">
                                       <span className="text-[9px] text-slate-500 uppercase tracking-wide">% đạt mục tiêu ĐKM ước tính</span>
                                       <span className={`text-[11px] font-bold font-mono ${(t.dkmKpiPct ?? 0) >= 80 ? "text-green-400" : (t.dkmKpiPct ?? 0) >= 60 ? "text-amber-400" : "text-red-400"}`}>
@@ -853,16 +840,19 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                     </div>
                                   </div>
                                 )}
-                                {/* Confidence */}
-                                {isProjected && (
-                                  <div className="mt-1.5 rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
-                                    <div className="text-[9px] text-slate-500 uppercase tracking-wide mb-0.5">Độ tin cậy dự kiến</div>
-                                    <div className={`text-[11px] font-medium font-mono ${t.confidence === "Cao" ? "text-green-400" : t.confidence === "Trung bình" ? "text-amber-400" : "text-red-400"}`}>
-                                      {t.confidence}
+                                {/* KPI DS tổng — đặt cuối */}
+                                {t.target > 0 && (
+                                  <div className="rounded bg-slate-900/80 border border-slate-700/40 px-2 py-1.5">
+                                    <div className="mb-1 flex items-center justify-between text-[10px]">
+                                      <span className="text-slate-500">DS tổng thực: <span className="text-slate-300 font-mono">{Math.round(t.rawRev).toLocaleString()}M</span></span>
+                                      {isProjected && (
+                                        <span className="text-slate-500">Dự kiến: <span className="text-amber-300 font-mono">~{Math.round(t.projRev).toLocaleString()}M</span> / {t.target.toLocaleString()}M</span>
+                                      )}
+                                      {!isProjected && (
+                                        <span className="text-slate-500">Mục tiêu: <span className="text-slate-300 font-mono">{t.target.toLocaleString()}M</span></span>
+                                      )}
                                     </div>
-                                    <div className="text-[9px] text-slate-600 mt-0.5">
-                                      {t.confidence === "Cao" ? "Đã qua ≥50% số ngày" : t.confidence === "Trung bình" ? "Đã qua 30–49% số ngày" : "Mới qua <30% số ngày"}
-                                    </div>
+                                    <KpiBar pct={t.kpiPct} projected={isProjected} />
                                   </div>
                                 )}
                               </div>
