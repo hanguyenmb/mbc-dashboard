@@ -916,6 +916,105 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           );
         })()}
 
+        {/* Phần 4b: Vị Thế Nhóm Dịch Vụ theo Khu Vực */}
+        {hasPrevYearTeamData && (() => {
+          const now4b        = new Date();
+          const selMo4b      = parseInt(selectedMonth.replace("T", ""));
+          const isCurMo4b    = view === "month" && selMo4b === now4b.getMonth() + 1;
+          const daysInMo4b   = new Date(now4b.getFullYear(), selMo4b, 0).getDate();
+          const daysElapsed4b = isCurMo4b ? now4b.getDate() : daysInMo4b;
+          const pace4b        = Math.min(daysElapsed4b / daysInMo4b, 1);
+          const proj4b = (v: number) => isCurMo4b && pace4b < 1 ? v / pace4b : v;
+
+          const svcData = SVC_KEYS.map(sk => {
+            const hnTeams  = displayed.filter(t => t.region === "HN");
+            const hcmTeams = displayed.filter(t => t.region === "HCM");
+            const hnRaw    = hnTeams.reduce((s, t) => s + ((t as any)[sk.key] ?? 0), 0);
+            const hcmRaw   = hcmTeams.reduce((s, t) => s + ((t as any)[sk.key] ?? 0), 0);
+            const hnDkm    = proj4b(hnRaw);
+            const hcmDkm   = proj4b(hcmRaw);
+            const hnPrevDkm  = hnTeams.reduce((s, t)  => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0);
+            const hcmPrevDkm = hcmTeams.reduce((s, t) => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0);
+            const hnYoy  = hnPrevDkm  > 0 ? ((hnDkm  - hnPrevDkm)  / hnPrevDkm  * 100) : null;
+            const hcmYoy = hcmPrevDkm > 0 ? ((hcmDkm - hcmPrevDkm) / hcmPrevDkm * 100) : null;
+            return { service: sk.label, hnDkm: Math.round(hnDkm), hcmDkm: Math.round(hcmDkm), hnYoy, hcmYoy };
+          }).filter(d => d.hnDkm > 0 || d.hcmDkm > 0);
+
+          if (svcData.length === 0) return null;
+
+          return (
+            <Card>
+              <CardHeader className="flex-col items-start gap-1">
+                <CardTitle className="text-sm font-semibold text-slate-200">Vị Thế Nhóm Dịch Vụ theo Khu Vực</CardTitle>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-2.5 rounded-sm bg-blue-500/70 inline-block"/>HN ĐKM (triệu VNĐ)
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-2.5 rounded-sm bg-orange-500/70 inline-block"/>HCM ĐKM (triệu VNĐ)
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-6 border-t-2 border-dashed border-blue-400"/>HN YoY%
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-6 border-t-2 border-dashed border-orange-400"/>HCM YoY%
+                  </span>
+                  <span className="text-slate-500">· Đường nét đứt trên/dưới 0% = tăng/giảm so cùng kỳ 2025</span>
+                  {isCurMo4b && pace4b < 1 && (
+                    <span className="text-amber-400/80">⚠ Tháng chưa kết thúc — DS đã quy đổi theo tốc độ {daysElapsed4b}/{daysInMo4b} ngày (ước tính ±15%)</span>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <ComposedChart data={svcData} margin={{ top: 10, right: 50, bottom: 5, left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="service" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fill: "#94a3b8", fontSize: 10 }}
+                      tickFormatter={v => `${v.toLocaleString()}M`}
+                      width={60}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fill: "#94a3b8", fontSize: 10 }}
+                      tickFormatter={v => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`}
+                      width={45}
+                    />
+                    <ReferenceLine yAxisId="right" y={0} stroke="#475569" strokeDasharray="4 4" label={{ value: "0%", fill: "#64748b", fontSize: 10, position: "right" }} />
+                    <Tooltip
+                      content={({ payload, label }) => {
+                        if (!payload?.length) return null;
+                        return (
+                          <div className="bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-xs shadow-xl">
+                            <div className="font-bold text-white mb-1.5">{label}</div>
+                            {payload.map((p: any) => (
+                              <div key={p.name} style={{ color: p.color }} className="flex items-center justify-between gap-3">
+                                <span>{p.name}:</span>
+                                <span className="font-semibold">
+                                  {p.name.includes("YoY")
+                                    ? (p.value != null ? `${p.value > 0 ? "+" : ""}${Number(p.value).toFixed(1)}%` : "—")
+                                    : `${Number(p.value).toLocaleString()}M`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar yAxisId="left"  dataKey="hnDkm"  name="HN ĐKM"   fill="#3b82f6" fillOpacity={0.7} radius={[3,3,0,0]} />
+                    <Bar yAxisId="left"  dataKey="hcmDkm" name="HCM ĐKM"  fill="#f97316" fillOpacity={0.7} radius={[3,3,0,0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="hnYoy"  name="HN YoY%"  stroke="#60a5fa" strokeWidth={2} strokeDasharray="5 3" dot={{ fill: "#60a5fa", r: 4 }} connectNulls />
+                    <Line yAxisId="right" type="monotone" dataKey="hcmYoy" name="HCM YoY%" stroke="#fb923c" strokeWidth={2} strokeDasharray="5 3" dot={{ fill: "#fb923c", r: 4 }} connectNulls />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* Phần 3: Radar + Top Team per Service */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card>
@@ -1245,105 +1344,6 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     </tr>
                   </tfoot>
                 </table>
-              </CardContent>
-            </Card>
-          );
-        })()}
-
-        {/* Phần 4b: Vị Thế Nhóm Dịch Vụ theo Khu Vực */}
-        {hasPrevYearTeamData && (() => {
-          const now4b        = new Date();
-          const selMo4b      = parseInt(selectedMonth.replace("T", ""));
-          const isCurMo4b    = view === "month" && selMo4b === now4b.getMonth() + 1;
-          const daysInMo4b   = new Date(now4b.getFullYear(), selMo4b, 0).getDate();
-          const daysElapsed4b = isCurMo4b ? now4b.getDate() : daysInMo4b;
-          const pace4b        = Math.min(daysElapsed4b / daysInMo4b, 1);
-          const proj4b = (v: number) => isCurMo4b && pace4b < 1 ? v / pace4b : v;
-
-          const svcData = SVC_KEYS.map(sk => {
-            const hnTeams  = displayed.filter(t => t.region === "HN");
-            const hcmTeams = displayed.filter(t => t.region === "HCM");
-            const hnRaw    = hnTeams.reduce((s, t) => s + ((t as any)[sk.key] ?? 0), 0);
-            const hcmRaw   = hcmTeams.reduce((s, t) => s + ((t as any)[sk.key] ?? 0), 0);
-            const hnDkm    = proj4b(hnRaw);
-            const hcmDkm   = proj4b(hcmRaw);
-            const hnPrevDkm  = hnTeams.reduce((s, t)  => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0);
-            const hcmPrevDkm = hcmTeams.reduce((s, t) => s + ((prevYearTeamMap[t.teamId] as any)?.[sk.key] ?? 0), 0);
-            const hnYoy  = hnPrevDkm  > 0 ? ((hnDkm  - hnPrevDkm)  / hnPrevDkm  * 100) : null;
-            const hcmYoy = hcmPrevDkm > 0 ? ((hcmDkm - hcmPrevDkm) / hcmPrevDkm * 100) : null;
-            return { service: sk.label, hnDkm: Math.round(hnDkm), hcmDkm: Math.round(hcmDkm), hnYoy, hcmYoy };
-          }).filter(d => d.hnDkm > 0 || d.hcmDkm > 0);
-
-          if (svcData.length === 0) return null;
-
-          return (
-            <Card>
-              <CardHeader>
-                <CardTitle>Vị Thế Nhóm Dịch Vụ theo Khu Vực</CardTitle>
-                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 mt-0.5">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-2.5 rounded-sm bg-blue-500/70 inline-block"/>HN ĐKM (triệu VNĐ)
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-2.5 rounded-sm bg-orange-500/70 inline-block"/>HCM ĐKM (triệu VNĐ)
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-6 border-t-2 border-dashed border-blue-400"/>HN YoY%
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-6 border-t-2 border-dashed border-orange-400"/>HCM YoY%
-                  </span>
-                  <span className="text-slate-500">· Đường nét đứt trên/dưới 0% = tăng/giảm so cùng kỳ 2025</span>
-                  {isCurMo4b && pace4b < 1 && (
-                    <span className="text-amber-400/80">⚠ Tháng chưa kết thúc — DS đã quy đổi theo tốc độ {daysElapsed4b}/{daysInMo4b} ngày (ước tính ±15%)</span>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <ComposedChart data={svcData} margin={{ top: 10, right: 50, bottom: 5, left: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="service" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                    <YAxis
-                      yAxisId="left"
-                      tick={{ fill: "#94a3b8", fontSize: 10 }}
-                      tickFormatter={v => `${v.toLocaleString()}M`}
-                      width={60}
-                    />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      tick={{ fill: "#94a3b8", fontSize: 10 }}
-                      tickFormatter={v => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`}
-                      width={45}
-                    />
-                    <ReferenceLine yAxisId="right" y={0} stroke="#475569" strokeDasharray="4 4" label={{ value: "0%", fill: "#64748b", fontSize: 10, position: "right" }} />
-                    <Tooltip
-                      content={({ payload, label }) => {
-                        if (!payload?.length) return null;
-                        return (
-                          <div className="bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-xs shadow-xl">
-                            <div className="font-bold text-white mb-1.5">{label}</div>
-                            {payload.map((p: any) => (
-                              <div key={p.name} style={{ color: p.color }} className="flex items-center justify-between gap-3">
-                                <span>{p.name}:</span>
-                                <span className="font-semibold">
-                                  {p.name.includes("YoY")
-                                    ? (p.value != null ? `${p.value > 0 ? "+" : ""}${Number(p.value).toFixed(1)}%` : "—")
-                                    : `${Number(p.value).toLocaleString()}M`}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }}
-                    />
-                    <Bar yAxisId="left"  dataKey="hnDkm"  name="HN ĐKM"   fill="#3b82f6" fillOpacity={0.7} radius={[3,3,0,0]} />
-                    <Bar yAxisId="left"  dataKey="hcmDkm" name="HCM ĐKM"  fill="#f97316" fillOpacity={0.7} radius={[3,3,0,0]} />
-                    <Line yAxisId="right" type="monotone" dataKey="hnYoy"  name="HN YoY%"  stroke="#60a5fa" strokeWidth={2} strokeDasharray="5 3" dot={{ fill: "#60a5fa", r: 4 }} connectNulls />
-                    <Line yAxisId="right" type="monotone" dataKey="hcmYoy" name="HCM YoY%" stroke="#fb923c" strokeWidth={2} strokeDasharray="5 3" dot={{ fill: "#fb923c", r: 4 }} connectNulls />
-                  </ComposedChart>
-                </ResponsiveContainer>
               </CardContent>
             </Card>
           );
