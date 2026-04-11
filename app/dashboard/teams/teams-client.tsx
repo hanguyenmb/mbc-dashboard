@@ -787,11 +787,11 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                 <div className="grid grid-cols-2 gap-3">
                   {quadGroups.map(q => (
                     <div key={q.key} className={`rounded-xl border p-4 ${q.borderCls} ${q.bgCls}`}>
-                      <div className="flex items-start justify-between mb-0.5">
-                        <div className={`text-sm font-bold ${q.headCls}`}>{q.label}</div>
+                      <div className="flex items-center justify-between mb-0.5 gap-2">
+                        <div className={`text-sm font-bold whitespace-nowrap ${q.headCls}`}>{q.label}</div>
                         <MiniAiPanel
                           context="ceo_quadrant_action"
-                          label="AI gợi ý"
+                          label="Gợi ý"
                           data={{
                             period: filterLabel,
                             quadLabel: q.label,

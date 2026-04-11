@@ -53,7 +53,7 @@ export function MiniAiPanel({ context, data, label = "AI phân tích" }: MiniAiP
       {/* Trigger */}
       <button
         onClick={handleClick}
-        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all border ${
+        className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all border whitespace-nowrap flex-shrink-0 ${
           open
             ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
             : "bg-slate-700/40 text-slate-400 border-slate-600/40 hover:text-purple-300 hover:bg-purple-500/10 hover:border-purple-500/30"
