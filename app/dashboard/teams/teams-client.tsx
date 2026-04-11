@@ -711,7 +711,6 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${t.region === "HN" ? "bg-green-900/60 text-green-400" : "bg-blue-900/60 text-blue-400"}`}>
                                       {t.region}
                                     </span>
-                                    {t.isSmallScale && <span className="text-[10px] text-slate-500 italic">Quy mô nhỏ</span>}
                                     {baseFlag && <span className="text-[9px] px-1 py-0.5 rounded border border-amber-600/40 text-amber-400 font-mono">BASE↓</span>}
                                   </div>
                                   <div className="flex items-center gap-2">
