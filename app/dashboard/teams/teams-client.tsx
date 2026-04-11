@@ -787,7 +787,29 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                 <div className="grid grid-cols-2 gap-3">
                   {quadGroups.map(q => (
                     <div key={q.key} className={`rounded-xl border p-4 ${q.borderCls} ${q.bgCls}`}>
-                      <div className={`text-sm font-bold ${q.headCls} mb-0.5`}>{q.label}</div>
+                      <div className="flex items-start justify-between mb-0.5">
+                        <div className={`text-sm font-bold ${q.headCls}`}>{q.label}</div>
+                        <MiniAiPanel
+                          context="ceo_quadrant_action"
+                          label="AI gợi ý"
+                          data={{
+                            period: filterLabel,
+                            quadLabel: q.label,
+                            quadKey: q.key,
+                            paceRatio,
+                            daysElapsed,
+                            daysInMonth,
+                            teams: q.teams.map(t => ({
+                              name: t.name,
+                              region: t.region,
+                              rawDkm: t.rawDkm,
+                              dkmTarget: t.dkmTarget,
+                              dkmKpiPct: t.dkmKpiPct,
+                              yoy: t.hasYoy ? t.yoy : null,
+                            })),
+                          }}
+                        />
+                      </div>
                       <div className="text-[11px] text-slate-500 mb-3">{q.sub} · {q.teams.length} team</div>
                       {q.teams.length === 0 ? (
                         <div className="text-xs text-slate-600 italic">Không có team nào</div>

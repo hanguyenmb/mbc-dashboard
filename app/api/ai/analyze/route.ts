@@ -178,6 +178,37 @@ DỮ LIỆU VỊ THẾ TEAM — ${period ?? ""}${region && region !== "all" ? ` 
 ${teamRows || "Không có dữ liệu"}`;
   }
 
+  // ─── CEO QUADRANT ACTION: Nhận xét + hành động cho từng ô quadrant ──────────
+  if (context === "ceo_quadrant_action") {
+    const { period, quadLabel, quadKey, teams, paceRatio, daysElapsed, daysInMonth } = data ?? {};
+    const teamRows = (teams ?? []).map((t: any) => {
+      const yoyStr = t.yoy !== null ? `YoY ${t.yoy >= 0 ? "▲" : "▼"}${Math.abs(t.yoy).toFixed(1)}%` : "YoY —";
+      const dkmStr = t.dkmKpiPct !== null ? `KPI ĐKM ${t.dkmKpiPct}% (${Math.round(t.rawDkm).toLocaleString()}M / kỳ vọng ${Math.round((t.dkmTarget ?? 0) * paceRatio).toLocaleString()}M)` : `ĐKM ${Math.round(t.rawDkm).toLocaleString()}M`;
+      return `  • ${t.name} [${t.region}]: ${dkmStr} | ${yoyStr}`;
+    }).join("\n");
+
+    const quadContext: Record<string, string> = {
+      star:      "Đây là nhóm NGÔI SAO — YoY tăng trưởng tốt VÀ đang đạt tiến độ KPI ĐKM. Mục tiêu: duy trì đà, khai thác tối đa.",
+      potential: "Đây là nhóm ỔN ĐỊNH — YoY tăng trưởng tốt NHƯNG tiến độ KPI ĐKM đang chậm. Mục tiêu: cải thiện tốc độ đăng ký mới, tránh tự mãn.",
+      stable:    "Đây là nhóm CHÚ Ý — KPI ĐKM đang đúng tiến độ NHƯNG YoY đang giảm so cùng kỳ. Mục tiêu: tìm hiểu nguyên nhân sụt giảm, ngăn chặn xu hướng xấu.",
+      watch:     "Đây là nhóm KHẨN CẤP — YoY giảm VÀ KPI ĐKM chưa đạt tiến độ. Cần can thiệp ngay lập tức.",
+    };
+
+    return `Bạn là CEO của Mắt Bão Corporation (MBC) — công ty cung cấp dịch vụ số B2B (Hosting, Domain, Microsoft/Google Workspace, AI, Elastic).
+${STRICT_RULE}
+
+${quadContext[quadKey] ?? ""}
+Kỳ phân tích: ${period ?? ""} · ${daysElapsed}/${daysInMonth} ngày đã qua tháng.
+
+Hãy trả lời theo cấu trúc ngắn gọn:
+🔍 **Nhận xét chung** — 1-2 câu tóm tắt tình trạng nhóm này
+⚡ **Hành động ưu tiên** — 2-3 việc CỤ THỂ cần làm tuần này (có thể nêu tên team)
+${quadKey === "watch" || quadKey === "stable" ? "🚨 **Rủi ro** — điều gì sẽ xảy ra nếu không can thiệp trong tháng này" : "💡 **Cơ hội** — có thể khai thác thêm điều gì từ nhóm này"}
+
+CÁC TEAM TRONG NHÓM ${quadLabel ?? ""}:
+${teamRows || "Không có team nào"}`;
+  }
+
   // ─── TREND: Xu hướng nhóm sản phẩm ─────────────────────────────────────────
   if (context === "trend") {
     const { period, region, rows, isPaceMonth, paceLabel } = data ?? {};
