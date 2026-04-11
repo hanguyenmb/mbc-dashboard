@@ -546,11 +546,15 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           const starCount = teamData.filter(t => (t.yoy ?? 0) >= 0).length;
           const watchCount = teamData.filter(t => t.hasYoy && (t.yoy ?? 0) < 0).length;
 
+          // Sort: ô tích cực → ĐKM dự kiến cao nhất lên trên; ô tiêu cực → YoY tệ nhất (âm nhất) lên trên
+          const sortDesc = (a: typeof teamData[0], b: typeof teamData[0]) => b.projDkm - a.projDkm;
+          const sortWorst = (a: typeof teamData[0], b: typeof teamData[0]) => (a.yoy ?? 0) - (b.yoy ?? 0);
+
           const quadGroups = [
-            { key: "star",      label: "⭐ Ngôi Sao",   sub: "ĐKM lớn · tăng trưởng tốt",  borderCls: "border-green-600/40",  headCls: "text-green-400",  bgCls: "bg-green-500/5",  teams: teamData.filter(t => t.projDkm >= threshold && (t.yoy ?? 0) >= 0) },
-            { key: "potential", label: "🔄 Ổn Định",    sub: "ĐKM nhỏ · tăng trưởng tốt",  borderCls: "border-violet-600/40", headCls: "text-violet-400", bgCls: "bg-violet-500/5", teams: teamData.filter(t => t.projDkm <  threshold && (t.yoy ?? 0) >= 0) },
-            { key: "stable",    label: "⚠️ Chú Ý",     sub: "ĐKM lớn · cần bứt phá YoY",  borderCls: "border-amber-600/40",  headCls: "text-amber-400",  bgCls: "bg-amber-500/5",  teams: teamData.filter(t => t.projDkm >= threshold && (t.yoy ?? 0) <  0) },
-            { key: "watch",     label: "🚨 Khẩn Cấp",  sub: "ĐKM nhỏ · cần cải thiện",    borderCls: "border-red-600/40",    headCls: "text-red-400",    bgCls: "bg-red-500/5",    teams: teamData.filter(t => t.projDkm <  threshold && (t.yoy ?? 0) <  0) },
+            { key: "star",      label: "⭐ Ngôi Sao",   sub: "ĐKM lớn · tăng trưởng tốt",  borderCls: "border-green-600/40",  headCls: "text-green-400",  bgCls: "bg-green-500/5",  teams: teamData.filter(t => t.projDkm >= threshold && (t.yoy ?? 0) >= 0).sort(sortDesc) },
+            { key: "potential", label: "🔄 Ổn Định",    sub: "ĐKM nhỏ · tăng trưởng tốt",  borderCls: "border-violet-600/40", headCls: "text-violet-400", bgCls: "bg-violet-500/5", teams: teamData.filter(t => t.projDkm <  threshold && (t.yoy ?? 0) >= 0).sort(sortDesc) },
+            { key: "stable",    label: "⚠️ Chú Ý",     sub: "ĐKM lớn · cần bứt phá YoY",  borderCls: "border-amber-600/40",  headCls: "text-amber-400",  bgCls: "bg-amber-500/5",  teams: teamData.filter(t => t.projDkm >= threshold && (t.yoy ?? 0) <  0).sort(sortWorst) },
+            { key: "watch",     label: "🚨 Khẩn Cấp",  sub: "ĐKM nhỏ · cần cải thiện",    borderCls: "border-red-600/40",    headCls: "text-red-400",    bgCls: "bg-red-500/5",    teams: teamData.filter(t => t.projDkm <  threshold && (t.yoy ?? 0) <  0).sort(sortWorst) },
           ];
 
           function MiniSparkline({ vals }: { vals: number[] }) {
@@ -688,7 +692,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                     { l: "ĐKM dự kiến",  v: isProjected ? `~${Math.round(t.projDkm).toLocaleString()}M` : "—" },
                                     { l: isProjected ? "Độ tin cậy dự kiến" : "—",
                                       v: isProjected ? t.confidence : "—",
-                                      sub: isProjected ? (t.confidence === "Cao" ? `≥50% tháng qua` : t.confidence === "Trung bình" ? `≥30% tháng qua` : `<30% tháng qua`) : "",
+                                      sub: isProjected ? (t.confidence === "Cao" ? `Đã qua ≥50% số ngày` : t.confidence === "Trung bình" ? `Đã qua 30–49% số ngày` : `Mới qua <30% số ngày`) : "",
                                       cls: t.confidence === "Cao" ? "text-green-400" : t.confidence === "Trung bình" ? "text-amber-400" : "text-red-400" },
                                   ].map((s, i) => (
                                     <div key={i} className="rounded bg-slate-900/80 border border-slate-700/40 px-1.5 py-1">
