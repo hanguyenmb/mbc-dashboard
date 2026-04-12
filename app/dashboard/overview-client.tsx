@@ -130,10 +130,21 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
 
   // KPI theo tháng được chọn
   const selMonth = MONTHLY_DATA[selectedMonthIdx];
-  const selThucHien = selMonth ? (selMonth.hn ?? 0) + (selMonth.hcm ?? 0) : 0;
+  const selThucHienRaw = selMonth ? (selMonth.hn ?? 0) + (selMonth.hcm ?? 0) : 0;
+  // Pace-project tháng hiện tại nếu đang xem tháng chưa kết thúc
+  const _now = new Date();
+  const selIsCurrentMonth = selectedMonthIdx === _now.getMonth()
+    && selMonth?.hn != null && selThucHienRaw > 0;
+  const _selDaysInMonth = selIsCurrentMonth
+    ? new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate() : 30;
+  const _selDaysElapsed = selIsCurrentMonth ? _now.getDate() : _selDaysInMonth;
+  const selPace = selIsCurrentMonth && _selDaysElapsed < _selDaysInMonth
+    ? _selDaysElapsed / _selDaysInMonth : 1;
+  // Dùng projected cho trend/so sánh, raw cho hiển thị số thực
+  const selThucHien = selPace < 1 ? selThucHienRaw / selPace : selThucHienRaw;
   const selTlMt8  = selMonth?.mt8  > 0 ? (selThucHien / selMonth.mt8)  * 100 : 0;
   const selTlMt10 = selMonth?.mt10 > 0 ? (selThucHien / selMonth.mt10) * 100 : 0;
-  // Trend so tháng trước
+  // Trend so tháng trước (dùng projected để so sánh công bằng)
   const prevMonth = selectedMonthIdx > 0 ? MONTHLY_DATA[selectedMonthIdx - 1] : null;
   const prevThucHien = prevMonth ? (prevMonth.hn ?? 0) + (prevMonth.hcm ?? 0) : 0;
   const trendThang = prevThucHien > 0 ? ((selThucHien - prevThucHien) / prevThucHien) * 100 : 0;
@@ -428,12 +439,17 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             return [
               <div key="thuc-hien" className="bg-slate-800/60 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4">
                 <div className="text-xs text-slate-400 mb-1">Thực hiện {selMonth?.month}</div>
-                <div className="text-xl font-bold text-blue-400">{selThucHien.toFixed(2)} tỷ</div>
-                <div className="flex items-center gap-1.5 mt-1.5">
+                <div className="text-xl font-bold text-blue-400">{selThucHienRaw.toFixed(2)} tỷ</div>
+                {selIsCurrentMonth && selPace < 1 && (
+                  <div className="text-[11px] text-amber-300/80 mb-1">
+                    → ~{selThucHien.toFixed(2)} tỷ dự kiến ({_selDaysElapsed}/{_selDaysInMonth} ngày)
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 mt-1">
                   <span className="text-xs text-slate-500 shrink-0">Toàn Quốc</span>
-                  {prevThucHien > 0 && <TrendBadge pct={trendThang} label={`so ${prevMonth?.month ?? "T trước"}`} />}
+                  {prevThucHien > 0 && <TrendBadge pct={trendThang} label={`so ${prevMonth?.month ?? "T trước"}${selPace < 1 ? " (pace)" : ""}`} />}
                   {selMonth?.cumKy != null && selMonth.cumKy > 0 && (
-                    <TrendBadge pct={(selThucHien - selMonth.cumKy) / selMonth.cumKy * 100} label="CK 2025" />
+                    <TrendBadge pct={(selThucHien - selMonth.cumKy) / selMonth.cumKy * 100} label={`CK 2025${selPace < 1 ? " (pace)" : ""}`} />
                   )}
                 </div>
               </div>,
@@ -461,8 +477,8 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                   <span className="text-slate-500 text-sm font-normal"> tỷ</span>
                 </div>
                 <div className="text-xs text-slate-500 mt-1.5">
-                  {selThucHien > 0
-                    ? <><span className="text-blue-400 font-medium">HN {((selMonth?.hn??0)/selThucHien*100).toFixed(0)}%</span> · <span className="text-orange-400 font-medium">HCM {((selMonth?.hcm??0)/selThucHien*100).toFixed(0)}%</span></>
+                  {selThucHienRaw > 0
+                    ? <><span className="text-blue-400 font-medium">HN {((selMonth?.hn??0)/selThucHienRaw*100).toFixed(0)}%</span> · <span className="text-orange-400 font-medium">HCM {((selMonth?.hcm??0)/selThucHienRaw*100).toFixed(0)}%</span></>
                     : "tỷ VNĐ"}
                 </div>
               </div>,
