@@ -940,22 +940,32 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                       </div>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                  <div className="flex items-stretch gap-3 flex-shrink-0">
+                                    {/* Tiến độ ĐKM */}
                                     {t.dkmKpiPct !== null && (
-                                      <div className="text-right">
-                                        <span className={`text-[10px] font-bold font-mono ${dkmPctColor}`}>
+                                      <div className="text-center min-w-[40px]">
+                                        <div className="text-[8px] text-slate-500 uppercase tracking-wide mb-0.5">Tiến độ</div>
+                                        <div className={`text-[11px] font-bold font-mono leading-none ${dkmPctColor}`}>
                                           {isBorderline ? "≈" : ""}{t.dkmKpiPct}%
-                                        </span>
-                                        <div className="text-[9px] text-slate-500 font-mono leading-tight">{revTy} tỷ</div>
+                                        </div>
+                                        <div className="text-[8px] text-slate-500 font-mono mt-0.5">{revTy} tỷ</div>
                                       </div>
                                     )}
-                                    <MiniSparkline vals={t.sparkVals} />
+                                    {/* Xu hướng 4 tháng */}
+                                    <div className="text-center">
+                                      <div className="text-[8px] text-slate-500 uppercase tracking-wide mb-1">4 tháng</div>
+                                      <MiniSparkline vals={t.sparkVals} />
+                                    </div>
+                                    {/* So cùng kỳ 2025 */}
                                     {t.hasYoy && (
-                                      <span className={`text-[11px] font-semibold font-mono ${(t.yoy ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                        {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
-                                      </span>
+                                      <div className="text-center min-w-[40px]">
+                                        <div className="text-[8px] text-slate-500 uppercase tracking-wide mb-0.5">So 2025</div>
+                                        <div className={`text-[11px] font-semibold font-mono leading-none ${(t.yoy ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                          {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
+                                        </div>
+                                      </div>
                                     )}
-                                    <span className="text-slate-600 text-[10px]">{isExpanded ? "▲" : "▼"}</span>
+                                    <span className="text-slate-600 text-[10px] self-center">{isExpanded ? "▲" : "▼"}</span>
                                   </div>
                                 </div>
 
