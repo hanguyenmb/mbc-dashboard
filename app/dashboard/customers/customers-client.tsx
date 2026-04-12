@@ -23,6 +23,7 @@ const QUARTER_MONTHS: Record<number, string[]> = {
 
 export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, serviceConfig }: CustomersClientProps) {
   const SVC_KEYS: ServiceConfig[] = serviceConfig?.length ? serviceConfig : DEFAULT_SERVICE_CONFIG;
+  const DKM_SVC_KEYS = SVC_KEYS.filter(s => s.key !== 'elastic');
 
   const [region, setRegion] = useState<"all" | "HN" | "HCM">("all");
   const [view, setView] = useState<"month" | "quarter">("month");
@@ -32,6 +33,16 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
 
   const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
   const allPrevMonths = teamPrevData.length > 0 ? teamPrevData : [];
+
+  // ── Pace calculation (current month only) ──────────────────────────────────
+  const now = new Date();
+  const selMoNum = view === "month" ? parseInt(selectedMonth.replace("T", "")) : null;
+  const isCurrentMonth = view === "month" && selMoNum === now.getMonth() + 1;
+  const daysInCurMonth = isCurrentMonth ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() : 30;
+  const daysElapsed = isCurrentMonth ? now.getDate() : daysInCurMonth;
+  const paceRatio = isCurrentMonth && daysElapsed < daysInCurMonth ? daysElapsed / daysInCurMonth : 1;
+  const proj = (v: number) => paceRatio < 1 ? v / paceRatio : v;
+  const paceLabel = isCurrentMonth && paceRatio < 1 ? `${daysElapsed}/${daysInCurMonth} ngày` : null;
 
   function getTeamsForMonths(monthKeys: string[], source = allMonths) {
     const map: Record<string, TeamServiceRecord> = {};
@@ -46,11 +57,9 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
         map[t.teamId].revenue       += t.revenue;
         map[t.teamId].target        += t.target;
         map[t.teamId].customerCount += (t.customerCount ?? 0);
-        // accumulate all known service fields plus any dynamic ones
         SVC_KEYS.forEach(s => {
           (map[t.teamId] as any)[s.key] = ((map[t.teamId] as any)[s.key] ?? 0) + ((t as any)[s.key] ?? 0);
         });
-        // customerCountDkm
         if ((t as any).customerCountDkm != null) {
           (map[t.teamId] as any).customerCountDkm = ((map[t.teamId] as any).customerCountDkm ?? 0) + (t as any).customerCountDkm;
         }
@@ -84,9 +93,10 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
     const prevDs = prev?.revenue ?? 0;
     const avgDs = kh > 0 ? ds / kh : 0;
     const prevAvgDs = prevKh > 0 ? prevDs / prevKh : 0;
-    const khYoy  = (kh > 0 && prevKh > 0)           ? ((kh - prevKh)         / prevKh   * 100) : null;
-    const dsYoy  = (ds > 0 && prevDs > 0)           ? ((ds - prevDs)         / prevDs   * 100) : null;
-    const avgYoy = (avgDs > 0 && prevAvgDs > 0)     ? ((avgDs - prevAvgDs)   / prevAvgDs * 100) : null;
+    // Pace-adjusted YoY: so projected (tốc độ hiện tại × cả tháng) vs prev full-month
+    const khYoy  = (kh > 0 && prevKh > 0)       ? ((proj(kh)    - prevKh)    / prevKh    * 100) : null;
+    const dsYoy  = (ds > 0 && prevDs > 0)        ? ((proj(ds)    - prevDs)    / prevDs    * 100) : null;
+    const avgYoy = (avgDs > 0 && prevAvgDs > 0)  ? ((proj(avgDs) - prevAvgDs) / prevAvgDs * 100) : null;
     return { ...t, kh, prevKh, ds, prevDs, avgDs, prevAvgDs, khYoy, dsYoy, avgYoy };
   });
 
@@ -99,9 +109,9 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
     const prevKh = ts.reduce((s,t) => s + (prevYearTeamMap[t.teamId]?.customerCount ?? 0), 0);
     const prevDs = ts.reduce((s,t) => s + (prevYearTeamMap[t.teamId]?.revenue ?? 0), 0);
     const prevAvgDs = prevKh > 0 ? prevDs / prevKh : 0;
-    const khYoy  = (kh > 0 && prevKh > 0)           ? ((kh - prevKh)         / prevKh   * 100) : null;
-    const dsYoy  = (ds > 0 && prevDs > 0)           ? ((ds - prevDs)         / prevDs   * 100) : null;
-    const avgYoy = (avgDs > 0 && prevAvgDs > 0)     ? ((avgDs - prevAvgDs)   / prevAvgDs * 100) : null;
+    const khYoy  = (kh > 0 && prevKh > 0)       ? ((proj(kh)    - prevKh)    / prevKh    * 100) : null;
+    const dsYoy  = (ds > 0 && prevDs > 0)        ? ((proj(ds)    - prevDs)    / prevDs    * 100) : null;
+    const avgYoy = (avgDs > 0 && prevAvgDs > 0)  ? ((proj(avgDs) - prevAvgDs) / prevAvgDs * 100) : null;
     return { reg, kh, ds, avgDs, khYoy, dsYoy, avgYoy };
   }).filter(Boolean) as { reg: string; kh: number; ds: number; avgDs: number; khYoy: number|null; dsYoy: number|null; avgYoy: number|null; }[];
 
@@ -109,16 +119,15 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
   const dkmRows = rows.map(r => {
     const khDkm = (r as any).customerCountDkm ?? 0;
     const prevKhDkm = (prevYearTeamMap[r.teamId] as any)?.customerCountDkm ?? 0;
-    const DKM_SVC_KEYS = SVC_KEYS.filter(s => s.key !== 'elastic');
     const dkm = DKM_SVC_KEYS.reduce((s, sk) => s + ((r as any)[sk.key] ?? 0), 0);
     const prevDkm = DKM_SVC_KEYS.reduce((s, sk) => s + ((prevYearTeamMap[r.teamId] as any)?.[sk.key] ?? 0), 0);
     const avgDkm = khDkm > 0 ? dkm / khDkm : 0;
     const prevAvgDkm = prevKhDkm > 0 ? prevDkm / prevKhDkm : 0;
-    const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)       ? ((khDkm - prevKhDkm)   / prevKhDkm  * 100) : null;
-    const dkmYoy    = (dkm > 0 && prevDkm > 0)           ? ((dkm - prevDkm)       / prevDkm    * 100) : null;
-    const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((avgDkm - prevAvgDkm) / prevAvgDkm * 100) : null;
-    const tlKhDkm   = (khDkm > 0 && r.kh > 0)           ? (khDkm / r.kh * 100)                       : null;
-    const tlAvgDkm  = (avgDkm > 0 && r.avgDs > 0)        ? (avgDkm / r.avgDs * 100)                   : null;
+    const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)      ? ((proj(khDkm)    - prevKhDkm)    / prevKhDkm    * 100) : null;
+    const dkmYoy    = (dkm > 0 && prevDkm > 0)           ? ((proj(dkm)     - prevDkm)      / prevDkm      * 100) : null;
+    const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((proj(avgDkm)  - prevAvgDkm)   / prevAvgDkm   * 100) : null;
+    const tlKhDkm   = (khDkm > 0 && r.kh > 0)           ? (khDkm / r.kh * 100)                                   : null;
+    const tlAvgDkm  = (avgDkm > 0 && r.avgDs > 0)        ? (avgDkm / r.avgDs * 100)                               : null;
     return { ...r, khDkm, prevKhDkm, dkm, prevDkm, avgDkm, prevAvgDkm, khDkmYoy, dkmYoy, avgDkmYoy, tlKhDkm, tlAvgDkm };
   });
 
@@ -136,11 +145,11 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
     const avgDkm      = khDkm > 0   ? dkm / khDkm     : 0;
     const avgDsTotal  = khTotal > 0  ? dsTotal / khTotal : 0;
     const prevAvgDkm  = prevKhDkm > 0 ? prevDkm / prevKhDkm : 0;
-    const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)       ? ((khDkm - prevKhDkm)   / prevKhDkm  * 100) : null;
-    const dkmYoy    = (dkm > 0 && prevDkm > 0)           ? ((dkm - prevDkm)       / prevDkm    * 100) : null;
-    const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((avgDkm - prevAvgDkm) / prevAvgDkm * 100) : null;
-    const tlKhDkm   = (khDkm > 0 && khTotal > 0)         ? (khDkm / khTotal * 100)                    : null;
-    const tlAvgDkm  = (avgDkm > 0 && avgDsTotal > 0)     ? (avgDkm / avgDsTotal * 100)                : null;
+    const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)      ? ((proj(khDkm)   - prevKhDkm)   / prevKhDkm   * 100) : null;
+    const dkmYoy    = (dkm > 0 && prevDkm > 0)           ? ((proj(dkm)    - prevDkm)     / prevDkm     * 100) : null;
+    const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((proj(avgDkm) - prevAvgDkm)  / prevAvgDkm  * 100) : null;
+    const tlKhDkm   = (khDkm > 0 && khTotal > 0)         ? (khDkm / khTotal * 100)                            : null;
+    const tlAvgDkm  = (avgDkm > 0 && avgDsTotal > 0)     ? (avgDkm / avgDsTotal * 100)                        : null;
     return { reg, khDkm, dkm, avgDkm, khDkmYoy, dkmYoy, avgDkmYoy, tlKhDkm, tlAvgDkm };
   }).filter(Boolean) as { reg: string; khDkm: number; dkm: number; avgDkm: number; khDkmYoy: number|null; dkmYoy: number|null; avgDkmYoy: number|null; tlKhDkm: number|null; tlAvgDkm: number|null; }[];
 
@@ -160,19 +169,15 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-6">
-          {/* View toggle */}
           <div className="flex rounded-lg overflow-hidden border border-slate-700">
-            <button
-              onClick={() => setView("month")}
+            <button onClick={() => setView("month")}
               className={`px-3 py-1.5 text-xs font-medium transition-colors ${view === "month" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white hover:bg-slate-700"}`}
             >Tháng</button>
-            <button
-              onClick={() => setView("quarter")}
+            <button onClick={() => setView("quarter")}
               className={`px-3 py-1.5 text-xs font-medium transition-colors ${view === "quarter" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white hover:bg-slate-700"}`}
             >Quý</button>
           </div>
 
-          {/* Month/Quarter selector */}
           <div className="relative">
             <button
               onClick={() => setOpenDropdown(openDropdown === (view === "month" ? "month" : "quarter") ? null : (view === "month" ? "month" : "quarter"))}
@@ -199,7 +204,6 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
             )}
           </div>
 
-          {/* Region filter */}
           <div className="flex rounded-lg overflow-hidden border border-slate-700">
             {(["all","HN","HCM"] as const).map(r => (
               <button key={r} onClick={() => setRegion(r)}
@@ -209,7 +213,6 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
           </div>
         </div>
 
-        {/* No KH data state */}
         {!hasKhData && (
           <Card>
             <CardContent className="py-12 text-center text-slate-400 text-sm">
@@ -221,19 +224,24 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
         {/* Bảng 1: Báo Cáo Khách Hàng */}
         {hasKhData && (
           <Card className="mb-4">
-            <CardHeader>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <CardTitle>Báo Cáo Khách Hàng — {filterLabel}</CardTitle>
-                  <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                    <span>Tổng Số KH · DS (triệu VNĐ) · TB DS/KH</span>
-                    {hasPrevKhData && <span className="text-amber-400">▲/▼ so cùng kỳ 2025</span>}
-                  </div>
-                </div>
+            <CardHeader className="flex-col items-start gap-1">
+              <div className="flex items-center justify-between gap-3 w-full">
+                <CardTitle className="text-sm font-semibold text-slate-200">
+                  Báo Cáo Khách Hàng — {filterLabel}
+                </CardTitle>
                 <MiniAiPanel context="kh_report" label="AI nhận xét" data={{
                   period: filterLabel, region,
                   rows: rows.map(r => ({ name: r.teamName, region: r.region, kh: r.kh, ds: r.ds, avgDs: r.avgDs }))
                 }} />
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                <span>Tổng Số KH · DS (triệu VNĐ) · TB DS/KH</span>
+                {hasPrevKhData && <span className="text-amber-400">▲/▼ so cùng kỳ 2025</span>}
+                {paceLabel && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                    ⏱ Pace {paceLabel} — YoY theo tốc độ dự kiến
+                  </span>
+                )}
               </div>
             </CardHeader>
             <CardContent className="overflow-x-auto">
@@ -305,11 +313,18 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
         {/* Bảng 2: TB DS ĐKM / KH */}
         {hasKhData && hasDkmKhData && (
           <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>TB Doanh Số Đăng Ký Mới / Khách Hàng — {filterLabel}</CardTitle>
-              <div className="flex items-center gap-3 text-xs text-slate-400">
+            <CardHeader className="flex-col items-start gap-1">
+              <CardTitle className="text-sm font-semibold text-slate-200">
+                TB Doanh Số Đăng Ký Mới / Khách Hàng — {filterLabel}
+              </CardTitle>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
                 <span>KH ĐKM · DS ĐKM (triệu VNĐ) · TB DS ĐKM/KH</span>
                 {hasPrevKhData && <span className="text-amber-400">▲/▼ so cùng kỳ 2025</span>}
+                {paceLabel && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                    ⏱ Pace {paceLabel}
+                  </span>
+                )}
               </div>
             </CardHeader>
             <CardContent className="overflow-x-auto">
