@@ -170,17 +170,28 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
 
   const filterLabel = view === "month" ? selectedMonth : `Q${selectedQuarter}`;
 
-  // Ranking chart data
+  // ── Pace calculation (tháng hiện tại chưa kết thúc) ──────────────────────────
+  const _now = new Date();
+  const _selMoNum = view === "month" ? parseInt(selectedMonth.replace("T","")) : null;
+  const isCurrentPeriod = view === "month" && _selMoNum === _now.getMonth() + 1;
+  const _daysInMonth  = isCurrentPeriod ? new Date(_now.getFullYear(), _selMoNum!, 0).getDate() : 30;
+  const _daysElapsed  = isCurrentPeriod ? _now.getDate() : _daysInMonth;
+  const globalPace    = isCurrentPeriod && _daysElapsed < _daysInMonth ? _daysElapsed / _daysInMonth : 1;
+  const projRev       = (v: number) => globalPace < 1 ? Math.round(v / globalPace) : v;
+  const paceBadgeLabel = isCurrentPeriod && globalPace < 1 ? `${_daysElapsed}/${_daysInMonth} ngày` : null;
+
+  // Ranking chart data (pace-adjusted % vs target, pace-adjusted YoY)
   const rankingData = [...displayed]
     .sort((a, b) => b.revenue - a.revenue)
     .map(t => {
       const prev = prevYearTeamMap[t.teamId];
-      const dsYoy = (t.revenue > 0 && prev && prev.revenue > 0) ? ((t.revenue - prev.revenue) / prev.revenue * 100) : null;
+      const dsYoy = (t.revenue > 0 && prev && prev.revenue > 0)
+        ? ((projRev(t.revenue) - prev.revenue) / prev.revenue * 100) : null;
       return {
         name: t.teamName,
         revenue: t.revenue,
         target: t.target,
-        pct: pct(t.revenue, t.target),
+        pct: pct(projRev(t.revenue), t.target),
         dkmYoy: dsYoy,
         color: t.region === "HN" ? "#3b82f6" : "#f97316",
       };
@@ -309,28 +320,38 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
         {(() => {
           const totalRev    = allTeams.reduce((s, t) => s + t.revenue, 0);
           const totalTarget = allTeams.reduce((s, t) => s + t.target, 0);
-          const totalPct    = pct(totalRev, totalTarget);
+          const projTotal   = projRev(totalRev);
+          const totalPct    = pct(projTotal, totalTarget);
           const prevRev     = prevTeams.reduce((s, t) => s + t.revenue, 0);
-          const momDiff     = prevRev > 0 ? ((totalRev - prevRev) / prevRev * 100) : null;
-          const yoyDiff     = prevYearRev != null && prevYearRev > 0 ? ((totalRev - prevYearRev) / prevYearRev * 100) : null;
+          const momDiff     = prevRev > 0 ? ((projTotal - prevRev) / prevRev * 100) : null;
+          const yoyDiff     = prevYearRev != null && prevYearRev > 0 ? ((projTotal - prevYearRev) / prevYearRev * 100) : null;
           const hnRev       = hnTeams.reduce((s, t) => s + t.revenue, 0);
           const hcmRev      = hcmTeams.reduce((s, t) => s + t.revenue, 0);
           const hnShare     = totalRev > 0 ? Math.round((hnRev / totalRev) * 100) : 0;
           const hcmShare    = totalRev > 0 ? Math.round((hcmRev / totalRev) * 100) : 0;
+          const hnTarget    = hnTeams.reduce((s,t) => s + t.target, 0);
+          const hcmTarget   = hcmTeams.reduce((s,t) => s + t.target, 0);
+          const projHn      = projRev(hnRev);
+          const projHcm     = projRev(hcmRev);
           const prevHnRev   = prevTeams.filter(t => t.region === "HN").reduce((s, t) => s + t.revenue, 0);
           const prevHcmRev  = prevTeams.filter(t => t.region === "HCM").reduce((s, t) => s + t.revenue, 0);
-          const hnMom       = prevHnRev > 0 ? ((hnRev - prevHnRev) / prevHnRev * 100) : null;
-          const hcmMom      = prevHcmRev > 0 ? ((hcmRev - prevHcmRev) / prevHcmRev * 100) : null;
-          const hnYoy       = prevYearHnRev != null && prevYearHnRev > 0 ? ((hnRev - prevYearHnRev) / prevYearHnRev * 100) : null;
-          const hcmYoy      = prevYearHcmRev != null && prevYearHcmRev > 0 ? ((hcmRev - prevYearHcmRev) / prevYearHcmRev * 100) : null;
+          const hnMom       = prevHnRev > 0 ? ((projHn - prevHnRev) / prevHnRev * 100) : null;
+          const hcmMom      = prevHcmRev > 0 ? ((projHcm - prevHcmRev) / prevHcmRev * 100) : null;
+          const hnYoy       = prevYearHnRev != null && prevYearHnRev > 0 ? ((projHn - prevYearHnRev) / prevYearHnRev * 100) : null;
+          const hcmYoy      = prevYearHcmRev != null && prevYearHcmRev > 0 ? ((projHcm - prevYearHcmRev) / prevYearHcmRev * 100) : null;
           return (
             <div className="rounded-xl border border-slate-600/50 bg-slate-800/40 p-5">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">
                       Tổng Doanh Số Toàn Quốc — {view === "month" ? selectedMonth : `Q${selectedQuarter}`}
                     </span>
+                    {paceBadgeLabel && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                        ⏱ {paceBadgeLabel} — hiển thị theo tốc độ dự kiến
+                      </span>
+                    )}
                     {momDiff !== null && prevLabel && (
                       <span className={`flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${momDiff >= 0 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
                         {momDiff >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -344,26 +365,31 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                       </span>
                     )}
                   </div>
-                  <div className="text-4xl font-bold text-white">{totalRev.toLocaleString()}<span className="text-xl text-slate-400 ml-1">M</span></div>
+                  <div className="flex items-baseline gap-2">
+                    <div className="text-4xl font-bold text-white">{totalRev.toLocaleString()}<span className="text-xl text-slate-400 ml-1">M</span></div>
+                    {paceBadgeLabel && (
+                      <div className="text-sm text-amber-300/80">→ dự kiến ~{projTotal.toLocaleString()}M</div>
+                    )}
+                  </div>
                   <div className="text-sm text-slate-400 mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
                     <span>Mục tiêu: <span className="text-white font-medium">{totalTarget.toLocaleString()}M</span></span>
                     {prevRev > 0 && prevLabel && (
                       <span>Kỳ trước ({prevLabel}): <span className="text-slate-300">{prevRev.toLocaleString()}M</span></span>
                     )}
                     {prevYearRev != null && prevYearRev > 0 && (
-                      <span>Cùng kỳ 2025: <span className="text-slate-300">{prevYearRev.toLocaleString()}M</span></span>
+                      <span>Cùng kỳ 2025: <span className="text-slate-300">{(prevYearRev).toLocaleString()}M</span></span>
                     )}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className={`text-3xl font-bold ${thresholdColor(totalPct)}`}>{totalPct}%</div>
-                  <div className="text-xs text-slate-400 mt-1">Đạt mục tiêu</div>
+                  <div className="text-xs text-slate-400 mt-1">{paceBadgeLabel ? "Dự kiến đạt MT" : "Đạt mục tiêu"}</div>
                   <div className="flex items-center justify-end gap-1 mt-1">
                     {totalPct >= 100
                       ? <TrendingUp size={14} className="text-green-400" />
                       : <TrendingDown size={14} className="text-red-400" />}
                     <span className={`text-xs font-semibold ${thresholdColor(totalPct)}`}>
-                      {totalPct >= 100 ? "Đạt chỉ tiêu" : `Còn thiếu ${(totalTarget - totalRev).toLocaleString()}M`}
+                      {totalPct >= 100 ? "Đạt chỉ tiêu" : `Còn thiếu ${(totalTarget - projTotal).toLocaleString()}M`}
                     </span>
                   </div>
                 </div>
@@ -398,13 +424,13 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     )}
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
-                    <span className="text-xs text-slate-400">{hnTeams.length} team · MT: {hnTeams.reduce((s,t)=>s+t.target,0).toLocaleString()}M</span>
-                    <span className={`text-xs font-bold ${thresholdColor(pct(hnRev, hnTeams.reduce((s,t)=>s+t.target,0)))}`}>
-                      Đạt {pct(hnRev, hnTeams.reduce((s,t)=>s+t.target,0))}% MT
+                    <span className="text-xs text-slate-400">{hnTeams.length} team · MT: {hnTarget.toLocaleString()}M</span>
+                    <span className={`text-xs font-bold ${thresholdColor(pct(projHn, hnTarget))}`}>
+                      Đạt {pct(projHn, hnTarget)}% MT
                     </span>
                   </div>
                   <div className="mt-1.5 h-1 bg-slate-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(pct(hnRev, hnTeams.reduce((s,t)=>s+t.target,0)), 100)}%` }} />
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(pct(projHn, hnTarget), 100)}%` }} />
                   </div>
                 </div>
                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
@@ -428,13 +454,13 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     )}
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
-                    <span className="text-xs text-slate-400">{hcmTeams.length} team · MT: {hcmTeams.reduce((s,t)=>s+t.target,0).toLocaleString()}M</span>
-                    <span className={`text-xs font-bold ${thresholdColor(pct(hcmRev, hcmTeams.reduce((s,t)=>s+t.target,0)))}`}>
-                      Đạt {pct(hcmRev, hcmTeams.reduce((s,t)=>s+t.target,0))}% MT
+                    <span className="text-xs text-slate-400">{hcmTeams.length} team · MT: {hcmTarget.toLocaleString()}M</span>
+                    <span className={`text-xs font-bold ${thresholdColor(pct(projHcm, hcmTarget))}`}>
+                      Đạt {pct(projHcm, hcmTarget)}% MT
                     </span>
                   </div>
                   <div className="mt-1.5 h-1 bg-slate-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(pct(hcmRev, hcmTeams.reduce((s,t)=>s+t.target,0)), 100)}%` }} />
+                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(pct(projHcm, hcmTarget), 100)}%` }} />
                   </div>
                 </div>
               </div>
