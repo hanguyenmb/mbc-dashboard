@@ -315,8 +315,13 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                 {/* 1. YTD actual */}
                 <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-2.5">
-                  <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">YTD Thực Hiện</div>
-                  <div className="text-lg font-bold text-blue-400 tabular-nums">{ytdActual.toFixed(2)} tỷ</div>
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">YTD Thực Tế T1–T{ytdMonths}</div>
+                  <div className="text-lg font-bold text-blue-400 tabular-nums">{ytdActualRaw.toFixed(2)} tỷ</div>
+                  {lastDataIsCurrentMonth && ytdPaceRatio < 1 && (
+                    <div className="text-[11px] text-amber-300/80 mt-0.5">
+                      → ~{ytdActual.toFixed(2)} tỷ nếu T{ytdMonths} đủ tháng
+                    </div>
+                  )}
                   {ytdYoy !== null && (
                     <div className={`text-[11px] mt-0.5 font-semibold ${ytdYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
                       {ytdYoy >= 0 ? "▲" : "▼"}{Math.abs(ytdYoy).toFixed(1)}% so CK 2025
