@@ -447,9 +447,9 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                 )}
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className="text-xs text-slate-500 shrink-0">Toàn Quốc</span>
-                  {prevThucHien > 0 && <TrendBadge pct={trendThang} label={`so ${prevMonth?.month ?? "T trước"}${selPace < 1 ? " (pace)" : ""}`} />}
+                  {prevThucHien > 0 && <TrendBadge pct={trendThang} label={`so ${prevMonth?.month ?? "T trước"}`} />}
                   {selMonth?.cumKy != null && selMonth.cumKy > 0 && (
-                    <TrendBadge pct={(selThucHien - selMonth.cumKy) / selMonth.cumKy * 100} label={`CK 2025${selPace < 1 ? " (pace)" : ""}`} />
+                    <TrendBadge pct={(selThucHien - selMonth.cumKy) / selMonth.cumKy * 100} label={`CK 2025`} />
                   )}
                 </div>
               </div>,
