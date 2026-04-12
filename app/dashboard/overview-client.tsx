@@ -305,9 +305,14 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                     <span className="ml-2 text-slate-500">· {Math.round(remainMonths)} tháng còn lại</span>
                   </div>
                 </div>
-                <div className={`text-2xl font-black tabular-nums ${accentCls}`}>
-                  {ytdVsPeriod10.toFixed(1)}%
-                  <div className="text-[10px] font-normal text-slate-400 text-right">vs kỳ vọng kỳ này</div>
+                <div className="text-right">
+                  <div className={`text-2xl font-black tabular-nums ${accentCls}`}>{ytdVsPeriod10.toFixed(1)}%</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">Tiến độ T1–T{ytdMonths} vs KH {ytdMonths}T</div>
+                  <div className="text-[10px] text-slate-500">
+                    {lastDataIsCurrentMonth && ytdPaceRatio < 1
+                      ? `(T${ytdMonths} chiếu theo pace ${ytdDayOfMonth}/${ytdDaysInMonth} ngày)`
+                      : "(so kế hoạch cùng kỳ)"}
+                  </div>
                 </div>
               </div>
 
