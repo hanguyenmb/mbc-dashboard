@@ -96,7 +96,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
     // Pace-adjusted YoY: so projected (tốc độ hiện tại × cả tháng) vs prev full-month
     const khYoy  = (kh > 0 && prevKh > 0)       ? ((proj(kh)    - prevKh)    / prevKh    * 100) : null;
     const dsYoy  = (ds > 0 && prevDs > 0)        ? ((proj(ds)    - prevDs)    / prevDs    * 100) : null;
-    const avgYoy = (avgDs > 0 && prevAvgDs > 0)  ? ((proj(avgDs) - prevAvgDs) / prevAvgDs * 100) : null;
+    const avgYoy = (avgDs > 0 && prevAvgDs > 0)  ? ((avgDs - prevAvgDs) / prevAvgDs * 100) : null;
     return { ...t, kh, prevKh, ds, prevDs, avgDs, prevAvgDs, khYoy, dsYoy, avgYoy };
   });
 
@@ -111,7 +111,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
     const prevAvgDs = prevKh > 0 ? prevDs / prevKh : 0;
     const khYoy  = (kh > 0 && prevKh > 0)       ? ((proj(kh)    - prevKh)    / prevKh    * 100) : null;
     const dsYoy  = (ds > 0 && prevDs > 0)        ? ((proj(ds)    - prevDs)    / prevDs    * 100) : null;
-    const avgYoy = (avgDs > 0 && prevAvgDs > 0)  ? ((proj(avgDs) - prevAvgDs) / prevAvgDs * 100) : null;
+    const avgYoy = (avgDs > 0 && prevAvgDs > 0)  ? ((avgDs - prevAvgDs) / prevAvgDs * 100) : null;
     return { reg, kh, ds, avgDs, khYoy, dsYoy, avgYoy };
   }).filter(Boolean) as { reg: string; kh: number; ds: number; avgDs: number; khYoy: number|null; dsYoy: number|null; avgYoy: number|null; }[];
 
@@ -125,7 +125,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
     const prevAvgDkm = prevKhDkm > 0 ? prevDkm / prevKhDkm : 0;
     const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)      ? ((proj(khDkm)    - prevKhDkm)    / prevKhDkm    * 100) : null;
     const dkmYoy    = (dkm > 0 && prevDkm > 0)           ? ((proj(dkm)     - prevDkm)      / prevDkm      * 100) : null;
-    const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((proj(avgDkm)  - prevAvgDkm)   / prevAvgDkm   * 100) : null;
+    const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((avgDkm  - prevAvgDkm)   / prevAvgDkm   * 100) : null;
     const tlKhDkm   = (khDkm > 0 && r.kh > 0)           ? (khDkm / r.kh * 100)                                   : null;
     const tlAvgDkm  = (avgDkm > 0 && r.avgDs > 0)        ? (avgDkm / r.avgDs * 100)                               : null;
     return { ...r, khDkm, prevKhDkm, dkm, prevDkm, avgDkm, prevAvgDkm, khDkmYoy, dkmYoy, avgDkmYoy, tlKhDkm, tlAvgDkm };
@@ -147,7 +147,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
     const prevAvgDkm  = prevKhDkm > 0 ? prevDkm / prevKhDkm : 0;
     const khDkmYoy  = (khDkm > 0 && prevKhDkm > 0)      ? ((proj(khDkm)   - prevKhDkm)   / prevKhDkm   * 100) : null;
     const dkmYoy    = (dkm > 0 && prevDkm > 0)           ? ((proj(dkm)    - prevDkm)     / prevDkm     * 100) : null;
-    const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((proj(avgDkm) - prevAvgDkm)  / prevAvgDkm  * 100) : null;
+    const avgDkmYoy = (avgDkm > 0 && prevAvgDkm > 0)     ? ((avgDkm - prevAvgDkm)  / prevAvgDkm  * 100) : null;
     const tlKhDkm   = (khDkm > 0 && khTotal > 0)         ? (khDkm / khTotal * 100)                            : null;
     const tlAvgDkm  = (avgDkm > 0 && avgDsTotal > 0)     ? (avgDkm / avgDsTotal * 100)                        : null;
     return { reg, khDkm, dkm, avgDkm, khDkmYoy, dkmYoy, avgDkmYoy, tlKhDkm, tlAvgDkm };
