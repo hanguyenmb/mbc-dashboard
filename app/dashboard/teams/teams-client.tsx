@@ -107,6 +107,25 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
     try { localStorage.setItem("trend_svc_notes", JSON.stringify(updated)); } catch {}
     setEditingNote(null);
   }
+
+  const [teamNotes, setTeamNotes] = useState<Record<string, string>>({});
+  const [editingTeamNote, setEditingTeamNote] = useState<string | null>(null);
+  const [teamNoteInput, setTeamNoteInput] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("ceo_team_notes");
+      if (saved) setTeamNotes(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  function saveTeamNote(id: string, text: string) {
+    const updated = { ...teamNotes, [id]: text.trim() };
+    if (!text.trim()) delete updated[id];
+    setTeamNotes(updated);
+    try { localStorage.setItem("ceo_team_notes", JSON.stringify(updated)); } catch {}
+    setEditingTeamNote(null);
+  }
   const rankingRef = useRef<HTMLDivElement>(null);
 
   const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
@@ -869,18 +888,35 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                             return (
                               <div key={t.id} className="rounded-lg bg-slate-800/70 border border-slate-700/50 overflow-hidden">
                                 {/* Summary row — always visible, click to expand */}
-                                <button
+                                <div
                                   onClick={() => setExpandedCeoTeam(isExpanded ? null : t.id)}
-                                  className="w-full px-3 py-2 flex items-center justify-between hover:bg-slate-700/40 transition-colors text-left"
+                                  className="w-full px-3 py-2 flex items-center justify-between hover:bg-slate-700/40 transition-colors cursor-pointer"
                                 >
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-semibold text-white">{t.name}</span>
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${t.region === "HN" ? "bg-green-900/60 text-green-400" : "bg-blue-900/60 text-blue-400"}`}>
-                                      {t.region}
-                                    </span>
-                                    {baseFlag && <span className="text-[9px] px-1 py-0.5 rounded border border-amber-600/40 text-amber-400 font-mono">BASE↓</span>}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs font-semibold text-white">{t.name}</span>
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${t.region === "HN" ? "bg-green-900/60 text-green-400" : "bg-blue-900/60 text-blue-400"}`}>
+                                        {t.region}
+                                      </span>
+                                      {baseFlag && <span className="text-[9px] px-1 py-0.5 rounded border border-amber-600/40 text-amber-400 font-mono">BASE↓</span>}
+                                      <button
+                                        onClick={e => { e.stopPropagation(); setEditingTeamNote(t.id); setTeamNoteInput(teamNotes[t.id] ?? ""); if (!isExpanded) setExpandedCeoTeam(t.id); }}
+                                        title="Ghi chú"
+                                        className={`flex-shrink-0 transition-opacity ${teamNotes[t.id] ? "opacity-70 hover:opacity-100" : "opacity-25 hover:opacity-70"}`}
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300">
+                                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                      </button>
+                                    </div>
+                                    {teamNotes[t.id] && editingTeamNote !== t.id && (
+                                      <div className="text-[10px] text-slate-400 italic mt-0.5 max-w-[160px] line-clamp-1 leading-tight">
+                                        {teamNotes[t.id]}
+                                      </div>
+                                    )}
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-shrink-0">
                                     {t.dkmKpiPct !== null && (
                                       <span className={`text-[10px] font-bold font-mono ${dkmPctColor}`}>{t.dkmKpiPct}%</span>
                                     )}
@@ -892,7 +928,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                     )}
                                     <span className="text-slate-600 text-[10px]">{isExpanded ? "▲" : "▼"}</span>
                                   </div>
-                                </button>
+                                </div>
 
                                 {/* Detail panel — only when expanded */}
                                 {isExpanded && (
@@ -939,6 +975,35 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                         <KpiBar pct={t.kpiPct} projected={isProjected} />
                                       </div>
                                     )}
+                                    {/* Ghi chú */}
+                                    {editingTeamNote === t.id ? (
+                                      <div className="flex flex-col gap-1 pt-1">
+                                        <div className="text-[9px] text-slate-500 uppercase tracking-wide">Ghi chú</div>
+                                        <textarea
+                                          value={teamNoteInput}
+                                          onChange={e => setTeamNoteInput(e.target.value)}
+                                          onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveTeamNote(t.id, teamNoteInput); if (e.key === "Escape") setEditingTeamNote(null); }}
+                                          className="w-full text-[11px] bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white resize-none focus:outline-none focus:border-blue-500"
+                                          rows={2}
+                                          placeholder="Nhập ghi chú (Ctrl+Enter để lưu)..."
+                                          autoFocus
+                                        />
+                                        <div className="flex gap-1.5">
+                                          <button onClick={() => saveTeamNote(t.id, teamNoteInput)} className="px-2 py-0.5 text-[10px] bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors">Lưu</button>
+                                          {teamNotes[t.id] && <button onClick={() => saveTeamNote(t.id, "")} className="px-2 py-0.5 text-[10px] bg-red-900/60 text-red-300 rounded hover:bg-red-900 transition-colors">Xóa</button>}
+                                          <button onClick={() => setEditingTeamNote(null)} className="px-2 py-0.5 text-[10px] bg-slate-600 text-slate-300 rounded hover:bg-slate-500 transition-colors">Hủy</button>
+                                        </div>
+                                      </div>
+                                    ) : teamNotes[t.id] ? (
+                                      <div className="rounded bg-slate-900/60 border border-slate-700/40 px-2 py-1.5">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="text-[10px] text-slate-300 italic leading-snug whitespace-pre-wrap">{teamNotes[t.id]}</div>
+                                          <button onClick={() => { setEditingTeamNote(t.id); setTeamNoteInput(teamNotes[t.id]); }} className="flex-shrink-0 opacity-50 hover:opacity-100 transition-opacity mt-0.5">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : null}
                                   </div>
                                 )}
                               </div>
