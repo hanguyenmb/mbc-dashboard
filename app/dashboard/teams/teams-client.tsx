@@ -644,10 +644,11 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             // % đạt mục tiêu DS tổng (dùng projRev so với target)
             const kpiPct = t.target > 0 ? Math.round(projRev / t.target * 100) : null;
 
-            // MoM momentum: compare current vs previous month ĐKM from sparkVals
+            // MoM momentum: compare pace-projected current month vs previous full month
+            // Use projDkm (raw / paceRatio) so mid-month comparisons are fair
             const prevMonthDkm = sparkVals.length >= 2 ? sparkVals[sparkVals.length - 2] : 0;
             const momTrend = prevMonthDkm > 0
-              ? ((sparkVals[sparkVals.length - 1] - prevMonthDkm) / prevMonthDkm * 100)
+              ? ((projDkm - prevMonthDkm) / prevMonthDkm * 100)
               : null;
 
             return {
