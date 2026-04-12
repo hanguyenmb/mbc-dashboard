@@ -904,8 +904,9 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                             const mom = t.momTrend;
                             const momUp   = mom !== null && mom > 5;
                             const momDown = mom !== null && mom < -5;
-                            // Revenue scale: use projRev (pace-projected) to match Tiến độ %
-                            const revTy = (t.projRev / 1000).toFixed(1);
+                            // ĐKM revenue scale (projDkm) — consistent with Tiến độ % which is also ĐKM-based
+                            // projRev (total DS) would be apples-vs-oranges since % is ĐKM-only
+                            const revTy = (t.projDkm / 1000).toFixed(2);
                             return (
                               <div key={t.id} className="rounded-lg bg-slate-800/70 border border-slate-700/50 overflow-hidden">
                                 {/* Summary row — always visible, click to expand */}
@@ -951,7 +952,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                           {isBorderline ? "≈" : ""}{t.dkmKpiPct}%
                                         </div>
                                         <div className="text-[8px] text-slate-500 font-mono mt-0.5">
-                                          {isProjected ? "~" : ""}{revTy} tỷ
+                                          DS ĐKM {isProjected ? "~" : ""}{revTy} tỷ
                                         </div>
                                       </div>
                                     )}
