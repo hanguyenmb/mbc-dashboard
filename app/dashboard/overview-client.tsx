@@ -150,22 +150,31 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
 
   // ── YTD vs Kế hoạch năm ────────────────────────────────────────────────────
   const calNow = new Date();
-  const calMonthIdx = calNow.getMonth(); // 0-based
-  const ytdMonthsData = MONTHLY_DATA.filter(m => m.hn != null);
-  const ytdMonths = ytdMonthsData.length;
-  const lastDataMonthIdx = ytdMonths - 1;
-  const lastDataIsCurrentMonth = lastDataMonthIdx === calMonthIdx;
-  const ytdDayOfMonth = calNow.getDate();
+  const calMonthIdx = calNow.getMonth(); // 0-based, April = 3
+  const ytdDayOfMonth  = calNow.getDate();
   const ytdDaysInMonth = new Date(calNow.getFullYear(), calNow.getMonth() + 1, 0).getDate();
+
+  // Chỉ lấy tháng từ T1 đến tháng hiện tại, có data thực tế (hn+hcm > 0)
+  const ytdMonthsData = MONTHLY_DATA.filter((m, i) =>
+    i <= calMonthIdx && m.hn != null && (m.hn + (m.hcm ?? 0)) > 0
+  );
+  const ytdMonths = ytdMonthsData.length;
+  // Kiểm tra tháng cuối có data có phải tháng đang chạy không
+  const lastDataIdx = MONTHLY_DATA.findIndex((m, i) =>
+    i === calMonthIdx && m.hn != null && (m.hn + (m.hcm ?? 0)) > 0
+  );
+  const lastDataIsCurrentMonth = lastDataIdx === calMonthIdx && ytdMonths > 0;
   const ytdPaceRatio = lastDataIsCurrentMonth && ytdDayOfMonth < ytdDaysInMonth
     ? ytdDayOfMonth / ytdDaysInMonth : 1;
 
-  // Raw sum (partial for current month)
+  // Raw sum — dùng cho YoY và "cần đạt" (không inflate)
   const ytdActualRaw = ytdMonthsData.reduce((s, m) => s + (m.hn ?? 0) + (m.hcm ?? 0), 0);
-  // Pace-project current month to full-month equivalent
-  const lastMonthRaw = ytdMonths > 0 ? (ytdMonthsData[lastDataMonthIdx].hn ?? 0) + (ytdMonthsData[lastDataMonthIdx].hcm ?? 0) : 0;
-  const lastMonthProj = lastDataIsCurrentMonth && ytdPaceRatio < 1 ? lastMonthRaw / ytdPaceRatio : lastMonthRaw;
-  const ytdActual = ytdActualRaw - lastMonthRaw + lastMonthProj;
+  // Pace-project tháng hiện tại → full-month equivalent cho forecast
+  const lastMonthRaw = ytdMonths > 0
+    ? (ytdMonthsData[ytdMonths - 1].hn ?? 0) + (ytdMonthsData[ytdMonths - 1].hcm ?? 0) : 0;
+  const lastMonthProj = lastDataIsCurrentMonth && ytdPaceRatio < 1
+    ? lastMonthRaw / ytdPaceRatio : lastMonthRaw;
+  const ytdActual = ytdActualRaw - lastMonthRaw + lastMonthProj; // used for forecast/rates
 
   // Annual targets
   const annualTarget10 = MONTHLY_DATA.reduce((s, m) => s + (m.mt10 ?? 0), 0);
@@ -173,26 +182,34 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   // Period target (same months as YTD)
   const ytdTarget10 = ytdMonthsData.reduce((s, m) => s + (m.mt10 ?? 0), 0);
 
-  // Rates
+  // Rates (dùng ytdActual = pace-projected)
   const ytdVsAnnual10 = annualTarget10 > 0 ? ytdActual / annualTarget10 * 100 : 0;
   const ytdVsPeriod10 = ytdTarget10    > 0 ? ytdActual / ytdTarget10    * 100 : 0;
 
-  // Full-year forecast at current avg pace
+  // Full-year forecast tại tốc độ hiện tại
   const effectiveMonths = lastDataIsCurrentMonth && ytdPaceRatio < 1
     ? (ytdMonths - 1) + ytdPaceRatio : ytdMonths;
-  const avgPerMonth = effectiveMonths > 0 ? ytdActualRaw / effectiveMonths : 0;
+  const avgPerMonth    = effectiveMonths > 0 ? ytdActualRaw / effectiveMonths : 0;
   const annualForecast = avgPerMonth * 12;
   const annualForecastPct = annualTarget10 > 0 ? annualForecast / annualTarget10 * 100 : 0;
 
-  // How much needed per remaining month to hit MT10%
-  const remainMonths = 12 - (lastDataIsCurrentMonth && ytdPaceRatio < 1
-    ? (ytdMonths - 1) + ytdPaceRatio : ytdMonths);
-  const deficit10 = annualTarget10 - ytdActualRaw;
-  const neededPerMonth = remainMonths > 0 ? deficit10 / remainMonths : 0;
+  // Số tháng còn lại = tháng chưa hoàn thành
+  // Nếu đang giữa tháng hiện tại: còn (1-pace) của tháng này + các tháng sau
+  const remainMonths = lastDataIsCurrentMonth && ytdPaceRatio < 1
+    ? (1 - ytdPaceRatio) + (12 - ytdMonths)   // phần còn lại T_hiện_tại + T sau
+    : 12 - ytdMonths;
+  // deficit tính từ ytdActualRaw (actual đã có), trừ dần phần còn lại
+  const deficit10      = annualTarget10 - ytdActualRaw;
+  const neededPerMonth = remainMonths > 0.01 ? deficit10 / remainMonths : null;
 
-  // YoY YTD vs same period 2025
-  const ytdPrev = ytdMonthsData.reduce((s, m) => s + (m.cumKy ?? 0), 0);
-  const ytdYoy = ytdPrev > 0 ? (ytdActual - ytdPrev) / ytdPrev * 100 : null;
+  // YoY — so sánh CÙNG KỲ thực: raw T1-T3 full + T4 theo số ngày thực tế
+  // CK 2025: cũng chỉ tính tương ứng — tháng partial thì nhân pace ratio
+  const ytdPrev = ytdMonthsData.reduce((s, m, i) => {
+    const isLast = i === ytdMonths - 1;
+    const ck = m.cumKy ?? 0;
+    return s + (isLast && lastDataIsCurrentMonth && ytdPaceRatio < 1 ? ck * ytdPaceRatio : ck);
+  }, 0);
+  const ytdYoy = ytdPrev > 0 ? (ytdActualRaw - ytdPrev) / ytdPrev * 100 : null;
 
   return (
     <div>
@@ -270,7 +287,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
           const accentCls = ytdVsPeriod10 >= 90 ? "text-green-400" : ytdVsPeriod10 >= 75 ? "text-amber-400" : "text-red-400";
           const barColor  = ytdVsPeriod10 >= 90 ? "#22c55e" : ytdVsPeriod10 >= 75 ? "#f59e0b" : "#ef4444";
           const fcColor   = annualForecastPct >= 100 ? "text-green-400" : annualForecastPct >= 90 ? "text-amber-400" : "text-red-400";
-          const needColor = neededPerMonth <= avgPerMonth * 1.1 ? "text-green-400" : neededPerMonth <= avgPerMonth * 1.3 ? "text-amber-400" : "text-red-400";
+          const needColor = neededPerMonth == null ? "text-slate-400" : neededPerMonth <= avgPerMonth * 1.1 ? "text-green-400" : neededPerMonth <= avgPerMonth * 1.3 ? "text-amber-400" : "text-red-400";
           const expectedPct = ytdMonths / 12 * 100; // where the "should-be" marker sits
           return (
             <div className={`mb-5 rounded-xl border-2 ${borderCls} bg-slate-800/50 p-4`}>
@@ -279,7 +296,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                 <div>
                   <div className="text-sm font-bold text-white">Tiến Độ Năm 2026 — YTD vs Kế Hoạch</div>
                   <div className="text-xs text-slate-400 mt-0.5">
-                    {ytdMonths} tháng có dữ liệu
+                    {ytdMonths > 0 ? `T1–T${ytdMonths} có dữ liệu` : "Chưa có dữ liệu"}
                     {lastDataIsCurrentMonth && ytdPaceRatio < 1 && (
                       <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300">
                         ⏱ T{calMonthIdx+1} tính pace {ytdDayOfMonth}/{ytdDaysInMonth} ngày
@@ -320,13 +337,24 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                 </div>
                 {/* 4. Needed per remaining month */}
                 <div className="rounded-lg bg-slate-700/40 border border-slate-600/40 px-3 py-2.5">
-                  <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Cần Đạt / Tháng Còn Lại</div>
-                  <div className={`text-lg font-bold tabular-nums ${needColor}`}>{neededPerMonth.toFixed(2)} tỷ</div>
-                  <div className={`text-[11px] mt-0.5 ${neededPerMonth > avgPerMonth ? "text-red-400" : "text-slate-500"}`}>
-                    {neededPerMonth > avgPerMonth
-                      ? `▲ ${((neededPerMonth/avgPerMonth - 1)*100).toFixed(0)}% so TB hiện tại`
-                      : `TB hiện tại: ${avgPerMonth.toFixed(2)} tỷ/T`}
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">
+                    Cần Đạt / Tháng Còn Lại {remainMonths > 0 ? `(~${remainMonths.toFixed(1)}T)` : ""}
                   </div>
+                  {neededPerMonth != null ? (
+                    <>
+                      <div className={`text-lg font-bold tabular-nums ${needColor}`}>{neededPerMonth.toFixed(2)} tỷ</div>
+                      <div className={`text-[11px] mt-0.5 ${neededPerMonth > avgPerMonth ? "text-red-400" : "text-slate-500"}`}>
+                        {neededPerMonth > avgPerMonth
+                          ? `▲ ${((neededPerMonth/avgPerMonth - 1)*100).toFixed(0)}% so TB ${avgPerMonth.toFixed(2)} tỷ/T`
+                          : `TB hiện tại: ${avgPerMonth.toFixed(2)} tỷ/T ✓`}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-lg font-bold text-slate-400">—</div>
+                      <div className="text-[11px] mt-0.5 text-slate-500">Đã hết năm</div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -349,7 +377,8 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                 {/* Month tick marks */}
                 <div className="flex gap-0">
                   {Array.from({ length: 12 }, (_, i) => {
-                    const hasData = MONTHLY_DATA[i]?.hn != null;
+                    const m = MONTHLY_DATA[i];
+                    const hasData = i < ytdMonths && m?.hn != null && (m.hn + (m.hcm ?? 0)) > 0;
                     const isCur   = i === calMonthIdx && lastDataIsCurrentMonth;
                     return (
                       <div key={i} className="flex-1 flex flex-col items-center">
