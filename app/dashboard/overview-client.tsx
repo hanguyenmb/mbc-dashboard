@@ -148,6 +148,52 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   const tlMt8  = tongMt8  > 0 ? (tongThucHien / tongMt8)  * 100 : 0;
   const tlMt10 = tongMt10 > 0 ? (tongThucHien / tongMt10) * 100 : 0;
 
+  // ── YTD vs Kế hoạch năm ────────────────────────────────────────────────────
+  const calNow = new Date();
+  const calMonthIdx = calNow.getMonth(); // 0-based
+  const ytdMonthsData = MONTHLY_DATA.filter(m => m.hn != null);
+  const ytdMonths = ytdMonthsData.length;
+  const lastDataMonthIdx = ytdMonths - 1;
+  const lastDataIsCurrentMonth = lastDataMonthIdx === calMonthIdx;
+  const ytdDayOfMonth = calNow.getDate();
+  const ytdDaysInMonth = new Date(calNow.getFullYear(), calNow.getMonth() + 1, 0).getDate();
+  const ytdPaceRatio = lastDataIsCurrentMonth && ytdDayOfMonth < ytdDaysInMonth
+    ? ytdDayOfMonth / ytdDaysInMonth : 1;
+
+  // Raw sum (partial for current month)
+  const ytdActualRaw = ytdMonthsData.reduce((s, m) => s + (m.hn ?? 0) + (m.hcm ?? 0), 0);
+  // Pace-project current month to full-month equivalent
+  const lastMonthRaw = ytdMonths > 0 ? (ytdMonthsData[lastDataMonthIdx].hn ?? 0) + (ytdMonthsData[lastDataMonthIdx].hcm ?? 0) : 0;
+  const lastMonthProj = lastDataIsCurrentMonth && ytdPaceRatio < 1 ? lastMonthRaw / ytdPaceRatio : lastMonthRaw;
+  const ytdActual = ytdActualRaw - lastMonthRaw + lastMonthProj;
+
+  // Annual targets
+  const annualTarget10 = MONTHLY_DATA.reduce((s, m) => s + (m.mt10 ?? 0), 0);
+  const annualTarget8  = MONTHLY_DATA.reduce((s, m) => s + (m.mt8  ?? 0), 0);
+  // Period target (same months as YTD)
+  const ytdTarget10 = ytdMonthsData.reduce((s, m) => s + (m.mt10 ?? 0), 0);
+
+  // Rates
+  const ytdVsAnnual10 = annualTarget10 > 0 ? ytdActual / annualTarget10 * 100 : 0;
+  const ytdVsPeriod10 = ytdTarget10    > 0 ? ytdActual / ytdTarget10    * 100 : 0;
+
+  // Full-year forecast at current avg pace
+  const effectiveMonths = lastDataIsCurrentMonth && ytdPaceRatio < 1
+    ? (ytdMonths - 1) + ytdPaceRatio : ytdMonths;
+  const avgPerMonth = effectiveMonths > 0 ? ytdActualRaw / effectiveMonths : 0;
+  const annualForecast = avgPerMonth * 12;
+  const annualForecastPct = annualTarget10 > 0 ? annualForecast / annualTarget10 * 100 : 0;
+
+  // How much needed per remaining month to hit MT10%
+  const remainMonths = 12 - (lastDataIsCurrentMonth && ytdPaceRatio < 1
+    ? (ytdMonths - 1) + ytdPaceRatio : ytdMonths);
+  const deficit10 = annualTarget10 - ytdActualRaw;
+  const neededPerMonth = remainMonths > 0 ? deficit10 / remainMonths : 0;
+
+  // YoY YTD vs same period 2025
+  const ytdPrev = ytdMonthsData.reduce((s, m) => s + (m.cumKy ?? 0), 0);
+  const ytdYoy = ytdPrev > 0 ? (ytdActual - ytdPrev) / ytdPrev * 100 : null;
+
   return (
     <div>
       <Header title="Tổng Quan">
@@ -217,6 +263,117 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
             </div>
           </div>
         </PageHeader>
+
+        {/* ── YTD vs Kế hoạch năm ── */}
+        {ytdMonths > 0 && annualTarget10 > 0 && (() => {
+          const borderCls = ytdVsPeriod10 >= 90 ? "border-green-500/50" : ytdVsPeriod10 >= 75 ? "border-amber-500/50" : "border-red-500/50";
+          const accentCls = ytdVsPeriod10 >= 90 ? "text-green-400" : ytdVsPeriod10 >= 75 ? "text-amber-400" : "text-red-400";
+          const barColor  = ytdVsPeriod10 >= 90 ? "#22c55e" : ytdVsPeriod10 >= 75 ? "#f59e0b" : "#ef4444";
+          const fcColor   = annualForecastPct >= 100 ? "text-green-400" : annualForecastPct >= 90 ? "text-amber-400" : "text-red-400";
+          const needColor = neededPerMonth <= avgPerMonth * 1.1 ? "text-green-400" : neededPerMonth <= avgPerMonth * 1.3 ? "text-amber-400" : "text-red-400";
+          const expectedPct = ytdMonths / 12 * 100; // where the "should-be" marker sits
+          return (
+            <div className={`mb-5 rounded-xl border-2 ${borderCls} bg-slate-800/50 p-4`}>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-sm font-bold text-white">Tiến Độ Năm 2026 — YTD vs Kế Hoạch</div>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    {ytdMonths} tháng có dữ liệu
+                    {lastDataIsCurrentMonth && ytdPaceRatio < 1 && (
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                        ⏱ T{calMonthIdx+1} tính pace {ytdDayOfMonth}/{ytdDaysInMonth} ngày
+                      </span>
+                    )}
+                    <span className="ml-2 text-slate-500">· {Math.round(remainMonths)} tháng còn lại</span>
+                  </div>
+                </div>
+                <div className={`text-2xl font-black tabular-nums ${accentCls}`}>
+                  {ytdVsPeriod10.toFixed(1)}%
+                  <div className="text-[10px] font-normal text-slate-400 text-right">vs kỳ vọng kỳ này</div>
+                </div>
+              </div>
+
+              {/* 4 metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                {/* 1. YTD actual */}
+                <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-2.5">
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">YTD Thực Hiện</div>
+                  <div className="text-lg font-bold text-blue-400 tabular-nums">{ytdActual.toFixed(2)} tỷ</div>
+                  {ytdYoy !== null && (
+                    <div className={`text-[11px] mt-0.5 font-semibold ${ytdYoy >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {ytdYoy >= 0 ? "▲" : "▼"}{Math.abs(ytdYoy).toFixed(1)}% so CK 2025
+                    </div>
+                  )}
+                </div>
+                {/* 2. vs Annual plan */}
+                <div className={`rounded-lg px-3 py-2.5 ${thresholdColor(ytdVsAnnual10).bg} border ${thresholdColor(ytdVsAnnual10).border}`}>
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">vs Kế Hoạch Năm MT10%</div>
+                  <div className={`text-lg font-bold tabular-nums ${thresholdColor(ytdVsAnnual10).text}`}>{ytdVsAnnual10.toFixed(1)}%</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">KH năm: {annualTarget10.toFixed(2)} tỷ</div>
+                </div>
+                {/* 3. Full-year forecast */}
+                <div className="rounded-lg bg-slate-700/40 border border-slate-600/40 px-3 py-2.5">
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Dự Báo Cả Năm</div>
+                  <div className={`text-lg font-bold tabular-nums ${fcColor}`}>{annualForecast.toFixed(2)} tỷ</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">= {annualForecastPct.toFixed(0)}% kế hoạch · TB {avgPerMonth.toFixed(2)}tỷ/T</div>
+                </div>
+                {/* 4. Needed per remaining month */}
+                <div className="rounded-lg bg-slate-700/40 border border-slate-600/40 px-3 py-2.5">
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Cần Đạt / Tháng Còn Lại</div>
+                  <div className={`text-lg font-bold tabular-nums ${needColor}`}>{neededPerMonth.toFixed(2)} tỷ</div>
+                  <div className={`text-[11px] mt-0.5 ${neededPerMonth > avgPerMonth ? "text-red-400" : "text-slate-500"}`}>
+                    {neededPerMonth > avgPerMonth
+                      ? `▲ ${((neededPerMonth/avgPerMonth - 1)*100).toFixed(0)}% so TB hiện tại`
+                      : `TB hiện tại: ${avgPerMonth.toFixed(2)} tỷ/T`}
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bar + month markers */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5 text-[11px]">
+                  <span className="text-slate-400">Hoàn thành kế hoạch năm MT10% ({annualTarget10.toFixed(2)} tỷ)</span>
+                  <span className={`font-bold ${accentCls}`}>{ytdVsAnnual10.toFixed(1)}%</span>
+                </div>
+                <div className="relative h-2.5 bg-slate-700 rounded-full overflow-visible mb-2">
+                  {/* Actual progress */}
+                  <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(ytdVsAnnual10, 100)}%`, backgroundColor: barColor }} />
+                  {/* Expected-pace marker (where we "should" be) */}
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-0.5 h-4 bg-white/50 rounded-full"
+                    style={{ left: `${Math.min(expectedPct, 99.5)}%` }}
+                    title={`Kỳ vọng tại ${ytdMonths}T: ${expectedPct.toFixed(0)}%`}
+                  />
+                </div>
+                {/* Month tick marks */}
+                <div className="flex gap-0">
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const hasData = MONTHLY_DATA[i]?.hn != null;
+                    const isCur   = i === calMonthIdx && lastDataIsCurrentMonth;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center">
+                        <div className={`h-1 w-full rounded-sm ${
+                          hasData && !isCur ? "bg-blue-400/70" :
+                          isCur ? "bg-amber-400/70" :
+                          "bg-slate-700"
+                        }`} />
+                        <div className="text-[8px] text-slate-600 mt-0.5 hidden md:block">
+                          {MONTHLY_DATA[i]?.month ?? `T${i+1}`}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-4 mt-1.5 text-[10px] text-slate-500">
+                  <span><span className="inline-block w-2 h-1 rounded bg-blue-400/70 mr-1"/>Đã có dữ liệu</span>
+                  {lastDataIsCurrentMonth && ytdPaceRatio < 1 && <span><span className="inline-block w-2 h-1 rounded bg-amber-400/70 mr-1"/>Tháng hiện tại (pace)</span>}
+                  <span><span className="inline-block w-0.5 h-3 rounded bg-white/50 mr-1 align-middle"/>Kỳ vọng tại T{ytdMonths}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── Summary KPI strip ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
