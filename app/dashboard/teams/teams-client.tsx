@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, RadarChart, Radar, PolarGrid,
@@ -89,6 +89,24 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
   const [trendTeamId, setTrendTeamId] = useState<string | null>(null);
   const [radarTeamId, setRadarTeamId] = useState<string | null>(null);
   const [expandedCeoTeam, setExpandedCeoTeam] = useState<string | null>(null);
+  const [svcNotes, setSvcNotes] = useState<Record<string, string>>({});
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [noteInput, setNoteInput] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("trend_svc_notes");
+      if (saved) setSvcNotes(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  function saveNote(key: string, text: string) {
+    const updated = { ...svcNotes, [key]: text.trim() };
+    if (!text.trim()) delete updated[key];
+    setSvcNotes(updated);
+    try { localStorage.setItem("trend_svc_notes", JSON.stringify(updated)); } catch {}
+    setEditingNote(null);
+  }
   const rankingRef = useRef<HTMLDivElement>(null);
 
   const allMonths = teamServiceData.length > 0 ? teamServiceData : TEAM_SERVICE_DATA;
@@ -1317,7 +1335,44 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                       })
                       .map(r => (
                       <tr key={r.key} className="border-b border-slate-800 hover:bg-slate-800/30">
-                        <td className="py-2.5 px-3 font-semibold" style={{ color: r.color }}>{r.label}</td>
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-1">
+                            <span className="font-semibold" style={{ color: r.color }}>{r.label}</span>
+                            <button
+                              onClick={() => { setEditingNote(r.key); setNoteInput(svcNotes[r.key] ?? ""); }}
+                              title="Ghi chú"
+                              className={`flex-shrink-0 transition-opacity ${svcNotes[r.key] ? "opacity-70 hover:opacity-100" : "opacity-25 hover:opacity-70"}`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                              </svg>
+                            </button>
+                          </div>
+                          {svcNotes[r.key] && editingNote !== r.key && (
+                            <div className="text-[10px] text-slate-400 italic mt-0.5 max-w-[140px] line-clamp-2 leading-tight">
+                              {svcNotes[r.key]}
+                            </div>
+                          )}
+                          {editingNote === r.key && (
+                            <div className="mt-1.5 flex flex-col gap-1 min-w-[180px]">
+                              <textarea
+                                value={noteInput}
+                                onChange={e => setNoteInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveNote(r.key, noteInput); if (e.key === "Escape") setEditingNote(null); }}
+                                className="w-full text-[11px] bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white resize-none focus:outline-none focus:border-blue-500"
+                                rows={2}
+                                placeholder="Nhập ghi chú (Ctrl+Enter để lưu)..."
+                                autoFocus
+                              />
+                              <div className="flex gap-1.5">
+                                <button onClick={() => saveNote(r.key, noteInput)} className="px-2 py-0.5 text-[10px] bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors">Lưu</button>
+                                {svcNotes[r.key] && <button onClick={() => saveNote(r.key, "")} className="px-2 py-0.5 text-[10px] bg-red-900/60 text-red-300 rounded hover:bg-red-900 transition-colors">Xóa</button>}
+                                <button onClick={() => setEditingNote(null)} className="px-2 py-0.5 text-[10px] bg-slate-600 text-slate-300 rounded hover:bg-slate-500 transition-colors">Hủy</button>
+                              </div>
+                            </div>
+                          )}
+                        </td>
                         <td className="py-2.5 px-3 text-center">
                           <Sparkline vals={r.sparkVals} color={r.color} />
                         </td>
