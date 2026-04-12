@@ -904,8 +904,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                             const mom = t.momTrend;
                             const momUp   = mom !== null && mom > 5;
                             const momDown = mom !== null && mom < -5;
-                            // Revenue in tỷ for scale context
-                            const revTy = (t.rawRev / 1000).toFixed(1);
+                            // Revenue scale: use projRev (pace-projected) to match Tiến độ %
+                            const revTy = (t.projRev / 1000).toFixed(1);
                             return (
                               <div key={t.id} className="rounded-lg bg-slate-800/70 border border-slate-700/50 overflow-hidden">
                                 {/* Summary row — always visible, click to expand */}
@@ -944,11 +944,15 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                     {/* Tiến độ ĐKM */}
                                     {t.dkmKpiPct !== null && (
                                       <div className="text-center min-w-[40px]">
-                                        <div className="text-[8px] text-slate-500 uppercase tracking-wide mb-0.5">Tiến độ</div>
+                                        <div className="text-[8px] text-slate-500 uppercase tracking-wide mb-0.5">
+                                          {isProjected ? "Dự kiến" : "Thực tế"}
+                                        </div>
                                         <div className={`text-[11px] font-bold font-mono leading-none ${dkmPctColor}`}>
                                           {isBorderline ? "≈" : ""}{t.dkmKpiPct}%
                                         </div>
-                                        <div className="text-[8px] text-slate-500 font-mono mt-0.5">{revTy} tỷ</div>
+                                        <div className="text-[8px] text-slate-500 font-mono mt-0.5">
+                                          {isProjected ? "~" : ""}{revTy} tỷ
+                                        </div>
                                       </div>
                                     )}
                                     {/* Xu hướng 4 tháng */}
