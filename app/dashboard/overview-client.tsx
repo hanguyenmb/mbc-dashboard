@@ -343,20 +343,26 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                 {/* 4. Needed per remaining month */}
                 <div className="rounded-lg bg-slate-700/40 border border-slate-600/40 px-3 py-2.5">
                   <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">
-                    Cần Đạt / Tháng Còn Lại {remainMonths > 0 ? `(~${remainMonths.toFixed(1)}T)` : ""}
+                    Còn thiếu KH năm: <span className="text-white font-semibold">{deficit10.toFixed(2)} tỷ</span>
                   </div>
                   {neededPerMonth != null ? (
                     <>
-                      <div className={`text-lg font-bold tabular-nums ${needColor}`}>{neededPerMonth.toFixed(2)} tỷ</div>
-                      <div className={`text-[11px] mt-0.5 ${neededPerMonth > avgPerMonth ? "text-red-400" : "text-slate-500"}`}>
-                        {neededPerMonth > avgPerMonth
-                          ? `▲ ${((neededPerMonth/avgPerMonth - 1)*100).toFixed(0)}% so TB ${avgPerMonth.toFixed(2)} tỷ/T`
-                          : `TB hiện tại: ${avgPerMonth.toFixed(2)} tỷ/T ✓`}
+                      <div className={`text-xl font-black tabular-nums leading-tight ${needColor}`}>
+                        {neededPerMonth.toFixed(2)} tỷ
+                      </div>
+                      <div className="text-[10px] text-slate-400 mb-1">TB / tháng còn lại (~{remainMonths.toFixed(1)} tháng)</div>
+                      <div className={`text-[11px] font-medium ${
+                        neededPerMonth <= avgPerMonth ? "text-green-400" :
+                        neededPerMonth <= avgPerMonth * 1.2 ? "text-amber-400" : "text-red-400"
+                      }`}>
+                        {neededPerMonth <= avgPerMonth
+                          ? `✓ Vừa tầm — TB hiện tại ${avgPerMonth.toFixed(2)} tỷ/T`
+                          : `Cần cao hơn TB hiện tại ${((neededPerMonth/avgPerMonth - 1)*100).toFixed(0)}% (${avgPerMonth.toFixed(2)} tỷ/T)`}
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="text-lg font-bold text-slate-400">—</div>
+                      <div className="text-xl font-black text-slate-400">—</div>
                       <div className="text-[11px] mt-0.5 text-slate-500">Đã hết năm</div>
                     </>
                   )}
