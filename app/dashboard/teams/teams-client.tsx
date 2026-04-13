@@ -696,6 +696,91 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           const sortDesc  = (a: typeof teamData[0], b: typeof teamData[0]) => (b.dkmKpiPct ?? b.projDkm) - (a.dkmKpiPct ?? a.projDkm);
           const sortWorst = (a: typeof teamData[0], b: typeof teamData[0]) => (a.yoy ?? 0) - (b.yoy ?? 0);
 
+          // ── Rule-based suggestion engine (no AI API needed) ─────────────────
+          type QTeam = { name: string; dkmKpiPct: number | null; yoy: number | null; hasYoy: boolean; dkmTarget: number | null; projDkm: number; rawDkm: number };
+          function getRuleSuggestions(quadKey: string, teams: QTeam[]): { obs: string; actions: string[] } {
+            if (teams.length === 0) return { obs: "Không có team nào trong ô này.", actions: [] };
+            const avgKpi = teams.filter(t => t.dkmKpiPct !== null).reduce((s, t) => s + (t.dkmKpiPct ?? 0), 0) / (teams.filter(t => t.dkmKpiPct !== null).length || 1);
+            const worst  = [...teams].sort((a, b) => (a.dkmKpiPct ?? 0) - (b.dkmKpiPct ?? 0))[0];
+            const worstYoy = [...teams].filter(t => t.hasYoy).sort((a, b) => (a.yoy ?? 0) - (b.yoy ?? 0))[0];
+            const best   = [...teams].sort((a, b) => (b.dkmKpiPct ?? 0) - (a.dkmKpiPct ?? 0))[0];
+            const remainDays = daysInMonth - daysElapsed;
+
+            if (quadKey === "star") {
+              const obs = avgKpi > 130
+                ? `${teams.length} team vượt kỳ vọng mạnh (TB ${Math.round(avgKpi)}% tiến độ).`
+                : `${teams.length} team đang đúng hướng (TB ${Math.round(avgKpi)}% tiến độ).`;
+              const actions: string[] = [];
+              if (avgKpi > 140) actions.push(`Cân nhắc tăng chỉ tiêu hoặc điều phối nguồn lực sang team yếu hơn.`);
+              else actions.push(`Duy trì đà hiện tại, không cần can thiệp.`);
+              if (best) actions.push(`${best.name} dẫn đầu — có thể dùng làm benchmark cho các team khác.`);
+              return { obs, actions };
+            }
+
+            if (quadKey === "potential") {
+              const obs = `${teams.length} team có YoY tốt nhưng tốc độ ĐKM tháng này chưa đạt (TB ${Math.round(avgKpi)}%).`;
+              const actions: string[] = [];
+              actions.push(`Review pipeline deals đang chờ close — xu hướng tốt, chỉ cần đẩy tốc độ.`);
+              if (worst && (worst.dkmKpiPct ?? 0) < 70) actions.push(`${worst.name} chậm nhất (${worst.dkmKpiPct}%) — kiểm tra hoạt động tuần này.`);
+              if (remainDays > 0 && worst?.dkmTarget) {
+                const needed = Math.round((worst.dkmTarget - worst.rawDkm) / remainDays);
+                if (needed > 0) actions.push(`${worst.name} cần ~${needed.toLocaleString()}M/ngày trong ${remainDays} ngày còn lại để đạt mục tiêu.`);
+              }
+              return { obs, actions };
+            }
+
+            if (quadKey === "stable") {
+              const obs = `${teams.length} team đạt KPI tháng nhưng đang giảm so cùng kỳ 2025.`;
+              const actions: string[] = [];
+              if (worstYoy) actions.push(`${worstYoy.name} giảm ${Math.abs(worstYoy.yoy ?? 0).toFixed(0)}% YoY — tìm hiểu nguyên nhân: mất khách cũ, cạnh tranh, hay chất lượng dịch vụ?`);
+              actions.push(`Không được chủ quan — tháng này ổn nhưng xu hướng YoY giảm là cảnh báo sớm.`);
+              return { obs, actions };
+            }
+
+            if (quadKey === "watch") {
+              const obs = `${teams.length} team cần can thiệp: vừa giảm YoY vừa chưa đạt KPI tháng.`;
+              const actions: string[] = [];
+              if (worst && (worst.dkmKpiPct ?? 0) < 60) actions.push(`${worst.name} chỉ đạt ${worst.dkmKpiPct}% tiến độ — họp ngay với team lead, xem pipeline cụ thể.`);
+              else if (worst) actions.push(`${worst.name} thấp nhất (${worst.dkmKpiPct}%) — cần review hoạt động ngay.`);
+              if (worstYoy && (worstYoy.yoy ?? 0) < -25) actions.push(`${worstYoy.name} giảm ${Math.abs(worstYoy.yoy ?? 0).toFixed(0)}% so CK25 — mức sụt giảm nghiêm trọng.`);
+              if (remainDays <= 7) actions.push(`Chỉ còn ${remainDays} ngày — ưu tiên close deals đang chờ, không mở deal mới.`);
+              else actions.push(`Còn ${remainDays} ngày — cần tăng tốc đáng kể để rút ngắn khoảng cách.`);
+              return { obs, actions };
+            }
+
+            return { obs: "", actions: [] };
+          }
+
+          function QuadSuggestion({ quadKey, teams }: { quadKey: string; teams: QTeam[] }) {
+            const [open, setOpen] = useState(false);
+            const { obs, actions } = getRuleSuggestions(quadKey, teams);
+            const dotColor = quadKey === "star" ? "bg-green-500" : quadKey === "potential" ? "bg-violet-500" : quadKey === "stable" ? "bg-amber-500" : "bg-red-500";
+            return (
+              <div>
+                <button
+                  onClick={() => setOpen(o => !o)}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all border whitespace-nowrap ${
+                    open ? "bg-slate-600/40 text-slate-200 border-slate-500/40" : "bg-slate-700/40 text-slate-400 border-slate-600/40 hover:text-slate-200 hover:bg-slate-600/30"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${dotColor}/70`} />
+                  Gợi ý
+                </button>
+                {open && obs && (
+                  <div className="mt-2 rounded-lg border border-slate-600/40 bg-slate-800/60 px-3 py-2.5 text-[11px] space-y-1.5">
+                    <div className="text-slate-300">{obs}</div>
+                    {actions.map((a, i) => (
+                      <div key={i} className="flex gap-1.5 text-slate-400">
+                        <span className="text-slate-500 shrink-0">→</span>
+                        <span>{a}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           const quadGroups = [
             { key: "star",      label: "⭐ Ngôi Sao",  sub: "YoY tốt · đang đạt KPI ĐKM",        borderCls: "border-green-600/40",  headCls: "text-green-400",  bgCls: "bg-green-500/5",  teams: teamData.filter(t =>  inGoodYoy(t) &&  inGoodDkm(t)).sort(sortDesc)  },
             { key: "potential", label: "🔄 Ổn Định",   sub: "YoY tốt · KPI ĐKM cần cải thiện",   borderCls: "border-violet-600/40", headCls: "text-violet-400", bgCls: "bg-violet-500/5", teams: teamData.filter(t =>  inGoodYoy(t) && !inGoodDkm(t)).sort(sortDesc)  },
@@ -864,26 +949,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     <div key={q.key} className={`rounded-xl border p-4 ${q.borderCls} ${q.bgCls}`}>
                       <div className="flex items-center justify-between mb-0.5 gap-2">
                         <div className={`text-sm font-bold whitespace-nowrap ${q.headCls}`}>{q.label}</div>
-                        <MiniAiPanel
-                          context="ceo_quadrant_action"
-                          label="Gợi ý"
-                          data={{
-                            period: filterLabel,
-                            quadLabel: q.label,
-                            quadKey: q.key,
-                            paceRatio,
-                            daysElapsed,
-                            daysInMonth,
-                            teams: q.teams.map(t => ({
-                              name: t.name,
-                              region: t.region,
-                              rawDkm: t.rawDkm,
-                              dkmTarget: t.dkmTarget,
-                              dkmKpiPct: t.dkmKpiPct,
-                              yoy: t.hasYoy ? t.yoy : null,
-                            })),
-                          }}
-                        />
+                        <QuadSuggestion quadKey={q.key} teams={q.teams} />
                       </div>
                       <div className="text-[11px] text-slate-500 mb-3">{q.sub} · {q.teams.length} team</div>
                       {q.teams.length === 0 ? (
