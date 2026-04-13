@@ -284,6 +284,8 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
               name: shortName(r.teamName),
               region: r.region,
               "% KH ĐKM": Math.round(r.tlKhDkm ?? 0),
+              "KH ĐKM": r.khDkm,
+              "Tổng KH": r.kh,
               color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
             }));
 
@@ -423,11 +425,23 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                     <div className="text-[10px] text-slate-500 mt-0.5">Team nào đang acquire KH mới nhiều nhất — xếp từ cao xuống thấp</div>
                   </CardHeader>
                   <CardContent className="px-2 pb-3">
-                    <ResponsiveContainer width="100%" height={180}>
-                      <BarChart data={dkmPctData} margin={{ top: 4, right: 8, left: -20, bottom: 44 }}>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={dkmPctData} margin={{ top: 20, right: 8, left: -20, bottom: 44 }}>
                         <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
-                        <YAxis tick={{ fill: "#64748b", fontSize: 10 }} unit="%" domain={[0, 100]} />
-                        <Tooltip content={<CustomTooltipKh />} formatter={(v: any) => [`${v}%`, "% KH ĐKM"]} />
+                        <YAxis tick={{ fill: "#64748b", fontSize: 10 }} unit="%" domain={[0, 130]} />
+                        <Tooltip
+                          content={({ active, payload, label }: any) => {
+                            if (!active || !payload?.length) return null;
+                            const d = payload[0]?.payload;
+                            return (
+                              <div className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-xs shadow-lg">
+                                <div className="font-semibold text-white mb-1">{label}</div>
+                                <div className="text-cyan-300">KH ĐKM: <span className="font-bold">{d?.["KH ĐKM"]?.toLocaleString()}</span></div>
+                                <div className="text-slate-400">Tổng KH: <span className="font-bold text-slate-300">{d?.["Tổng KH"]?.toLocaleString()}</span></div>
+                              </div>
+                            );
+                          }}
+                        />
                         <Bar dataKey="% KH ĐKM" maxBarSize={32} radius={[3,3,0,0]}>
                           <LabelList dataKey="% KH ĐKM" position="top" style={{ fill: "#94a3b8", fontSize: 10 }} formatter={(v: any) => `${v}%`} />
                           {dkmPctData.map((d, i) => <Cell key={i} fill={d.color} />)}
