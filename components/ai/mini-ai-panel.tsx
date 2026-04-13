@@ -1,7 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sparkles, Loader2, RefreshCw, X, Copy, CheckCheck } from "lucide-react";
+
+const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours
+
+function cacheKey(context: string, data: any) {
+  // Simple stable key: context + JSON of data (truncated)
+  try {
+    const str = context + JSON.stringify(data);
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+      h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    }
+    return `ai_cache_${context}_${h}`;
+  } catch {
+    return `ai_cache_${context}`;
+  }
+}
+
+function readCache(key: string): string | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { result, ts } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem(key); return null; }
+    return result;
+  } catch { return null; }
+}
+
+function writeCache(key: string, result: string) {
+  try { localStorage.setItem(key, JSON.stringify({ result, ts: Date.now() })); } catch {}
+}
 
 interface MiniAiPanelProps {
   context: string;
@@ -15,11 +45,23 @@ export function MiniAiPanel({ context, data, label = "AI phân tích" }: MiniAiP
   const [result, setResult]   = useState("");
   const [error, setError]     = useState("");
   const [copied, setCopied]   = useState(false);
+  const fetchingRef = useRef(false);
+  const ck = cacheKey(context, data);
 
-  async function fetchAnalysis() {
+  // Load from cache on mount
+  useEffect(() => {
+    const cached = readCache(ck);
+    if (cached) setResult(cached);
+  }, [ck]);
+
+  async function fetchAnalysis(force = false) {
+    if (fetchingRef.current) return;
+    const cached = readCache(ck);
+    if (cached && !force) { setResult(cached); return; }
+    fetchingRef.current = true;
     setLoading(true);
     setError("");
-    setResult("");
+    if (force) setResult("");
     try {
       const res = await fetch("/api/ai/analyze", {
         method: "POST",
@@ -29,17 +71,24 @@ export function MiniAiPanel({ context, data, label = "AI phân tích" }: MiniAiP
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Lỗi AI");
       setResult(json.analysis);
+      writeCache(ck, json.analysis);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
+  }
+
+  // Pre-fetch on hover so result is ready when clicked
+  function handleHover() {
+    if (!result && !fetchingRef.current) fetchAnalysis();
   }
 
   function handleClick() {
     if (open) { setOpen(false); return; }
     setOpen(true);
-    if (!result) fetchAnalysis();
+    fetchAnalysis();
   }
 
   async function handleCopy() {
@@ -48,11 +97,14 @@ export function MiniAiPanel({ context, data, label = "AI phân tích" }: MiniAiP
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const isCached = !!readCache(ck);
+
   return (
     <div className="w-full">
       {/* Trigger */}
       <button
         onClick={handleClick}
+        onMouseEnter={handleHover}
         className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all border whitespace-nowrap flex-shrink-0 ${
           open
             ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
@@ -61,6 +113,7 @@ export function MiniAiPanel({ context, data, label = "AI phân tích" }: MiniAiP
       >
         <Sparkles size={11} className={loading ? "animate-pulse text-purple-400" : ""} />
         {label}
+        {isCached && !open && <span className="w-1.5 h-1.5 rounded-full bg-green-500/70 ml-0.5" title="Đã lưu cache" />}
       </button>
 
       {/* Inline panel */}
@@ -70,6 +123,7 @@ export function MiniAiPanel({ context, data, label = "AI phân tích" }: MiniAiP
           <div className="flex items-center justify-between px-3 py-2 border-b border-purple-500/10">
             <div className="flex items-center gap-1.5 text-[11px] text-purple-400 font-medium">
               <Sparkles size={10} /> Gemini 2.5 Flash
+              {isCached && <span className="text-[9px] text-green-400/70 font-normal ml-1">· từ cache</span>}
             </div>
             <div className="flex items-center gap-0.5">
               {result && !loading && (
@@ -78,7 +132,7 @@ export function MiniAiPanel({ context, data, label = "AI phân tích" }: MiniAiP
                 </button>
               )}
               {result && (
-                <button onClick={fetchAnalysis} disabled={loading} className="p-1.5 text-slate-500 hover:text-slate-300 rounded transition-colors">
+                <button onClick={() => fetchAnalysis(true)} disabled={loading} title="Làm mới" className="p-1.5 text-slate-500 hover:text-slate-300 rounded transition-colors">
                   <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
                 </button>
               )}
@@ -99,7 +153,7 @@ export function MiniAiPanel({ context, data, label = "AI phân tích" }: MiniAiP
             {error && !loading && (
               <div className="text-red-400">
                 <span className="font-medium">Lỗi: </span>{error}
-                <button onClick={fetchAnalysis} className="ml-2 underline text-red-300 hover:text-red-200">Thử lại</button>
+                <button onClick={() => fetchAnalysis(true)} className="ml-2 underline text-red-300 hover:text-red-200">Thử lại</button>
               </div>
             )}
             {result && !loading && (
