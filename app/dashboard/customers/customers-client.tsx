@@ -230,16 +230,16 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
           const PREV_COLOR = "#475569";
 
           // Chart 1: Số KH
-          // - Giữa tháng: cột thực tế + cột mờ dự kiến cuối tháng (pace) + cùng kỳ xám
+          // - Giữa tháng: stacked bar — phần dưới = thực tế, phần trên mờ = delta dự kiến còn lại
           // - Hết tháng: cột đổi màu xanh/đỏ theo YoY + label +X%/-X% trên đầu
           const monthComplete = !isCurrentMonth;
           const khChartData = rows
             .filter(r => r.kh > 0)
             .sort((a, b) => b.kh - a.kh)
             .map(r => {
-              const projected = isCurrentMonth && paceRatio < 1 ? Math.round(proj(r.kh)) : null;
+              const projTotal = isCurrentMonth && paceRatio < 1 ? Math.round(proj(r.kh)) : null;
+              const projDelta = projTotal !== null ? Math.max(0, projTotal - r.kh) : null;
               const yoyPct = r.prevKh > 0 ? Math.round((r.kh - r.prevKh) / r.prevKh * 100) : null;
-              // Hết tháng: màu xanh nếu tăng, đỏ nếu giảm so CK
               const barColor = monthComplete && r.prevKh > 0
                 ? (r.kh >= r.prevKh ? "#22c55e" : "#ef4444")
                 : (r.region === "HN" ? HN_COLOR : HCM_COLOR);
@@ -247,7 +247,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                 name: shortName(r.teamName),
                 region: r.region,
                 "Thực tế": r.kh,
-                "Dự kiến c.tháng": projected,
+                "Dự kiến thêm": projDelta,
                 "Cùng kỳ 2025": r.prevKh > 0 ? r.prevKh : null,
                 color: barColor,
                 yoyPct,
@@ -303,7 +303,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                       {monthComplete ? (
                         <><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-green-500"/> Tăng so CK</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-red-500"/> Giảm so CK</span></>
                       ) : (
-                        <><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HN_COLOR}}/> HN</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HCM_COLOR}}/> HCM</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HN_COLOR, opacity:0.35}}/> Dự kiến c.tháng</span></>
+                        <><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HN_COLOR}}/> HN</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HCM_COLOR}}/> HCM</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm border border-dashed border-slate-400 opacity-50"/><span className="inline-block w-3 h-2 rounded-sm opacity-30" style={{background:"#94a3b8"}}/> Dự kiến thêm (pace)</span></>
                       )}
                       {hasPrevKhData && <span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-slate-500/60"/> Cùng kỳ 2025</span>}
                     </div>
@@ -314,8 +314,9 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                         <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
                         <YAxis tick={{ fill: "#64748b", fontSize: 10 }} />
                         <Tooltip content={<CustomTooltipKh />} />
-                        {/* Cột thực tế — xanh/đỏ khi hết tháng, màu vùng khi giữa tháng */}
-                        <Bar dataKey="Thực tế" maxBarSize={20} radius={[3,3,0,0]}>
+                        {/* Cột thực tế (solid) — stack bottom */}
+                        <Bar dataKey="Thực tế" stackId="kh" maxBarSize={22}
+                          radius={monthComplete || !isCurrentMonth || paceRatio >= 1 ? [3,3,0,0] : [0,0,0,0]}>
                           {monthComplete && (
                             <LabelList dataKey="yoyLabel" position="top"
                               content={(props: any) => {
@@ -329,14 +330,14 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                           )}
                           {khChartData.map((d, i) => <Cell key={i} fill={d.color} />)}
                         </Bar>
-                        {/* Cột dự kiến cuối tháng — chỉ hiện khi giữa tháng */}
-                        {!monthComplete && isCurrentMonth && paceRatio < 1 && (
-                          <Bar dataKey="Dự kiến c.tháng" maxBarSize={20} radius={[3,3,0,0]}>
-                            {khChartData.map((d, i) => <Cell key={i} fill={d.color} opacity={0.35} />)}
+                        {/* Phần dự kiến thêm — stack top, mờ, chỉ giữa tháng */}
+                        {isCurrentMonth && paceRatio < 1 && (
+                          <Bar dataKey="Dự kiến thêm" stackId="kh" maxBarSize={22} radius={[3,3,0,0]}>
+                            {khChartData.map((d, i) => <Cell key={i} fill={d.color} opacity={0.3} />)}
                           </Bar>
                         )}
                         {hasPrevKhData && (
-                          <Bar dataKey="Cùng kỳ 2025" maxBarSize={20} fill={PREV_COLOR} radius={[3,3,0,0]} opacity={0.6} />
+                          <Bar dataKey="Cùng kỳ 2025" maxBarSize={22} fill={PREV_COLOR} radius={[3,3,0,0]} opacity={0.6} />
                         )}
                       </BarChart>
                     </ResponsiveContainer>
