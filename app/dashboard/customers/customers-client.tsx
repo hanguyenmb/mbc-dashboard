@@ -289,6 +289,51 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
               color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
             }));
 
+          // Chart 4: Số KH ĐKM — stacked bar (same logic as Chart 1)
+          const khDkmChartData = dkmRows
+            .filter(r => r.khDkm > 0)
+            .sort((a, b) => b.khDkm - a.khDkm)
+            .map(r => {
+              const projTotal = isCurrentMonth && paceRatio < 1 ? Math.round(proj(r.khDkm)) : null;
+              const projDelta = projTotal !== null ? Math.max(0, projTotal - r.khDkm) : null;
+              const yoyPct = r.prevKhDkm > 0 ? Math.round((r.khDkm - r.prevKhDkm) / r.prevKhDkm * 100) : null;
+              const barColor = monthComplete && r.prevKhDkm > 0
+                ? (r.khDkm >= r.prevKhDkm ? "#22c55e" : "#ef4444")
+                : (r.region === "HN" ? HN_COLOR : HCM_COLOR);
+              return {
+                name: shortName(r.teamName),
+                region: r.region,
+                "Thực tế": r.khDkm,
+                "Dự kiến thêm": projDelta,
+                "Cùng kỳ 2025": r.prevKhDkm > 0 ? r.prevKhDkm : null,
+                color: barColor,
+                yoyPct,
+                yoyLabel: monthComplete && yoyPct !== null ? `${yoyPct >= 0 ? "+" : ""}${yoyPct}%` : "",
+              };
+            });
+
+          // Chart 5: DS TB / KH ĐKM — ranking list với baseline theo vùng
+          const avgDkmRows = dkmRows.filter(r => r.avgDkm > 0);
+          const hnAvgDkm  = (() => { const ts = avgDkmRows.filter(r => r.region === "HN");  return ts.length ? ts.reduce((s,r) => s + r.avgDkm, 0) / ts.length : null; })();
+          const hcmAvgDkm = (() => { const ts = avgDkmRows.filter(r => r.region === "HCM"); return ts.length ? ts.reduce((s,r) => s + r.avgDkm, 0) / ts.length : null; })();
+          const avgDkmData = avgDkmRows
+            .sort((a, b) => b.avgDkm - a.avgDkm)
+            .map(r => {
+              const baseline = r.region === "HN" ? hnAvgDkm : hcmAvgDkm;
+              const vsBaseline = baseline && baseline > 0 ? (r.avgDkm - baseline) / baseline * 100 : null;
+              return {
+                name: shortName(r.teamName),
+                region: r.region,
+                avgDkm: r.avgDkm,
+                color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
+                yoyVal: r.avgDkmYoy,
+                baseline,
+                vsBaseline,
+              };
+            });
+          const maxAvgDkm = Math.max(...avgDkmData.map(d => d.avgDkm), 1);
+          const hasPrevKhDkmData = dkmRows.some(r => r.prevKhDkm > 0);
+
           const CustomTooltipKh = ({ active, payload, label }: any) => {
             if (!active || !payload?.length) return null;
             return (
@@ -370,7 +415,8 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                   </div>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
+                  {/* Single flat grid: rank | name | bar | value | assess | yoy — columns align across all rows */}
+                  <div className="grid gap-y-2.5 items-center" style={{ gridTemplateColumns: "1.25rem 5.5rem 1fr 4.5rem 5.5rem 2.75rem" }}>
                     {avgDsData.map((d, i) => {
                       const barW    = (d.avgDs / maxAvgDs) * 100;
                       const baseW   = d.baseline ? (d.baseline / maxAvgDs) * 100 : null;
@@ -384,33 +430,34 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                         : d.vsBaseline >= -10 ? `≈ TB vùng`
                         : `${d.vsBaseline.toFixed(0)}% TB vùng`;
                       return (
-                        <div key={d.name} className="flex items-center gap-3">
-                          <span className="text-[11px] font-bold text-slate-500 w-5 text-right shrink-0">{i+1}</span>
-                          <div className="w-24 shrink-0">
+                        <>
+                          {/* Rank */}
+                          <span key={`r-${d.name}`} className="text-[11px] font-bold text-slate-500 text-right pr-1">{i + 1}</span>
+                          {/* Name + region */}
+                          <div key={`n-${d.name}`} className="min-w-0">
                             <span className="text-[11px] text-slate-300 font-medium leading-tight block truncate">{d.name}</span>
                             <span className={`text-[9px] font-mono ${d.region === "HN" ? "text-blue-400" : "text-orange-400"}`}>{d.region}</span>
                           </div>
-                          <div className="flex-1 flex items-center gap-2 min-w-0">
-                            {/* Bar với vạch baseline */}
-                            <div className="flex-1 relative h-[7px] bg-slate-700/60 rounded-full overflow-visible">
-                              <div className="absolute inset-y-0 left-0 rounded-full transition-all"
-                                style={{ width: `${barW}%`, backgroundColor: aboveBase ? d.color : (d.region === "HN" ? "#3b82f6" : "#f97316"), opacity: aboveBase ? 1 : 0.6 }} />
-                              {baseW !== null && (
-                                <div className="absolute top-[-2px] bottom-[-2px] w-[2px] rounded-full bg-white/40 z-10"
-                                  style={{ left: `${baseW}%` }} />
-                              )}
-                            </div>
-                            <span className="text-[12px] font-bold tabular-nums shrink-0 w-16" style={{ color: d.color }}>
-                              {d.avgDs.toFixed(2)} tr
-                            </span>
-                            <span className={`text-[9px] font-semibold shrink-0 w-20 ${assessColor}`}>{assessLabel}</span>
-                            {d.yoyVal !== null && (
-                              <span className={`text-[10px] font-semibold shrink-0 ${(d.yoyVal ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                {(d.yoyVal ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(d.yoyVal ?? 0).toFixed(0)}%
-                              </span>
+                          {/* Bar */}
+                          <div key={`b-${d.name}`} className="relative h-[7px] bg-slate-700/60 rounded-full overflow-visible mx-2">
+                            <div className="absolute inset-y-0 left-0 rounded-full transition-all"
+                              style={{ width: `${barW}%`, backgroundColor: aboveBase ? d.color : (d.region === "HN" ? "#3b82f6" : "#f97316"), opacity: aboveBase ? 1 : 0.6 }} />
+                            {baseW !== null && (
+                              <div className="absolute top-[-2px] bottom-[-2px] w-[2px] rounded-full bg-white/40 z-10"
+                                style={{ left: `${baseW}%` }} />
                             )}
                           </div>
-                        </div>
+                          {/* Value */}
+                          <span key={`v-${d.name}`} className="text-[12px] font-bold tabular-nums text-right pr-2" style={{ color: d.color }}>
+                            {d.avgDs.toFixed(2)} tr
+                          </span>
+                          {/* Assessment */}
+                          <span key={`a-${d.name}`} className={`text-[9px] font-semibold ${assessColor}`}>{assessLabel}</span>
+                          {/* YoY */}
+                          <span key={`y-${d.name}`} className={`text-[10px] font-semibold ${(d.yoyVal ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                            {d.yoyVal !== null ? `${(d.yoyVal ?? 0) >= 0 ? "▲" : "▼"}${Math.abs(d.yoyVal ?? 0).toFixed(0)}%` : ""}
+                          </span>
+                        </>
                       );
                     })}
                   </div>
@@ -448,6 +495,114 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Chart 4: Số KH ĐKM — stacked bar */}
+              {hasDkmKhData && khDkmChartData.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <CardTitle className="text-xs font-semibold text-slate-300">Số KH Đăng Ký Mới theo Team</CardTitle>
+                      <div className="text-[10px] text-slate-500 flex flex-wrap items-center gap-3">
+                        {monthComplete ? (
+                          <><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-green-500"/> Tăng so CK</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-red-500"/> Giảm so CK</span></>
+                        ) : (
+                          <><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HN_COLOR}}/> HN</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HCM_COLOR}}/> HCM</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm opacity-30" style={{background:"#94a3b8"}}/> Dự kiến thêm</span></>
+                        )}
+                        {hasPrevKhDkmData && <span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-slate-500/60"/> Cùng kỳ 2025</span>}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-2 pb-3">
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={khDkmChartData} margin={{ top: 16, right: 8, left: -20, bottom: 44 }}>
+                        <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
+                        <YAxis tick={{ fill: "#64748b", fontSize: 10 }} />
+                        <Tooltip content={<CustomTooltipKh />} />
+                        <Bar dataKey="Thực tế" stackId="khd" maxBarSize={28}
+                          radius={monthComplete || paceRatio >= 1 ? [3,3,0,0] : [0,0,0,0]}>
+                          {monthComplete && (
+                            <LabelList dataKey="yoyLabel" position="top"
+                              content={(props: any) => {
+                                const { x, y, width, value, index } = props;
+                                if (!value) return null;
+                                const d = khDkmChartData[index];
+                                const color = (d?.yoyPct ?? 0) >= 0 ? "#4ade80" : "#f87171";
+                                return <text x={x + width / 2} y={y - 3} textAnchor="middle" fill={color} fontSize={9} fontWeight={600}>{value}</text>;
+                              }}
+                            />
+                          )}
+                          {khDkmChartData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                        </Bar>
+                        {isCurrentMonth && paceRatio < 1 && (
+                          <Bar dataKey="Dự kiến thêm" stackId="khd" maxBarSize={28} radius={[3,3,0,0]}>
+                            {khDkmChartData.map((d, i) => <Cell key={i} fill={d.color} opacity={0.3} />)}
+                          </Bar>
+                        )}
+                        {hasPrevKhDkmData && (
+                          <Bar dataKey="Cùng kỳ 2025" maxBarSize={28} fill={PREV_COLOR} radius={[3,3,0,0]} opacity={0.6} />
+                        )}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Chart 5: DS TB / KH ĐKM — ranking list với baseline vùng */}
+              {hasDkmKhData && avgDkmData.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <CardTitle className="text-xs font-semibold text-slate-300">TB Doanh Số / KH Đăng Ký Mới — Xếp Hạng</CardTitle>
+                      <div className="flex items-center gap-3 text-[10px]">
+                        {hnAvgDkm !== null && <span className="flex items-center gap-1 px-2 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-blue-300"><span className="font-mono">HN TB:</span><span className="font-bold">{hnAvgDkm.toFixed(2)} tr</span></span>}
+                        {hcmAvgDkm !== null && <span className="flex items-center gap-1 px-2 py-0.5 rounded border border-orange-500/30 bg-orange-500/10 text-orange-300"><span className="font-mono">HCM TB:</span><span className="font-bold">{hcmAvgDkm.toFixed(2)} tr</span></span>}
+                        <span className="text-slate-500">· vạch ▸ = baseline vùng</span>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    <div className="grid gap-y-2.5 items-center" style={{ gridTemplateColumns: "1.25rem 5.5rem 1fr 4.5rem 5.5rem 2.75rem" }}>
+                      {avgDkmData.map((d, i) => {
+                        const barW    = (d.avgDkm / maxAvgDkm) * 100;
+                        const baseW   = d.baseline ? (d.baseline / maxAvgDkm) * 100 : null;
+                        const aboveBase = d.vsBaseline !== null && d.vsBaseline >= 0;
+                        const assessColor = d.vsBaseline === null ? "text-slate-500"
+                          : d.vsBaseline >= 10  ? "text-green-400"
+                          : d.vsBaseline >= -10 ? "text-amber-400"
+                          : "text-red-400";
+                        const assessLabel = d.vsBaseline === null ? ""
+                          : d.vsBaseline >= 10  ? `+${d.vsBaseline.toFixed(0)}% TB vùng`
+                          : d.vsBaseline >= -10 ? `≈ TB vùng`
+                          : `${d.vsBaseline.toFixed(0)}% TB vùng`;
+                        return (
+                          <>
+                            <span key={`r-${d.name}`} className="text-[11px] font-bold text-slate-500 text-right pr-1">{i + 1}</span>
+                            <div key={`n-${d.name}`} className="min-w-0">
+                              <span className="text-[11px] text-slate-300 font-medium leading-tight block truncate">{d.name}</span>
+                              <span className={`text-[9px] font-mono ${d.region === "HN" ? "text-blue-400" : "text-orange-400"}`}>{d.region}</span>
+                            </div>
+                            <div key={`b-${d.name}`} className="relative h-[7px] bg-slate-700/60 rounded-full overflow-visible mx-2">
+                              <div className="absolute inset-y-0 left-0 rounded-full transition-all"
+                                style={{ width: `${barW}%`, backgroundColor: aboveBase ? d.color : (d.region === "HN" ? "#3b82f6" : "#f97316"), opacity: aboveBase ? 1 : 0.6 }} />
+                              {baseW !== null && (
+                                <div className="absolute top-[-2px] bottom-[-2px] w-[2px] rounded-full bg-white/40 z-10"
+                                  style={{ left: `${baseW}%` }} />
+                              )}
+                            </div>
+                            <span key={`v-${d.name}`} className="text-[12px] font-bold tabular-nums text-right pr-2" style={{ color: d.color }}>
+                              {d.avgDkm.toFixed(2)} tr
+                            </span>
+                            <span key={`a-${d.name}`} className={`text-[9px] font-semibold ${assessColor}`}>{assessLabel}</span>
+                            <span key={`y-${d.name}`} className={`text-[10px] font-semibold ${(d.yoyVal ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                              {d.yoyVal !== null ? `${(d.yoyVal ?? 0) >= 0 ? "▲" : "▼"}${Math.abs(d.yoyVal ?? 0).toFixed(0)}%` : ""}
+                            </span>
+                          </>
+                        );
+                      })}
+                    </div>
                   </CardContent>
                 </Card>
               )}
