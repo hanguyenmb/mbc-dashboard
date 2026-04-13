@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 import { Header } from "@/components/layout/header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { MiniAiPanel } from "@/components/ai/mini-ai-panel";
@@ -220,6 +221,136 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
             </CardContent>
           </Card>
         )}
+
+        {/* ── Charts ── */}
+        {hasKhData && (() => {
+          const shortName = (name: string) => name.replace(/^Team\s+/i, "").slice(0, 10);
+          const HN_COLOR  = "#60a5fa";
+          const HCM_COLOR = "#fb923c";
+          const PREV_COLOR = "#475569";
+
+          // Chart 1: Số KH — grouped current vs prev per team
+          const khChartData = rows
+            .filter(r => r.kh > 0)
+            .sort((a, b) => b.kh - a.kh)
+            .map(r => ({
+              name: shortName(r.teamName),
+              region: r.region,
+              "Tháng này": r.kh,
+              "Cùng kỳ 2025": r.prevKh > 0 ? r.prevKh : null,
+              color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
+            }));
+
+          // Chart 2: TB DS/KH — horizontal bar ranked
+          const avgDsData = rows
+            .filter(r => r.avgDs > 0)
+            .sort((a, b) => b.avgDs - a.avgDs)
+            .map(r => ({
+              name: shortName(r.teamName),
+              region: r.region,
+              "TB DS/KH (tr.đ)": Math.round(r.avgDs),
+              color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
+            }));
+
+          // Chart 3: % KH ĐKM / Tổng KH
+          const dkmPctData = dkmRows
+            .filter(r => r.kh > 0 && r.khDkm > 0)
+            .sort((a, b) => (b.tlKhDkm ?? 0) - (a.tlKhDkm ?? 0))
+            .map(r => ({
+              name: shortName(r.teamName),
+              region: r.region,
+              "% KH ĐKM": Math.round(r.tlKhDkm ?? 0),
+              color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
+            }));
+
+          const CustomTooltipKh = ({ active, payload, label }: any) => {
+            if (!active || !payload?.length) return null;
+            return (
+              <div className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-xs shadow-lg">
+                <div className="font-semibold text-white mb-1">{label}</div>
+                {payload.map((p: any) => p.value != null && (
+                  <div key={p.name} style={{ color: p.color }} className="flex gap-2">
+                    <span>{p.name}:</span><span className="font-bold">{p.value}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          };
+
+          return (
+            <div className="space-y-3">
+              {/* Row 1: Chart 1 + Chart 2 */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Chart 1: Số KH */}
+                <Card>
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-xs font-semibold text-slate-300">Số Khách Hàng theo Team</CardTitle>
+                    {hasPrevKhData && <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-3"><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HN_COLOR}}/> HN</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HCM_COLOR}}/> HCM</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-slate-500/60"/> Cùng kỳ 2025</span></div>}
+                  </CardHeader>
+                  <CardContent className="px-2 pb-3">
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={khChartData} margin={{ top: 4, right: 8, left: -20, bottom: 40 }}>
+                        <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
+                        <YAxis tick={{ fill: "#64748b", fontSize: 10 }} />
+                        <Tooltip content={<CustomTooltipKh />} />
+                        <Bar dataKey="Tháng này" maxBarSize={20} radius={[3,3,0,0]}>
+                          {khChartData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                        </Bar>
+                        {hasPrevKhData && (
+                          <Bar dataKey="Cùng kỳ 2025" maxBarSize={20} fill={PREV_COLOR} radius={[3,3,0,0]} opacity={0.6} />
+                        )}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Chart 2: TB DS/KH ranked */}
+                <Card>
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-xs font-semibold text-slate-300">TB Doanh Số / Khách Hàng (tr.đ)</CardTitle>
+                    <div className="text-[10px] text-slate-500 mt-0.5">Giá trị trung bình mỗi KH — xếp từ cao xuống thấp</div>
+                  </CardHeader>
+                  <CardContent className="px-2 pb-3">
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={avgDsData} layout="vertical" margin={{ top: 4, right: 40, left: 10, bottom: 4 }}>
+                        <XAxis type="number" tick={{ fill: "#64748b", fontSize: 10 }} />
+                        <YAxis type="category" dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} width={72} />
+                        <Tooltip content={<CustomTooltipKh />} />
+                        <Bar dataKey="TB DS/KH (tr.đ)" maxBarSize={16} radius={[0,3,3,0]}>
+                          <LabelList dataKey="TB DS/KH (tr.đ)" position="right" style={{ fill: "#94a3b8", fontSize: 10 }} />
+                          {avgDsData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Chart 3: % KH ĐKM / Tổng KH — full width */}
+              {hasDkmKhData && dkmPctData.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-xs font-semibold text-slate-300">Tỷ lệ KH Đăng Ký Mới / Tổng KH (%)</CardTitle>
+                    <div className="text-[10px] text-slate-500 mt-0.5">Team nào đang acquire KH mới nhiều nhất — xếp từ cao xuống thấp</div>
+                  </CardHeader>
+                  <CardContent className="px-2 pb-3">
+                    <ResponsiveContainer width="100%" height={160}>
+                      <BarChart data={dkmPctData} margin={{ top: 4, right: 8, left: -20, bottom: 40 }}>
+                        <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
+                        <YAxis tick={{ fill: "#64748b", fontSize: 10 }} unit="%" domain={[0, 100]} />
+                        <Tooltip content={<CustomTooltipKh />} formatter={(v: any) => [`${v}%`, "% KH ĐKM"]} />
+                        <Bar dataKey="% KH ĐKM" maxBarSize={28} radius={[3,3,0,0]}>
+                          <LabelList dataKey="% KH ĐKM" position="top" style={{ fill: "#94a3b8", fontSize: 10 }} formatter={(v: any) => `${v}%`} />
+                          {dkmPctData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Bảng 1: Báo Cáo Khách Hàng */}
         {hasKhData && (
