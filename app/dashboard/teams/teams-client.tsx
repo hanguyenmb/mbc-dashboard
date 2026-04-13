@@ -644,22 +644,12 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             // % đạt mục tiêu DS tổng (dùng projRev so với target)
             const kpiPct = t.target > 0 ? Math.round(projRev / t.target * 100) : null;
 
-            // 3-month trend: completed months only (exclude current if mid-month)
-            const completedSpark = isProjected ? sparkVals.slice(0, -1) : sparkVals;
-            const last3 = completedSpark.filter(v => v > 0).slice(-3);
-            let momTrend: number | null = null;
-            if (last3.length >= 2) {
-              const oldAvg = last3.slice(0, -1).reduce((s, v) => s + v, 0) / (last3.length - 1);
-              const newVal = last3[last3.length - 1];
-              momTrend = oldAvg > 0 ? (newVal - oldAvg) / oldAvg * 100 : null;
-            }
-
             return {
               id: t.teamId, name: t.teamName, region: t.region,
               rawDkm, projDkm, rawRev: t.revenue, projRev, target: t.target,
               prevDkm, yoy, hasYoy: prevDkm > 0,
               kpiPct, dkmKpiPct, dkmTarget, dkmTargetNote,
-              sparkVals, confidence, momTrend,
+              sparkVals, confidence,
             };
           }).filter(t => t.rawDkm > 0 || t.rawRev > 0);
 
@@ -853,9 +843,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   <span><span className="text-amber-400 font-bold">■</span> 60–79% hơi chậm</span>
                   <span><span className="text-red-400 font-bold">■</span> &lt;60% chậm đáng kể</span>
                   <span className="text-slate-500">·</span>
-                  <span>Xếp ô: YoY ĐKM × tốc độ vs kỳ vọng (ngưỡng 80%) · <span className="text-amber-300 font-mono">≈</span> = vùng 75–84% (gần ngưỡng)</span>
-                  <span className="text-slate-500">·</span>
-                  <span><span className="text-green-400 font-mono font-bold">↑ 3T</span> / <span className="text-slate-400 font-mono font-bold">→ 3T</span> / <span className="text-red-400 font-mono font-bold">↓ 3T</span> = xu hướng DS ĐKM 3 tháng thực tế gần nhất</span>
+                  <span>Xếp ô: YoY ĐKM × tốc độ vs kỳ vọng (ngưỡng 80%)</span>
                   <span className="text-slate-500">·</span>
                   <span className="px-1.5 py-0.5 rounded border border-amber-600/40 text-amber-400 text-[10px] font-mono">BASE↓</span>
                   <span>= YoY cao do cùng kỳ 2025 bất thường thấp</span>
@@ -896,20 +884,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                           {q.teams.map(t => {
                             const isExpanded = expandedCeoTeam === t.id;
                             const baseFlag = t.hasYoy && (t.yoy ?? 0) > 80 && t.dkmTarget !== null && t.prevDkm < (t.dkmTarget ?? 0) * 0.5;
-                            // Fuzzy zone: 75–84% is borderline, not cleanly good/bad
-                            const isBorderline = t.dkmKpiPct !== null && t.dkmKpiPct >= 75 && t.dkmKpiPct < 85;
-                            const dkmPctColor = t.dkmKpiPct === null ? "text-slate-400"
-                              : t.dkmKpiPct >= 85 ? "text-green-400"
-                              : isBorderline    ? "text-amber-300"
-                              : t.dkmKpiPct >= 60 ? "text-amber-400"
-                              : "text-red-400";
-                            // Momentum: MoM ĐKM direction for context
-                            const mom = t.momTrend;
-                            const momUp   = mom !== null && mom > 5;
-                            const momDown = mom !== null && mom < -5;
-                            // ĐKM revenue scale (projDkm) — consistent with Tiến độ % which is also ĐKM-based
-                            // projRev (total DS) would be apples-vs-oranges since % is ĐKM-only
-                            const revTy = (t.projDkm / 1000).toFixed(2);
+                            const dkmPctColor = (t.dkmKpiPct ?? 0) >= 80 ? "text-green-400" : (t.dkmKpiPct ?? 0) >= 60 ? "text-amber-400" : "text-red-400";
                             return (
                               <div key={t.id} className="rounded-lg bg-slate-800/70 border border-slate-700/50 overflow-hidden">
                                 {/* Summary row — always visible, click to expand */}
@@ -918,16 +893,12 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                   className="w-full px-3 py-2 flex items-center justify-between hover:bg-slate-700/40 transition-colors cursor-pointer"
                                 >
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                    <div className="flex items-center gap-1.5">
                                       <span className="text-xs font-semibold text-white">{t.name}</span>
                                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${t.region === "HN" ? "bg-green-900/60 text-green-400" : "bg-blue-900/60 text-blue-400"}`}>
                                         {t.region}
                                       </span>
                                       {baseFlag && <span className="text-[9px] px-1 py-0.5 rounded border border-amber-600/40 text-amber-400 font-mono">BASE↓</span>}
-                                      {/* 3-month trend arrow — completed months only */}
-                                      {momUp   && <span className="text-[9px] px-1 py-0.5 rounded bg-green-900/40 border border-green-600/30 text-green-400 font-mono" title={`DS ĐKM xu hướng tăng ${mom!.toFixed(0)}% (3 tháng thực tế)`}>↑ 3T</span>}
-                                      {!momUp && !momDown && mom !== null && <span className="text-[9px] px-1 py-0.5 rounded bg-slate-700/60 border border-slate-600/40 text-slate-400 font-mono" title={`DS ĐKM đi ngang (3 tháng thực tế)`}>→ 3T</span>}
-                                      {momDown && <span className="text-[9px] px-1 py-0.5 rounded bg-red-900/40 border border-red-600/30 text-red-400 font-mono" title={`DS ĐKM xu hướng giảm ${Math.abs(mom!).toFixed(0)}% (3 tháng thực tế)`}>↓ 3T</span>}
                                       <button
                                         onClick={e => { e.stopPropagation(); setEditingTeamNote(t.id); setTeamNoteInput(teamNotes[t.id] ?? ""); if (!isExpanded) setExpandedCeoTeam(t.id); }}
                                         title="Ghi chú"
@@ -945,36 +916,17 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                       </div>
                                     )}
                                   </div>
-                                  <div className="flex items-stretch gap-3 flex-shrink-0">
-                                    {/* Tiến độ ĐKM */}
+                                  <div className="flex items-center gap-2 flex-shrink-0">
                                     {t.dkmKpiPct !== null && (
-                                      <div className="text-center min-w-[40px]">
-                                        <div className="text-[8px] text-slate-500 uppercase tracking-wide mb-0.5">
-                                          {isProjected ? "Dự kiến" : "Thực tế"}
-                                        </div>
-                                        <div className={`text-[11px] font-bold font-mono leading-none ${dkmPctColor}`}>
-                                          {isBorderline ? "≈" : ""}{t.dkmKpiPct}%
-                                        </div>
-                                        <div className="text-[8px] text-slate-500 font-mono mt-0.5">
-                                          DS ĐKM {isProjected ? "~" : ""}{revTy} tỷ
-                                        </div>
-                                      </div>
+                                      <span className={`text-[10px] font-bold font-mono ${dkmPctColor}`}>{t.dkmKpiPct}%</span>
                                     )}
-                                    {/* Xu hướng 4 tháng */}
-                                    <div className="text-center">
-                                      <div className="text-[8px] text-slate-500 uppercase tracking-wide mb-1">4 tháng</div>
-                                      <MiniSparkline vals={t.sparkVals} />
-                                    </div>
-                                    {/* So cùng kỳ 2025 */}
+                                    <MiniSparkline vals={t.sparkVals} />
                                     {t.hasYoy && (
-                                      <div className="text-center min-w-[40px]">
-                                        <div className="text-[8px] text-slate-500 uppercase tracking-wide mb-0.5">So 2025</div>
-                                        <div className={`text-[11px] font-semibold font-mono leading-none ${(t.yoy ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                          {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
-                                        </div>
-                                      </div>
+                                      <span className={`text-[11px] font-semibold font-mono ${(t.yoy ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                        {(t.yoy ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(t.yoy ?? 0).toFixed(1)}%
+                                      </span>
                                     )}
-                                    <span className="text-slate-600 text-[10px] self-center">{isExpanded ? "▲" : "▼"}</span>
+                                    <span className="text-slate-600 text-[10px]">{isExpanded ? "▲" : "▼"}</span>
                                   </div>
                                 </div>
 
