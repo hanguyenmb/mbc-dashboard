@@ -644,12 +644,15 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
             // % đạt mục tiêu DS tổng (dùng projRev so với target)
             const kpiPct = t.target > 0 ? Math.round(projRev / t.target * 100) : null;
 
-            // MoM momentum: compare pace-projected current month vs previous full month
-            // Use projDkm (raw / paceRatio) so mid-month comparisons are fair
-            const prevMonthDkm = sparkVals.length >= 2 ? sparkVals[sparkVals.length - 2] : 0;
-            const momTrend = prevMonthDkm > 0
-              ? ((projDkm - prevMonthDkm) / prevMonthDkm * 100)
-              : null;
+            // 3-month trend: completed months only (exclude current if mid-month)
+            const completedSpark = isProjected ? sparkVals.slice(0, -1) : sparkVals;
+            const last3 = completedSpark.filter(v => v > 0).slice(-3);
+            let momTrend: number | null = null;
+            if (last3.length >= 2) {
+              const oldAvg = last3.slice(0, -1).reduce((s, v) => s + v, 0) / (last3.length - 1);
+              const newVal = last3[last3.length - 1];
+              momTrend = oldAvg > 0 ? (newVal - oldAvg) / oldAvg * 100 : null;
+            }
 
             return {
               id: t.teamId, name: t.teamName, region: t.region,
@@ -852,7 +855,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   <span className="text-slate-500">·</span>
                   <span>Xếp ô: YoY ĐKM × tốc độ vs kỳ vọng (ngưỡng 80%) · <span className="text-amber-300 font-mono">≈</span> = vùng 75–84% (gần ngưỡng)</span>
                   <span className="text-slate-500">·</span>
-                  <span><span className="text-green-400 font-mono font-bold">↑ MoM</span> / <span className="text-red-400 font-mono font-bold">↓ MoM</span> = xu hướng ĐKM so tháng trước</span>
+                  <span><span className="text-green-400 font-mono font-bold">↑ 3T</span> / <span className="text-slate-400 font-mono font-bold">→ 3T</span> / <span className="text-red-400 font-mono font-bold">↓ 3T</span> = xu hướng DS ĐKM 3 tháng thực tế gần nhất</span>
                   <span className="text-slate-500">·</span>
                   <span className="px-1.5 py-0.5 rounded border border-amber-600/40 text-amber-400 text-[10px] font-mono">BASE↓</span>
                   <span>= YoY cao do cùng kỳ 2025 bất thường thấp</span>
@@ -921,9 +924,10 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                                         {t.region}
                                       </span>
                                       {baseFlag && <span className="text-[9px] px-1 py-0.5 rounded border border-amber-600/40 text-amber-400 font-mono">BASE↓</span>}
-                                      {/* Momentum badge — MoM ĐKM trend */}
-                                      {momUp   && <span className="text-[9px] px-1 py-0.5 rounded bg-green-900/40 border border-green-600/30 text-green-400 font-mono" title={`ĐKM tháng này tăng ${mom!.toFixed(0)}% so tháng trước`}>↑ MoM</span>}
-                                      {momDown && <span className="text-[9px] px-1 py-0.5 rounded bg-red-900/40 border border-red-600/30 text-red-400 font-mono" title={`ĐKM tháng này giảm ${Math.abs(mom!).toFixed(0)}% so tháng trước`}>↓ MoM</span>}
+                                      {/* 3-month trend arrow — completed months only */}
+                                      {momUp   && <span className="text-[9px] px-1 py-0.5 rounded bg-green-900/40 border border-green-600/30 text-green-400 font-mono" title={`DS ĐKM xu hướng tăng ${mom!.toFixed(0)}% (3 tháng thực tế)`}>↑ 3T</span>}
+                                      {!momUp && !momDown && mom !== null && <span className="text-[9px] px-1 py-0.5 rounded bg-slate-700/60 border border-slate-600/40 text-slate-400 font-mono" title={`DS ĐKM đi ngang (3 tháng thực tế)`}>→ 3T</span>}
+                                      {momDown && <span className="text-[9px] px-1 py-0.5 rounded bg-red-900/40 border border-red-600/30 text-red-400 font-mono" title={`DS ĐKM xu hướng giảm ${Math.abs(mom!).toFixed(0)}% (3 tháng thực tế)`}>↓ 3T</span>}
                                       <button
                                         onClick={e => { e.stopPropagation(); setEditingTeamNote(t.id); setTeamNoteInput(teamNotes[t.id] ?? ""); if (!isExpanded) setExpandedCeoTeam(t.id); }}
                                         title="Ghi chú"
