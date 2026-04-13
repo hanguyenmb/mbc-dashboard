@@ -291,80 +291,103 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
             );
           };
 
+          // Avg DS max for ranking bar width calc
+          const maxAvgDs = Math.max(...avgDsData.map(d => d["TB DS/KH (tr.đ)"]), 1);
+
           return (
             <div className="space-y-3">
-              {/* Row 1: Chart 1 + Chart 2 */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Chart 1: Số KH */}
-                <Card>
-                  <CardHeader className="pb-2 pt-4 px-4">
+              {/* Chart 1: Số KH — full width */}
+              <Card>
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <CardTitle className="text-xs font-semibold text-slate-300">Số Khách Hàng theo Team</CardTitle>
-                    <div className="text-[10px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-3">
+                    <div className="text-[10px] text-slate-500 flex flex-wrap items-center gap-3">
                       {monthComplete ? (
                         <><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-green-500"/> Tăng so CK</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-red-500"/> Giảm so CK</span></>
                       ) : (
-                        <><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HN_COLOR}}/> HN</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HCM_COLOR}}/> HCM</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm border border-dashed border-slate-400 opacity-50"/><span className="inline-block w-3 h-2 rounded-sm opacity-30" style={{background:"#94a3b8"}}/> Dự kiến thêm (pace)</span></>
+                        <><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HN_COLOR}}/> HN</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm" style={{background:HCM_COLOR}}/> HCM</span><span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm opacity-30" style={{background:"#94a3b8"}}/> Dự kiến thêm</span></>
                       )}
                       {hasPrevKhData && <span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-slate-500/60"/> Cùng kỳ 2025</span>}
                     </div>
-                  </CardHeader>
-                  <CardContent className="px-2 pb-3">
-                    <ResponsiveContainer width="100%" height={220}>
-                      <BarChart data={khChartData} margin={{ top: 16, right: 8, left: -20, bottom: 40 }}>
-                        <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
-                        <YAxis tick={{ fill: "#64748b", fontSize: 10 }} />
-                        <Tooltip content={<CustomTooltipKh />} />
-                        {/* Cột thực tế (solid) — stack bottom */}
-                        <Bar dataKey="Thực tế" stackId="kh" maxBarSize={22}
-                          radius={monthComplete || !isCurrentMonth || paceRatio >= 1 ? [3,3,0,0] : [0,0,0,0]}>
-                          {monthComplete && (
-                            <LabelList dataKey="yoyLabel" position="top"
-                              content={(props: any) => {
-                                const { x, y, width, value, index } = props;
-                                if (!value) return null;
-                                const d = khChartData[index];
-                                const color = (d?.yoyPct ?? 0) >= 0 ? "#4ade80" : "#f87171";
-                                return <text x={x + width / 2} y={y - 3} textAnchor="middle" fill={color} fontSize={9} fontWeight={600}>{value}</text>;
-                              }}
-                            />
-                          )}
-                          {khChartData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                  </div>
+                </CardHeader>
+                <CardContent className="px-2 pb-3">
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={khChartData} margin={{ top: 16, right: 8, left: -20, bottom: 44 }}>
+                      <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
+                      <YAxis tick={{ fill: "#64748b", fontSize: 10 }} />
+                      <Tooltip content={<CustomTooltipKh />} />
+                      <Bar dataKey="Thực tế" stackId="kh" maxBarSize={28}
+                        radius={monthComplete || paceRatio >= 1 ? [3,3,0,0] : [0,0,0,0]}>
+                        {monthComplete && (
+                          <LabelList dataKey="yoyLabel" position="top"
+                            content={(props: any) => {
+                              const { x, y, width, value, index } = props;
+                              if (!value) return null;
+                              const d = khChartData[index];
+                              const color = (d?.yoyPct ?? 0) >= 0 ? "#4ade80" : "#f87171";
+                              return <text x={x + width / 2} y={y - 3} textAnchor="middle" fill={color} fontSize={9} fontWeight={600}>{value}</text>;
+                            }}
+                          />
+                        )}
+                        {khChartData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                      </Bar>
+                      {isCurrentMonth && paceRatio < 1 && (
+                        <Bar dataKey="Dự kiến thêm" stackId="kh" maxBarSize={28} radius={[3,3,0,0]}>
+                          {khChartData.map((d, i) => <Cell key={i} fill={d.color} opacity={0.3} />)}
                         </Bar>
-                        {/* Phần dự kiến thêm — stack top, mờ, chỉ giữa tháng */}
-                        {isCurrentMonth && paceRatio < 1 && (
-                          <Bar dataKey="Dự kiến thêm" stackId="kh" maxBarSize={22} radius={[3,3,0,0]}>
-                            {khChartData.map((d, i) => <Cell key={i} fill={d.color} opacity={0.3} />)}
-                          </Bar>
-                        )}
-                        {hasPrevKhData && (
-                          <Bar dataKey="Cùng kỳ 2025" maxBarSize={22} fill={PREV_COLOR} radius={[3,3,0,0]} opacity={0.6} />
-                        )}
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
+                      )}
+                      {hasPrevKhData && (
+                        <Bar dataKey="Cùng kỳ 2025" maxBarSize={28} fill={PREV_COLOR} radius={[3,3,0,0]} opacity={0.6} />
+                      )}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
 
-                {/* Chart 2: TB DS/KH ranked */}
-                <Card>
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-xs font-semibold text-slate-300">TB Doanh Số / Khách Hàng (tr.đ)</CardTitle>
-                    <div className="text-[10px] text-slate-500 mt-0.5">Giá trị trung bình mỗi KH — xếp từ cao xuống thấp</div>
-                  </CardHeader>
-                  <CardContent className="px-2 pb-3">
-                    <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={avgDsData} layout="vertical" margin={{ top: 4, right: 40, left: 10, bottom: 4 }}>
-                        <XAxis type="number" tick={{ fill: "#64748b", fontSize: 10 }} />
-                        <YAxis type="category" dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} width={72} />
-                        <Tooltip content={<CustomTooltipKh />} />
-                        <Bar dataKey="TB DS/KH (tr.đ)" maxBarSize={16} radius={[0,3,3,0]}>
-                          <LabelList dataKey="TB DS/KH (tr.đ)" position="right" style={{ fill: "#94a3b8", fontSize: 10 }} />
-                          {avgDsData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              </div>
+              {/* Chart 2: TB DS/KH — ranking list, full width */}
+              <Card>
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <CardTitle className="text-xs font-semibold text-slate-300">TB Doanh Số / Khách Hàng — Xếp Hạng</CardTitle>
+                    <div className="text-[10px] text-slate-500">Giá trị trung bình mỗi KH · cao = khai thác tốt hơn</div>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                    {avgDsData.map((d, i) => {
+                      const barW = Math.round((d["TB DS/KH (tr.đ)"] / maxAvgDs) * 100);
+                      const row = rows.find(r => shortName(r.teamName) === d.name);
+                      const yoyVal = row?.avgYoy ?? null;
+                      return (
+                        <div key={d.name} className="flex items-center gap-3">
+                          {/* Rank */}
+                          <span className="text-[11px] font-bold text-slate-500 w-5 text-right shrink-0">{i+1}</span>
+                          {/* Team name + region */}
+                          <div className="w-24 shrink-0">
+                            <span className="text-[11px] text-slate-300 font-medium leading-tight block truncate">{d.name}</span>
+                            <span className={`text-[9px] font-mono ${d.region === "HN" ? "text-blue-400" : "text-orange-400"}`}>{d.region}</span>
+                          </div>
+                          {/* Bar + value */}
+                          <div className="flex-1 flex items-center gap-2 min-w-0">
+                            <div className="flex-1 h-[6px] bg-slate-700/60 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full transition-all" style={{ width: `${barW}%`, backgroundColor: d.color }} />
+                            </div>
+                            <span className="text-[12px] font-bold tabular-nums shrink-0" style={{ color: d.color }}>
+                              {d["TB DS/KH (tr.đ)"].toLocaleString()} tr
+                            </span>
+                            {yoyVal !== null && (
+                              <span className={`text-[10px] font-semibold shrink-0 ${yoyVal >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                {yoyVal >= 0 ? "▲" : "▼"}{Math.abs(yoyVal).toFixed(0)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Chart 3: % KH ĐKM / Tổng KH — full width */}
               {hasDkmKhData && dkmPctData.length > 0 && (
@@ -374,12 +397,12 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                     <div className="text-[10px] text-slate-500 mt-0.5">Team nào đang acquire KH mới nhiều nhất — xếp từ cao xuống thấp</div>
                   </CardHeader>
                   <CardContent className="px-2 pb-3">
-                    <ResponsiveContainer width="100%" height={160}>
-                      <BarChart data={dkmPctData} margin={{ top: 4, right: 8, left: -20, bottom: 40 }}>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={dkmPctData} margin={{ top: 4, right: 8, left: -20, bottom: 44 }}>
                         <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
                         <YAxis tick={{ fill: "#64748b", fontSize: 10 }} unit="%" domain={[0, 100]} />
                         <Tooltip content={<CustomTooltipKh />} formatter={(v: any) => [`${v}%`, "% KH ĐKM"]} />
-                        <Bar dataKey="% KH ĐKM" maxBarSize={28} radius={[3,3,0,0]}>
+                        <Bar dataKey="% KH ĐKM" maxBarSize={32} radius={[3,3,0,0]}>
                           <LabelList dataKey="% KH ĐKM" position="top" style={{ fill: "#94a3b8", fontSize: 10 }} formatter={(v: any) => `${v}%`} />
                           {dkmPctData.map((d, i) => <Cell key={i} fill={d.color} />)}
                         </Bar>
