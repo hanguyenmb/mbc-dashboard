@@ -255,16 +255,26 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
               };
             });
 
-          // Chart 2: TB DS/KH — horizontal bar ranked
-          const avgDsData = rows
-            .filter(r => r.avgDs > 0)
+          // Chart 2: TB DS/KH — ranking list với baseline theo vùng
+          const avgDsRows = rows.filter(r => r.avgDs > 0);
+          const hnAvgDs  = (() => { const ts = avgDsRows.filter(r => r.region === "HN");  return ts.length ? ts.reduce((s,r) => s + r.avgDs, 0) / ts.length : null; })();
+          const hcmAvgDs = (() => { const ts = avgDsRows.filter(r => r.region === "HCM"); return ts.length ? ts.reduce((s,r) => s + r.avgDs, 0) / ts.length : null; })();
+          const avgDsData = avgDsRows
             .sort((a, b) => b.avgDs - a.avgDs)
-            .map(r => ({
-              name: shortName(r.teamName),
-              region: r.region,
-              "TB DS/KH (tr.đ)": Math.round(r.avgDs),
-              color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
-            }));
+            .map(r => {
+              const baseline = r.region === "HN" ? hnAvgDs : hcmAvgDs;
+              const vsBaseline = baseline && baseline > 0 ? (r.avgDs - baseline) / baseline * 100 : null;
+              return {
+                name: shortName(r.teamName),
+                fullName: r.teamName,
+                region: r.region,
+                avgDs: r.avgDs,
+                color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
+                yoyVal: r.avgYoy,
+                baseline,
+                vsBaseline,
+              };
+            });
 
           // Chart 3: % KH ĐKM / Tổng KH
           const dkmPctData = dkmRows
@@ -291,8 +301,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
             );
           };
 
-          // Avg DS max for ranking bar width calc
-          const maxAvgDs = Math.max(...avgDsData.map(d => d["TB DS/KH (tr.đ)"]), 1);
+          const maxAvgDs = Math.max(...avgDsData.map(d => d.avgDs), 1);
 
           return (
             <div className="space-y-3">
@@ -345,40 +354,57 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                 </CardContent>
               </Card>
 
-              {/* Chart 2: TB DS/KH — ranking list, full width */}
+              {/* Chart 2: TB DS/KH — ranking list với baseline vùng */}
               <Card>
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
                     <CardTitle className="text-xs font-semibold text-slate-300">TB Doanh Số / Khách Hàng — Xếp Hạng</CardTitle>
-                    <div className="text-[10px] text-slate-500">Giá trị trung bình mỗi KH · cao = khai thác tốt hơn</div>
+                    {/* Baseline badges */}
+                    <div className="flex items-center gap-3 text-[10px]">
+                      {hnAvgDs !== null && <span className="flex items-center gap-1 px-2 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-blue-300"><span className="font-mono">HN TB:</span><span className="font-bold">{hnAvgDs.toFixed(2)} tr</span></span>}
+                      {hcmAvgDs !== null && <span className="flex items-center gap-1 px-2 py-0.5 rounded border border-orange-500/30 bg-orange-500/10 text-orange-300"><span className="font-mono">HCM TB:</span><span className="font-bold">{hcmAvgDs.toFixed(2)} tr</span></span>}
+                      <span className="text-slate-500">· vạch ▸ = baseline vùng</span>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
                     {avgDsData.map((d, i) => {
-                      const barW = Math.round((d["TB DS/KH (tr.đ)"] / maxAvgDs) * 100);
-                      const row = rows.find(r => shortName(r.teamName) === d.name);
-                      const yoyVal = row?.avgYoy ?? null;
+                      const barW    = (d.avgDs / maxAvgDs) * 100;
+                      const baseW   = d.baseline ? (d.baseline / maxAvgDs) * 100 : null;
+                      const aboveBase = d.vsBaseline !== null && d.vsBaseline >= 0;
+                      const assessColor = d.vsBaseline === null ? "text-slate-500"
+                        : d.vsBaseline >= 10  ? "text-green-400"
+                        : d.vsBaseline >= -10 ? "text-amber-400"
+                        : "text-red-400";
+                      const assessLabel = d.vsBaseline === null ? ""
+                        : d.vsBaseline >= 10  ? `+${d.vsBaseline.toFixed(0)}% TB vùng`
+                        : d.vsBaseline >= -10 ? `≈ TB vùng`
+                        : `${d.vsBaseline.toFixed(0)}% TB vùng`;
                       return (
                         <div key={d.name} className="flex items-center gap-3">
-                          {/* Rank */}
                           <span className="text-[11px] font-bold text-slate-500 w-5 text-right shrink-0">{i+1}</span>
-                          {/* Team name + region */}
                           <div className="w-24 shrink-0">
                             <span className="text-[11px] text-slate-300 font-medium leading-tight block truncate">{d.name}</span>
                             <span className={`text-[9px] font-mono ${d.region === "HN" ? "text-blue-400" : "text-orange-400"}`}>{d.region}</span>
                           </div>
-                          {/* Bar + value */}
                           <div className="flex-1 flex items-center gap-2 min-w-0">
-                            <div className="flex-1 h-[6px] bg-slate-700/60 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full transition-all" style={{ width: `${barW}%`, backgroundColor: d.color }} />
+                            {/* Bar với vạch baseline */}
+                            <div className="flex-1 relative h-[7px] bg-slate-700/60 rounded-full overflow-visible">
+                              <div className="absolute inset-y-0 left-0 rounded-full transition-all"
+                                style={{ width: `${barW}%`, backgroundColor: aboveBase ? d.color : (d.region === "HN" ? "#3b82f6" : "#f97316"), opacity: aboveBase ? 1 : 0.6 }} />
+                              {baseW !== null && (
+                                <div className="absolute top-[-2px] bottom-[-2px] w-[2px] rounded-full bg-white/40 z-10"
+                                  style={{ left: `${baseW}%` }} />
+                              )}
                             </div>
-                            <span className="text-[12px] font-bold tabular-nums shrink-0" style={{ color: d.color }}>
-                              {d["TB DS/KH (tr.đ)"].toLocaleString()} tr
+                            <span className="text-[12px] font-bold tabular-nums shrink-0 w-16" style={{ color: d.color }}>
+                              {d.avgDs.toFixed(2)} tr
                             </span>
-                            {yoyVal !== null && (
-                              <span className={`text-[10px] font-semibold shrink-0 ${yoyVal >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                {yoyVal >= 0 ? "▲" : "▼"}{Math.abs(yoyVal).toFixed(0)}%
+                            <span className={`text-[9px] font-semibold shrink-0 w-20 ${assessColor}`}>{assessLabel}</span>
+                            {d.yoyVal !== null && (
+                              <span className={`text-[10px] font-semibold shrink-0 ${(d.yoyVal ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                {(d.yoyVal ?? 0) >= 0 ? "▲" : "▼"}{Math.abs(d.yoyVal ?? 0).toFixed(0)}%
                               </span>
                             )}
                           </div>
