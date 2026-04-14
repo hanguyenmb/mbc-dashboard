@@ -51,7 +51,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
       const teams = source.find(m => m.month === mk)?.teams ?? [];
       for (const t of teams) {
         if (!map[t.teamId]) {
-          const base: any = { ...t, revenue: 0, target: 0, customerCount: 0 };
+          const base: any = { ...t, revenue: 0, target: 0, customerCount: 0, customerCountDkm: 0 };
           SVC_KEYS.forEach(s => { base[s.key] = 0; });
           map[t.teamId] = base;
         }
