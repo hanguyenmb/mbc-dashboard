@@ -786,8 +786,9 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           const inGoodDkm = (t: typeof teamData[0]) => t.dkmKpiPct !== null ? t.dkmKpiPct >= DKM_KPI_THRESHOLD  : t.projDkm >= avgPerTeam;
           const inGoodYoy = (t: typeof teamData[0]) => (t.yoy ?? 0) >= 0;
 
-          const starCount  = teamData.filter(t => inGoodYoy(t) && inStarDkm(t)).length;
-          const watchCount = teamData.filter(t => !inGoodYoy(t) || !inGoodDkm(t)).length;
+          const starCount     = teamData.filter(t => inGoodYoy(t) && inStarDkm(t)).length;
+          const potentialCount = teamData.filter(t => inGoodYoy(t) && !inStarDkm(t)).length;
+          const watchCount    = teamData.filter(t => !inGoodYoy(t) || !inGoodDkm(t)).length;
 
           // Tổng mục tiêu ĐKM ước tính (chỉ tính team có dkmTarget)
           const totalDkmTarget = teamData.reduce((s, t) => s + (t.dkmTarget ?? 0), 0);
@@ -907,8 +908,13 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   {/* Ngôi Sao / Ổn Định */}
                   <div className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-3 py-2.5">
                     <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wide mb-1">Ngôi Sao / Ổn Định</div>
-                    <div className="text-xl font-bold leading-none text-green-400">{starCount} team</div>
-                    <div className="text-[11px] text-slate-400 mt-1">YoY tốt — đang tăng trưởng</div>
+                    <div className="flex items-baseline gap-1.5 leading-none">
+                      <span className="text-xl font-bold text-green-400">{starCount}</span>
+                      <span className="text-sm text-slate-500">/</span>
+                      <span className="text-xl font-bold text-violet-400">{potentialCount}</span>
+                      <span className="text-sm text-slate-400">team</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">YoY tốt — ⭐{starCount} ≥95% · 🔄{potentialCount} &lt;95%</div>
                   </div>
                   {/* Chú Ý / Khẩn Cấp */}
                   <div className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-3 py-2.5">
