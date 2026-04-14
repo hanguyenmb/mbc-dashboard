@@ -517,19 +517,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                           }}
                         />
                         <Bar dataKey="% KH ĐKM" maxBarSize={28} radius={[3,3,0,0]}>
-                          <LabelList dataKey="diffPp" position="top"
-                            content={(props: any) => {
-                              const { x, y, width, value } = props;
-                              if (value === null || value === undefined) return null;
-                              const color = value >= 0 ? "#4ade80" : "#f87171";
-                              const sign = value >= 0 ? "▲" : "▼";
-                              return (
-                                <text x={x + width / 2} y={y - 3} textAnchor="middle" fill={color} fontSize={9} fontWeight={700}>
-                                  {sign}{Math.abs(value)}pp
-                                </text>
-                              );
-                            }}
-                          />
+                          <LabelList dataKey="% KH ĐKM" position="top" style={{ fill: "#94a3b8", fontSize: 10 }} formatter={(v: any) => `${v}%`} />
                           {dkmPctData.map((d, i) => <Cell key={i} fill={d.color} />)}
                         </Bar>
                         {hasPrevDkmPct && (
