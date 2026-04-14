@@ -86,40 +86,70 @@ function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number)
 
   if (quadKey === "star") {
     const obs = avgKpi > 130
-      ? `${teams.length} team vượt kỳ vọng mạnh (TB ${Math.round(avgKpi)}% tiến độ).`
-      : `${teams.length} team đang đúng hướng (TB ${Math.round(avgKpi)}% tiến độ).`;
+      ? `${teams.length} team vượt 95% tiến độ ĐKM, trung bình đạt ${Math.round(avgKpi)}%.`
+      : `${teams.length} team đạt ≥95% tiến độ ĐKM (TB ${Math.round(avgKpi)}%).`;
     const actions: string[] = [];
-    if (avgKpi > 140) actions.push(`Cân nhắc tăng chỉ tiêu hoặc điều phối nguồn lực sang team yếu hơn.`);
-    else actions.push(`Duy trì đà hiện tại, không cần can thiệp.`);
-    if (best) actions.push(`${best.name} dẫn đầu — có thể dùng làm benchmark cho các team khác.`);
+    if (avgKpi > 140) actions.push(`Đang vượt mạnh — cân nhắc nâng chỉ tiêu hoặc điều phối một phần nguồn lực hỗ trợ team yếu.`);
+    else actions.push(`Duy trì nhịp hiện tại, không cần can thiệp. Theo dõi để giữ đà đến cuối tháng.`);
+    if (best) actions.push(`${best.name} dẫn đầu — chia sẻ cách làm với các team khác để nhân rộng.`);
     return { obs, actions };
   }
   if (quadKey === "potential") {
-    const obs = `${teams.length} team có YoY tốt nhưng tốc độ ĐKM tháng này chưa đạt (TB ${Math.round(avgKpi)}%).`;
+    const below80 = teams.filter(t => (t.dkmKpiPct ?? 0) < 80);
+    const obs = `${teams.length} team YoY tốt nhưng chưa đạt ngưỡng 95% ĐKM (TB ${Math.round(avgKpi)}%).`;
     const actions: string[] = [];
-    actions.push(`Review pipeline deals đang chờ close — xu hướng tốt, chỉ cần đẩy tốc độ.`);
-    if (worst && (worst.dkmKpiPct ?? 0) < 70) actions.push(`${worst.name} chậm nhất (${worst.dkmKpiPct}%) — kiểm tra hoạt động tuần này.`);
-    if (remainDays > 0 && worst?.dkmTarget) {
-      const needed = Math.round((worst.dkmTarget - worst.rawDkm) / remainDays);
-      if (needed > 0) actions.push(`${worst.name} cần ~${needed.toLocaleString()}M/ngày trong ${remainDays} ngày còn lại.`);
+    actions.push(`Xu hướng tốt — chỉ cần đẩy tốc độ. Review pipeline deals đang chờ close trong ${remainDays} ngày còn lại.`);
+    if (below80.length > 0) actions.push(`${below80.map(t => t.name).join(", ")} chưa đạt 80% — ưu tiên hỗ trợ để không rớt xuống Chú Ý.`);
+    if (worst && worst.dkmTarget) {
+      const needed = Math.round((worst.dkmTarget - worst.rawDkm) / Math.max(remainDays, 1));
+      if (needed > 0) actions.push(`${worst.name} cần ~${needed.toLocaleString()}M/ngày để kịp tháng này.`);
     }
     return { obs, actions };
   }
   if (quadKey === "stable") {
-    const obs = `${teams.length} team đạt KPI tháng nhưng đang giảm so cùng kỳ 2025.`;
+    const teamsWithYoy = teams.filter(t => t.hasYoy);
+    const avgYoyDrop = teamsWithYoy.length > 0
+      ? teamsWithYoy.reduce((s, t) => s + (t.yoy ?? 0), 0) / teamsWithYoy.length : null;
+    const deepDrop = teamsWithYoy.filter(t => (t.yoy ?? 0) < -20);
+    const obs = `${teams.length} team đạt KPI tháng (TB ${Math.round(avgKpi)}%) nhưng trung bình giảm ${Math.abs(avgYoyDrop ?? 0).toFixed(0)}% so cùng kỳ 2025.`;
     const actions: string[] = [];
-    if (worstYoy) actions.push(`${worstYoy.name} giảm ${Math.abs(worstYoy.yoy ?? 0).toFixed(0)}% YoY — tìm hiểu nguyên nhân: mất khách cũ, cạnh tranh, hay chất lượng dịch vụ?`);
-    actions.push(`Không được chủ quan — tháng này ổn nhưng xu hướng YoY giảm là cảnh báo sớm.`);
+    if (worstYoy) {
+      const gap = Math.abs(worstYoy.yoy ?? 0);
+      actions.push(`${worstYoy.name} giảm ${gap.toFixed(0)}% YoY — phân tích nguyên nhân: (1) mất khách gia hạn, (2) thị trường co lại, hay (3) sản phẩm/dịch vụ mất cạnh tranh?`);
+    }
+    if (deepDrop.length > 1) {
+      actions.push(`${deepDrop.length} team giảm >20% YoY — tìm điểm chung: thay đổi nhân sự, mất khách lớn, hay vấn đề chất lượng toàn diện?`);
+    }
+    actions.push(`⚠️ KPI tháng ổn là tín hiệu dễ bỏ qua — nếu không chặn đà giảm YoY ngay, tháng tới nhiều khả năng rớt xuống Khẩn Cấp.`);
+    if (remainDays <= 10) actions.push(`Còn ${remainDays} ngày — cố gắng chốt thêm deal để thu hẹp khoảng cách YoY trước khi đóng tháng.`);
     return { obs, actions };
   }
   if (quadKey === "watch") {
-    const obs = `${teams.length} team cần can thiệp: vừa giảm YoY vừa chưa đạt KPI tháng.`;
+    const teamsWithYoy = teams.filter(t => t.hasYoy);
+    const seriousYoy = teamsWithYoy.filter(t => (t.yoy ?? 0) < -30);
+    const criticalKpi = teams.filter(t => (t.dkmKpiPct ?? 0) < 50);
+    const obs = `🚨 ${teams.length} team cần can thiệp khẩn: vừa giảm YoY vừa chưa đạt KPI tháng (TB chỉ ${Math.round(avgKpi)}% tiến độ).`;
     const actions: string[] = [];
-    if (worst && (worst.dkmKpiPct ?? 0) < 60) actions.push(`${worst.name} chỉ đạt ${worst.dkmKpiPct}% tiến độ — họp ngay với team lead, xem pipeline cụ thể.`);
-    else if (worst) actions.push(`${worst.name} thấp nhất (${worst.dkmKpiPct}%) — cần review hoạt động ngay.`);
-    if (worstYoy && (worstYoy.yoy ?? 0) < -25) actions.push(`${worstYoy.name} giảm ${Math.abs(worstYoy.yoy ?? 0).toFixed(0)}% so CK25 — mức sụt giảm nghiêm trọng.`);
-    if (remainDays <= 7) actions.push(`Chỉ còn ${remainDays} ngày — ưu tiên close deals đang chờ, không mở deal mới.`);
-    else actions.push(`Còn ${remainDays} ngày — cần tăng tốc đáng kể để rút ngắn khoảng cách.`);
+    if (worst) {
+      const kpiVal = worst.dkmKpiPct ?? 0;
+      const needed = worst.dkmTarget ? Math.round((worst.dkmTarget - worst.rawDkm) / Math.max(remainDays, 1)) : null;
+      if (kpiVal < 50) {
+        actions.push(`${worst.name} chỉ đạt ${kpiVal}% — họp team lead ngay hôm nay, xem từng deal trong pipeline. ${needed ? `Cần ~${needed.toLocaleString()}M/ngày để kịp.` : ""}`);
+      } else {
+        actions.push(`${worst.name} thấp nhất (${kpiVal}%) — review hoạt động sale và pipeline ngay. ${needed ? `Cần ~${needed.toLocaleString()}M/ngày còn lại.` : ""}`);
+      }
+    }
+    if (seriousYoy.length > 0) {
+      actions.push(`${seriousYoy.map(t => t.name).join(", ")} giảm >30% so CK — kiểm tra ngay: có mất khách lớn, thay đổi nhân sự, hay vấn đề chất lượng dịch vụ không?`);
+    } else if (worstYoy) {
+      actions.push(`${worstYoy.name} giảm ${Math.abs(worstYoy.yoy ?? 0).toFixed(0)}% YoY — đánh giá lại chiến lược khai thác thị trường của team này.`);
+    }
+    if (criticalKpi.length >= teams.length && teams.length >= 2) {
+      actions.push(`Toàn bộ ${teams.length} team đều dưới 50% — cân nhắc điều phối tạm thời nguồn lực từ Ngôi Sao/Ổn Định để hỗ trợ.`);
+    }
+    if (remainDays <= 5) actions.push(`Chỉ còn ${remainDays} ngày — ưu tiên close 100% deals đang chờ ký, không mở pipeline mới.`);
+    else if (remainDays <= 10) actions.push(`Còn ${remainDays} ngày — tăng tốc tối đa, mỗi ngày phải đạt đủ chỉ tiêu để bù khoảng cách.`);
+    else actions.push(`Còn ${remainDays} ngày — vẫn đủ thời gian nếu hành động ngay. Tổ chức họp toàn team xác định rào cản và tháo gỡ.`);
     return { obs, actions };
   }
   return { obs: "", actions: [] };
@@ -746,12 +776,17 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           const totalRaw   = teamData.reduce((s, t) => s + t.rawDkm, 0);
           const totalProj  = teamData.reduce((s, t) => s + t.projDkm, 0);
 
-          // Xếp ô: trục 1 = YoY ĐKM, trục 2 = % đạt mục tiêu ĐKM ước tính (≥80% = đạt)
-          const DKM_KPI_THRESHOLD = 80;
-          const inGoodDkm = (t: typeof teamData[0]) => t.dkmKpiPct !== null ? t.dkmKpiPct >= DKM_KPI_THRESHOLD : t.projDkm >= totalProj / teamData.length;
+          // Xếp ô:
+          // - inStarDkm  (≥95%): dùng cho Ngôi Sao
+          // - inGoodDkm  (≥80%): dùng để phân biệt Chú Ý vs Khẩn Cấp
+          const STAR_DKM_THRESHOLD = 95;
+          const DKM_KPI_THRESHOLD  = 80;
+          const avgPerTeam = totalProj / teamData.length;
+          const inStarDkm = (t: typeof teamData[0]) => t.dkmKpiPct !== null ? t.dkmKpiPct >= STAR_DKM_THRESHOLD : t.projDkm >= avgPerTeam;
+          const inGoodDkm = (t: typeof teamData[0]) => t.dkmKpiPct !== null ? t.dkmKpiPct >= DKM_KPI_THRESHOLD  : t.projDkm >= avgPerTeam;
           const inGoodYoy = (t: typeof teamData[0]) => (t.yoy ?? 0) >= 0;
 
-          const starCount  = teamData.filter(t => inGoodYoy(t) && inGoodDkm(t)).length;
+          const starCount  = teamData.filter(t => inGoodYoy(t) && inStarDkm(t)).length;
           const watchCount = teamData.filter(t => !inGoodYoy(t) || !inGoodDkm(t)).length;
 
           // Tổng mục tiêu ĐKM ước tính (chỉ tính team có dkmTarget)
@@ -780,8 +815,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           const remainDays = daysInMonth - daysElapsed;
 
           const quadGroups = [
-            { key: "star",      label: "⭐ Ngôi Sao",  sub: "YoY tốt · đang đạt KPI ĐKM",        borderCls: "border-green-600/40",  headCls: "text-green-400",  bgCls: "bg-green-500/5",  teams: teamData.filter(t =>  inGoodYoy(t) &&  inGoodDkm(t)).sort(sortDesc)  },
-            { key: "potential", label: "🔄 Ổn Định",   sub: "YoY tốt · KPI ĐKM cần cải thiện",   borderCls: "border-violet-600/40", headCls: "text-violet-400", bgCls: "bg-violet-500/5", teams: teamData.filter(t =>  inGoodYoy(t) && !inGoodDkm(t)).sort(sortDesc)  },
+            { key: "star",      label: "⭐ Ngôi Sao",  sub: "YoY tốt · DS ĐKM dự kiến ≥95%",     borderCls: "border-green-600/40",  headCls: "text-green-400",  bgCls: "bg-green-500/5",  teams: teamData.filter(t =>  inGoodYoy(t) &&  inStarDkm(t)).sort(sortDesc)  },
+            { key: "potential", label: "🔄 Ổn Định",   sub: "YoY tốt · DS ĐKM dự kiến <95%",     borderCls: "border-violet-600/40", headCls: "text-violet-400", bgCls: "bg-violet-500/5", teams: teamData.filter(t =>  inGoodYoy(t) && !inStarDkm(t)).sort(sortDesc)  },
             { key: "stable",    label: "⚠️ Chú Ý",    sub: "KPI ĐKM ổn · nhưng YoY đang giảm",  borderCls: "border-amber-600/40",  headCls: "text-amber-400",  bgCls: "bg-amber-500/5",  teams: teamData.filter(t => !inGoodYoy(t) &&  inGoodDkm(t)).sort(sortWorst) },
             { key: "watch",     label: "🚨 Khẩn Cấp", sub: "YoY giảm · KPI ĐKM chưa đạt",       borderCls: "border-red-600/40",    headCls: "text-red-400",    bgCls: "bg-red-500/5",    teams: teamData.filter(t => !inGoodYoy(t) && !inGoodDkm(t)).sort(sortWorst) },
           ];
