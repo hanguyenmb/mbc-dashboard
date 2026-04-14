@@ -788,7 +788,8 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
 
           const starCount     = teamData.filter(t => inGoodYoy(t) && inStarDkm(t)).length;
           const potentialCount = teamData.filter(t => inGoodYoy(t) && !inStarDkm(t)).length;
-          const watchCount    = teamData.filter(t => !inGoodYoy(t) || !inGoodDkm(t)).length;
+          const stableCount   = teamData.filter(t => !inGoodYoy(t) &&  inGoodDkm(t)).length;
+          const watchCount    = teamData.filter(t => !inGoodYoy(t) && !inGoodDkm(t)).length;
 
           // Tổng mục tiêu ĐKM ước tính (chỉ tính team có dkmTarget)
           const totalDkmTarget = teamData.reduce((s, t) => s + (t.dkmTarget ?? 0), 0);
@@ -919,8 +920,13 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   {/* Chú Ý / Khẩn Cấp */}
                   <div className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-3 py-2.5">
                     <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wide mb-1">Chú Ý / Khẩn Cấp</div>
-                    <div className="text-xl font-bold leading-none text-red-400">{watchCount} team</div>
-                    <div className="text-[11px] text-slate-400 mt-1">YoY âm — cần can thiệp</div>
+                    <div className="flex items-baseline gap-1.5 leading-none">
+                      <span className="text-xl font-bold text-amber-400">{stableCount}</span>
+                      <span className="text-sm text-slate-500">/</span>
+                      <span className="text-xl font-bold text-red-400">{watchCount}</span>
+                      <span className="text-sm text-slate-400">team</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">YoY âm — ⚠️{stableCount} chú ý · 🚨{watchCount} khẩn cấp</div>
                   </div>
                 </div>
 
