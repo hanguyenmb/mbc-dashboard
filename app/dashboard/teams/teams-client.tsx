@@ -75,7 +75,15 @@ function RegionCard({ label, teams }: { label: string; teams: TeamServiceRecord[
 }
 
 // ── Rule-based suggestion engine — defined at module level (hooks-safe) ──────
-type QTeam = { name: string; dkmKpiPct: number | null; yoy: number | null; hasYoy: boolean; dkmTarget: number | null; projDkm: number; rawDkm: number };
+type QTeam = { name: string; region?: string; dkmKpiPct: number | null; yoy: number | null; hasYoy: boolean; dkmTarget: number | null; projDkm: number; rawDkm: number };
+
+// Phân loại team theo đặc thù vận hành
+function teamType(name: string): "ocean" | "reseller" | "consultant" {
+  const n = name.toLowerCase();
+  if (n.includes("ocean"))    return "ocean";
+  if (n.includes("reseller")) return "reseller";
+  return "consultant";
+}
 
 function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number): { obs: string; actions: string[] } {
   if (teams.length === 0) return { obs: "Không có team nào trong ô này.", actions: [] };
@@ -83,6 +91,11 @@ function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number)
   const worst    = [...teams].sort((a, b) => (a.dkmKpiPct ?? 0) - (b.dkmKpiPct ?? 0))[0];
   const worstYoy = [...teams].filter(t => t.hasYoy).sort((a, b) => (a.yoy ?? 0) - (b.yoy ?? 0))[0];
   const best     = [...teams].sort((a, b) => (b.dkmKpiPct ?? 0) - (a.dkmKpiPct ?? 0))[0];
+
+  // Phân nhóm team theo loại
+  const oceans      = teams.filter(t => teamType(t.name) === "ocean");
+  const resellers   = teams.filter(t => teamType(t.name) === "reseller");
+  const consultants = teams.filter(t => teamType(t.name) === "consultant");
 
   if (quadKey === "star") {
     const obs = avgKpi > 130
@@ -111,17 +124,31 @@ function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number)
     const avgYoyDrop = teamsWithYoy.length > 0
       ? teamsWithYoy.reduce((s, t) => s + (t.yoy ?? 0), 0) / teamsWithYoy.length : null;
     const deepDrop = teamsWithYoy.filter(t => (t.yoy ?? 0) < -20);
-    const obs = `${teams.length} team đạt KPI tháng (TB ${Math.round(avgKpi)}%) nhưng trung bình giảm ${Math.abs(avgYoyDrop ?? 0).toFixed(0)}% so cùng kỳ 2025.`;
+    const obs = `${teams.length} team đạt KPI tháng (TB ${Math.round(avgKpi)}%) nhưng trung bình giảm ${Math.abs(avgYoyDrop ?? 0).toFixed(0)}% DS ĐKM so cùng kỳ 2025.`;
     const actions: string[] = [];
-    if (worstYoy) {
-      const gap = Math.abs(worstYoy.yoy ?? 0);
-      actions.push(`${worstYoy.name} giảm ${gap.toFixed(0)}% DS ĐKM so CK — phân tích: (1) ít khách mới hơn, (2) giá trị deal mới nhỏ hơn, hay (3) đối thủ đang lấy khách mới của mình?`);
+    // Phân tích theo loại team
+    if (oceans.length > 0) {
+      const oceanNames = oceans.map(t => t.name).join(", ");
+      actions.push(`${oceanNames} (Online): DS ĐKM phụ thuộc marketing — kiểm tra: lưu lượng đặt hàng online có giảm không, tỷ lệ chuyển đổi, đối thủ có đang chạy khuyến mãi mạnh hơn cùng kỳ?`);
     }
-    if (deepDrop.length > 1) {
-      actions.push(`${deepDrop.length} team giảm >20% DS ĐKM YoY — tìm điểm chung: thay đổi nhân sự sale, thu hẹp tệp prospect, hay sản phẩm mới kém hấp dẫn hơn CK?`);
+    if (resellers.length > 0) {
+      const resellerNames = resellers.map(t => t.name).join(", ");
+      actions.push(`${resellerNames} (Reseller): rà soát đại lý active — đại lý nào đang giảm volume? Cân nhắc chương trình kích hoạt đại lý ngủ đông hoặc tăng hỗ trợ chiết khấu.`);
+    }
+    if (consultants.length > 0) {
+      const worstConsultant = [...consultants].filter(t => t.hasYoy).sort((a, b) => (a.yoy ?? 0) - (b.yoy ?? 0))[0];
+      if (worstConsultant) {
+        actions.push(`${worstConsultant.name} (Tư vấn) giảm ${Math.abs(worstConsultant.yoy ?? 0).toFixed(0)}% — rà soát: số prospect mới tháng này vs CK, tỷ lệ close, deal size TB. Đối thủ có đang cạnh tranh trực tiếp tệp KH này không?`);
+      }
+      if (consultants.length > 1) {
+        actions.push(`${consultants.length} team tư vấn cần review pipeline: số deal đang chờ close, hành vi KH (do dự / so sánh giá / chờ ngân sách), và dịch vụ thế mạnh so cùng kỳ có thay đổi không?`);
+      }
+    }
+    if (deepDrop.length > 1 && consultants.length > 1) {
+      actions.push(`${deepDrop.filter(t => teamType(t.name) === "consultant").length} team tư vấn giảm >20% — kiểm tra nhân sự: có thay đổi sale, leader, hay chất lượng hoạt động tuần gần đây?`);
     }
     actions.push(`⚠️ KPI tháng ổn là tín hiệu dễ bỏ qua — nếu không chặn đà giảm DS ĐKM YoY ngay, tháng tới nhiều khả năng rớt xuống Khẩn Cấp.`);
-    if (remainDays <= 10) actions.push(`Còn ${remainDays} ngày — cố gắng chốt thêm deal để thu hẹp khoảng cách YoY trước khi đóng tháng.`);
+    if (remainDays <= 10) actions.push(`Còn ${remainDays} ngày — ưu tiên close deal đang chờ để thu hẹp khoảng cách YoY trước khi đóng tháng.`);
     return { obs, actions };
   }
   if (quadKey === "watch") {
@@ -130,25 +157,35 @@ function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number)
     const criticalKpi = teams.filter(t => (t.dkmKpiPct ?? 0) < 50);
     const obs = `🚨 ${teams.length} team cần can thiệp khẩn: vừa giảm YoY vừa chưa đạt KPI tháng (TB chỉ ${Math.round(avgKpi)}% tiến độ).`;
     const actions: string[] = [];
-    if (worst) {
-      const kpiVal = worst.dkmKpiPct ?? 0;
-      const needed = worst.dkmTarget ? Math.round((worst.dkmTarget - worst.rawDkm) / Math.max(remainDays, 1)) : null;
-      if (kpiVal < 50) {
-        actions.push(`${worst.name} chỉ đạt ${kpiVal}% — họp team lead ngay hôm nay, xem từng deal trong pipeline. ${needed ? `Cần ~${needed.toLocaleString()}M/ngày để kịp.` : ""}`);
-      } else {
-        actions.push(`${worst.name} thấp nhất (${kpiVal}%) — review hoạt động sale và pipeline ngay. ${needed ? `Cần ~${needed.toLocaleString()}M/ngày còn lại.` : ""}`);
+    // Phân tích riêng theo loại team
+    if (oceans.length > 0) {
+      const oceanNames = oceans.map(t => t.name).join(", ");
+      const oceanWorst = [...oceans].sort((a, b) => (a.dkmKpiPct ?? 0) - (b.dkmKpiPct ?? 0))[0];
+      actions.push(`${oceanNames} (Online): DS ĐKM thấp — kiểm tra ngay: (1) lưu lượng đặt hàng online tuần này, (2) landing page/quảng cáo có vấn đề kỹ thuật không, (3) đối thủ đang chạy khuyến mãi mạnh. ${oceanWorst?.dkmKpiPct ? `Hiện đạt ${oceanWorst.dkmKpiPct}%.` : ""}`);
+    }
+    if (resellers.length > 0) {
+      const resellerNames = resellers.map(t => t.name).join(", ");
+      actions.push(`${resellerNames} (Reseller): liên hệ ngay top 5 đại lý lớn nhất — kiểm tra pipeline của đại lý, tháo gỡ rào cản, cân nhắc hỗ trợ chiết khấu ngắn hạn để kích cầu trước cuối tháng.`);
+    }
+    if (consultants.length > 0) {
+      const worstC = [...consultants].sort((a, b) => (a.dkmKpiPct ?? 0) - (b.dkmKpiPct ?? 0))[0];
+      const needed = worstC?.dkmTarget ? Math.round((worstC.dkmTarget - worstC.rawDkm) / Math.max(remainDays, 1)) : null;
+      actions.push(`${worstC?.name ?? "Team tư vấn"} (Tư vấn) thấp nhất (${worstC?.dkmKpiPct ?? "—"}%) — họp team lead ngay: review từng deal trong pipeline, phân loại deal có thể close tuần này. ${needed ? `Cần ~${needed.toLocaleString()}M/ngày.` : ""}`);
+      if (consultants.length > 1) {
+        actions.push(`${consultants.length} team tư vấn: rà soát hành vi KH — deal nào đang do dự, deal nào chờ ngân sách, deal nào cần thêm thông tin. Ưu tiên push deal gần close nhất.`);
       }
     }
     if (seriousYoy.length > 0) {
-      actions.push(`${seriousYoy.map(t => t.name).join(", ")} giảm >30% DS ĐKM so CK — kiểm tra ngay: ít prospect mới, deal size nhỏ lại, hay đối thủ đang chiếm lĩnh thị trường mới?`);
-    } else if (worstYoy) {
-      actions.push(`${worstYoy.name} giảm ${Math.abs(worstYoy.yoy ?? 0).toFixed(0)}% DS ĐKM YoY — đánh giá lại chiến lược khai thác khách mới của team này.`);
+      const seriousConsultants = seriousYoy.filter(t => teamType(t.name) === "consultant");
+      if (seriousConsultants.length > 0) {
+        actions.push(`${seriousConsultants.map(t => t.name).join(", ")} giảm >30% DS ĐKM — kiểm tra: thay đổi nhân sự gần đây? Thế mạnh dịch vụ của team (so CK) có còn phù hợp không?`);
+      }
     }
     if (criticalKpi.length >= teams.length && teams.length >= 2) {
       actions.push(`Toàn bộ ${teams.length} team đều dưới 50% — cân nhắc điều phối tạm thời nguồn lực từ Ngôi Sao/Ổn Định để hỗ trợ.`);
     }
     if (remainDays <= 5) actions.push(`Chỉ còn ${remainDays} ngày — ưu tiên close 100% deals đang chờ ký, không mở pipeline mới.`);
-    else if (remainDays <= 10) actions.push(`Còn ${remainDays} ngày — tăng tốc tối đa, mỗi ngày phải đạt đủ chỉ tiêu để bù khoảng cách.`);
+    else if (remainDays <= 10) actions.push(`Còn ${remainDays} ngày — tăng tốc tối đa, họp daily với từng team lead để theo sát tiến độ.`);
     else actions.push(`Còn ${remainDays} ngày — vẫn đủ thời gian nếu hành động ngay. Tổ chức họp toàn team xác định rào cản và tháo gỡ.`);
     return { obs, actions };
   }
