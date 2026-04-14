@@ -115,12 +115,12 @@ function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number)
     const actions: string[] = [];
     if (worstYoy) {
       const gap = Math.abs(worstYoy.yoy ?? 0);
-      actions.push(`${worstYoy.name} giảm ${gap.toFixed(0)}% YoY — phân tích nguyên nhân: (1) mất khách gia hạn, (2) thị trường co lại, hay (3) sản phẩm/dịch vụ mất cạnh tranh?`);
+      actions.push(`${worstYoy.name} giảm ${gap.toFixed(0)}% DS ĐKM so CK — phân tích: (1) ít khách mới hơn, (2) giá trị deal mới nhỏ hơn, hay (3) đối thủ đang lấy khách mới của mình?`);
     }
     if (deepDrop.length > 1) {
-      actions.push(`${deepDrop.length} team giảm >20% YoY — tìm điểm chung: thay đổi nhân sự, mất khách lớn, hay vấn đề chất lượng toàn diện?`);
+      actions.push(`${deepDrop.length} team giảm >20% DS ĐKM YoY — tìm điểm chung: thay đổi nhân sự sale, thu hẹp tệp prospect, hay sản phẩm mới kém hấp dẫn hơn CK?`);
     }
-    actions.push(`⚠️ KPI tháng ổn là tín hiệu dễ bỏ qua — nếu không chặn đà giảm YoY ngay, tháng tới nhiều khả năng rớt xuống Khẩn Cấp.`);
+    actions.push(`⚠️ KPI tháng ổn là tín hiệu dễ bỏ qua — nếu không chặn đà giảm DS ĐKM YoY ngay, tháng tới nhiều khả năng rớt xuống Khẩn Cấp.`);
     if (remainDays <= 10) actions.push(`Còn ${remainDays} ngày — cố gắng chốt thêm deal để thu hẹp khoảng cách YoY trước khi đóng tháng.`);
     return { obs, actions };
   }
@@ -140,9 +140,9 @@ function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number)
       }
     }
     if (seriousYoy.length > 0) {
-      actions.push(`${seriousYoy.map(t => t.name).join(", ")} giảm >30% so CK — kiểm tra ngay: có mất khách lớn, thay đổi nhân sự, hay vấn đề chất lượng dịch vụ không?`);
+      actions.push(`${seriousYoy.map(t => t.name).join(", ")} giảm >30% DS ĐKM so CK — kiểm tra ngay: ít prospect mới, deal size nhỏ lại, hay đối thủ đang chiếm lĩnh thị trường mới?`);
     } else if (worstYoy) {
-      actions.push(`${worstYoy.name} giảm ${Math.abs(worstYoy.yoy ?? 0).toFixed(0)}% YoY — đánh giá lại chiến lược khai thác thị trường của team này.`);
+      actions.push(`${worstYoy.name} giảm ${Math.abs(worstYoy.yoy ?? 0).toFixed(0)}% DS ĐKM YoY — đánh giá lại chiến lược khai thác khách mới của team này.`);
     }
     if (criticalKpi.length >= teams.length && teams.length >= 2) {
       actions.push(`Toàn bộ ${teams.length} team đều dưới 50% — cân nhắc điều phối tạm thời nguồn lực từ Ngôi Sao/Ổn Định để hỗ trợ.`);
