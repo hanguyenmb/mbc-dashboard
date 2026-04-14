@@ -277,17 +277,29 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
             });
 
           // Chart 3: % KH ĐKM / Tổng KH
+          const hasPrevDkmPct = dkmRows.some(r => r.prevKhDkm > 0 && r.prevKh > 0);
           const dkmPctData = dkmRows
             .filter(r => r.kh > 0 && r.khDkm > 0)
             .sort((a, b) => (b.tlKhDkm ?? 0) - (a.tlKhDkm ?? 0))
-            .map(r => ({
-              name: shortName(r.teamName),
-              region: r.region,
-              "% KH ĐKM": Math.round(r.tlKhDkm ?? 0),
-              "KH ĐKM": r.khDkm,
-              "Tổng KH": r.kh,
-              color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
-            }));
+            .map(r => {
+              const prevTlKhDkm = r.prevKhDkm > 0 && r.prevKh > 0
+                ? Math.round(r.prevKhDkm / r.prevKh * 100) : null;
+              const cur = Math.round(r.tlKhDkm ?? 0);
+              // Chênh lệch số điểm % (percentage point)
+              const diffPp = prevTlKhDkm !== null ? cur - prevTlKhDkm : null;
+              return {
+                name: shortName(r.teamName),
+                region: r.region,
+                "% KH ĐKM": cur,
+                "CK 2025 %": prevTlKhDkm,
+                "KH ĐKM": r.khDkm,
+                "Tổng KH": r.kh,
+                "KH ĐKM CK": r.prevKhDkm,
+                "Tổng KH CK": r.prevKh,
+                diffPp,
+                color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
+              };
+            });
 
           // Chart 4: Số KH ĐKM — stacked bar (same logic as Chart 1)
           const khDkmChartData = dkmRows
@@ -468,31 +480,61 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
               {hasDkmKhData && dkmPctData.length > 0 && (
                 <Card>
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-xs font-semibold text-slate-300">Tỷ lệ KH Đăng Ký Mới / Tổng KH (%)</CardTitle>
-                    <div className="text-[10px] text-slate-500 mt-0.5">Team nào đang acquire KH mới nhiều nhất — xếp từ cao xuống thấp</div>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <CardTitle className="text-xs font-semibold text-slate-300">Tỷ lệ KH Đăng Ký Mới / Tổng KH (%)</CardTitle>
+                      <div className="text-[10px] text-slate-500 flex items-center gap-3">
+                        <span>Team nào đang acquire KH mới nhiều nhất — xếp từ cao xuống thấp</span>
+                        {hasPrevDkmPct && <span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-slate-600/80 opacity-70"/> CK 2025</span>}
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="px-2 pb-3">
-                    <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={dkmPctData} margin={{ top: 20, right: 8, left: -20, bottom: 44 }}>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={dkmPctData} margin={{ top: 28, right: 8, left: -20, bottom: 44 }} barCategoryGap="25%">
                         <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
                         <YAxis tick={{ fill: "#64748b", fontSize: 10 }} unit="%" domain={[0, 130]} />
                         <Tooltip
                           content={({ active, payload, label }: any) => {
                             if (!active || !payload?.length) return null;
                             const d = payload[0]?.payload;
+                            const diffPp = d?.diffPp;
                             return (
                               <div className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-xs shadow-lg">
                                 <div className="font-semibold text-white mb-1">{label}</div>
-                                <div className="text-cyan-300">KH ĐKM: <span className="font-bold">{d?.["KH ĐKM"]?.toLocaleString()}</span></div>
-                                <div className="text-slate-400">Tổng KH: <span className="font-bold text-slate-300">{d?.["Tổng KH"]?.toLocaleString()}</span></div>
+                                <div className="text-cyan-300">KH ĐKM: <span className="font-bold">{d?.["KH ĐKM"]?.toLocaleString()}</span> / Tổng: <span className="font-bold text-slate-300">{d?.["Tổng KH"]?.toLocaleString()}</span></div>
+                                {d?.["CK 2025 %"] != null && (
+                                  <div className="text-slate-400 mt-0.5">CK 2025: <span className="font-bold text-slate-300">{d["CK 2025 %"]}%</span>
+                                    {" "}(KH ĐKM: {d?.["KH ĐKM CK"]?.toLocaleString()} / {d?.["Tổng KH CK"]?.toLocaleString()})
+                                  </div>
+                                )}
+                                {diffPp !== null && diffPp !== undefined && (
+                                  <div className={`mt-1 font-semibold ${diffPp >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                    {diffPp >= 0 ? "▲" : "▼"}{Math.abs(diffPp)} pp so CK
+                                  </div>
+                                )}
                               </div>
                             );
                           }}
                         />
-                        <Bar dataKey="% KH ĐKM" maxBarSize={32} radius={[3,3,0,0]}>
-                          <LabelList dataKey="% KH ĐKM" position="top" style={{ fill: "#94a3b8", fontSize: 10 }} formatter={(v: any) => `${v}%`} />
+                        <Bar dataKey="% KH ĐKM" maxBarSize={28} radius={[3,3,0,0]}>
+                          <LabelList dataKey="diffPp" position="top"
+                            content={(props: any) => {
+                              const { x, y, width, value } = props;
+                              if (value === null || value === undefined) return null;
+                              const color = value >= 0 ? "#4ade80" : "#f87171";
+                              const sign = value >= 0 ? "▲" : "▼";
+                              return (
+                                <text x={x + width / 2} y={y - 3} textAnchor="middle" fill={color} fontSize={9} fontWeight={700}>
+                                  {sign}{Math.abs(value)}pp
+                                </text>
+                              );
+                            }}
+                          />
                           {dkmPctData.map((d, i) => <Cell key={i} fill={d.color} />)}
                         </Bar>
+                        {hasPrevDkmPct && (
+                          <Bar dataKey="CK 2025 %" maxBarSize={28} radius={[3,3,0,0]} fill="#475569" opacity={0.5} />
+                        )}
                       </BarChart>
                     </ResponsiveContainer>
                   </CardContent>
