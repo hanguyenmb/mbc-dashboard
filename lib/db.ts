@@ -5,8 +5,11 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Server-side client (full access, dùng trong API routes)
+// Dùng cache: 'no-store' để tránh Next.js cache cũ sau khi lưu dữ liệu mới
 export const supabaseAdmin = () =>
-  createClient(supabaseUrl, supabaseServiceKey);
+  createClient(supabaseUrl, supabaseServiceKey, {
+    global: { fetch: (url, opts) => fetch(url, { ...opts, cache: "no-store" }) },
+  });
 
 // Client-side client (read only, dùng trong components)
 export const supabaseClient = () =>
