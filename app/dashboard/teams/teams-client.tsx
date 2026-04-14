@@ -75,7 +75,13 @@ function RegionCard({ label, teams }: { label: string; teams: TeamServiceRecord[
 }
 
 // ── Rule-based suggestion engine — defined at module level (hooks-safe) ──────
-type QTeam = { name: string; region?: string; dkmKpiPct: number | null; yoy: number | null; hasYoy: boolean; dkmTarget: number | null; projDkm: number; rawDkm: number };
+type QTeam = {
+  name: string; region?: string;
+  dkmKpiPct: number | null; yoy: number | null; hasYoy: boolean;
+  dkmTarget: number | null; projDkm: number; rawDkm: number;
+  avgDkm: number; prevAvgDkm: number; avgDkmYoy: number | null;
+  prevMonthAvgDkm: number; avgDkmMom: number | null;
+};
 
 // Phân loại team theo đặc thù vận hành
 function teamType(name: string): "ocean" | "reseller" | "consultant" {
@@ -85,7 +91,7 @@ function teamType(name: string): "ocean" | "reseller" | "consultant" {
   return "consultant";
 }
 
-function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number): { obs: string; actions: string[] } {
+function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number, isPaceMonth = false): { obs: string; actions: string[] } {
   if (teams.length === 0) return { obs: "Không có team nào trong ô này.", actions: [] };
   const avgKpi = teams.filter(t => t.dkmKpiPct !== null).reduce((s, t) => s + (t.dkmKpiPct ?? 0), 0) / (teams.filter(t => t.dkmKpiPct !== null).length || 1);
   const worst    = [...teams].sort((a, b) => (a.dkmKpiPct ?? 0) - (b.dkmKpiPct ?? 0))[0];
@@ -96,6 +102,28 @@ function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number)
   const oceans      = teams.filter(t => teamType(t.name) === "ocean");
   const resellers   = teams.filter(t => teamType(t.name) === "reseller");
   const consultants = teams.filter(t => teamType(t.name) === "consultant");
+
+  // Helper: tóm tắt TB DS ĐKM/KH của một team
+  function avgDkmSummary(t: QTeam, isPace: boolean): string {
+    if (t.avgDkm <= 0) return "";
+    const parts: string[] = [];
+    const fmt = (v: number) => (v / 1e6).toFixed(2) + "tr";
+    parts.push(`TB DS ĐKM/KH: ${fmt(t.avgDkm)}`);
+    if (t.avgDkmYoy !== null) {
+      const sign = t.avgDkmYoy >= 0 ? "▲" : "▼";
+      parts.push(`${sign}${Math.abs(t.avgDkmYoy).toFixed(0)}% so CK${isPace ? " (pace)" : ""}`);
+    }
+    if (t.avgDkmMom !== null) {
+      const sign = t.avgDkmMom >= 0 ? "▲" : "▼";
+      parts.push(`${sign}${Math.abs(t.avgDkmMom).toFixed(0)}% so T.trước`);
+    }
+    return parts.join(" · ");
+  }
+
+  // Đánh giá xu hướng avgDkm của nhóm
+  const teamsWithAvg = teams.filter(t => t.avgDkm > 0 && t.avgDkmYoy !== null);
+  const avgDkmDropTeams = teamsWithAvg.filter(t => (t.avgDkmYoy ?? 0) < -10);
+  const avgDkmRiseTeams = teamsWithAvg.filter(t => (t.avgDkmYoy ?? 0) >= 10);
 
   if (quadKey === "star") {
     const obs = avgKpi > 130
@@ -147,6 +175,14 @@ function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number)
     if (deepDrop.length > 1 && consultants.length > 1) {
       actions.push(`${deepDrop.filter(t => teamType(t.name) === "consultant").length} team tư vấn giảm >20% — kiểm tra nhân sự: có thay đổi sale, leader, hay chất lượng hoạt động tuần gần đây?`);
     }
+    // Phân tích TB DS ĐKM/KH
+    if (avgDkmDropTeams.length > 0) {
+      const worst = [...avgDkmDropTeams].sort((a, b) => (a.avgDkmYoy ?? 0) - (b.avgDkmYoy ?? 0))[0];
+      actions.push(`TB DS ĐKM/KH đang giảm (${worst.name}: ${avgDkmSummary(worst, isPaceMonth)}) — deal mới đang nhỏ hơn, cần review chất lượng KH và sản phẩm đang bán.`);
+    } else if (avgDkmRiseTeams.length > 0 && avgDkmDropTeams.length === 0) {
+      const best2 = [...avgDkmRiseTeams].sort((a, b) => (b.avgDkmYoy ?? 0) - (a.avgDkmYoy ?? 0))[0];
+      actions.push(`Điểm sáng: TB DS ĐKM/KH tăng (${best2.name}: ${avgDkmSummary(best2, isPaceMonth)}) — deal lớn hơn, vấn đề là số lượng KH ĐKM giảm. Tập trung mở rộng tệp KH mới.`);
+    }
     actions.push(`⚠️ KPI tháng ổn là tín hiệu dễ bỏ qua — nếu không chặn đà giảm DS ĐKM YoY ngay, tháng tới nhiều khả năng rớt xuống Khẩn Cấp.`);
     if (remainDays <= 10) actions.push(`Còn ${remainDays} ngày — ưu tiên close deal đang chờ để thu hẹp khoảng cách YoY trước khi đóng tháng.`);
     return { obs, actions };
@@ -184,6 +220,15 @@ function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number)
     if (criticalKpi.length >= teams.length && teams.length >= 2) {
       actions.push(`Toàn bộ ${teams.length} team đều dưới 50% — cân nhắc điều phối tạm thời nguồn lực từ Ngôi Sao/Ổn Định để hỗ trợ.`);
     }
+    // Phân tích TB DS ĐKM/KH cho Khẩn Cấp
+    if (avgDkmDropTeams.length > 0) {
+      const worst = [...avgDkmDropTeams].sort((a, b) => (a.avgDkmYoy ?? 0) - (b.avgDkmYoy ?? 0))[0];
+      actions.push(`TB DS ĐKM/KH giảm (${worst.name}: ${avgDkmSummary(worst, isPaceMonth)}) — vừa ít KH mới vừa deal nhỏ hơn: cần review ngay chất lượng prospect và sản phẩm đang pitch.`);
+    } else if (teamsWithAvg.length > 0) {
+      const sample = teamsWithAvg[0];
+      const summary = avgDkmSummary(sample, isPaceMonth);
+      if (summary) actions.push(`Tham chiếu: ${summary} — DS ĐKM thấp chủ yếu do số lượng KH, không phải chất lượng deal. Tập trung tăng số KH mới.`);
+    }
     if (remainDays <= 5) actions.push(`Chỉ còn ${remainDays} ngày — ưu tiên close 100% deals đang chờ ký, không mở pipeline mới.`);
     else if (remainDays <= 10) actions.push(`Còn ${remainDays} ngày — tăng tốc tối đa, họp daily với từng team lead để theo sát tiến độ.`);
     else actions.push(`Còn ${remainDays} ngày — vẫn đủ thời gian nếu hành động ngay. Tổ chức họp toàn team xác định rào cản và tháo gỡ.`);
@@ -192,9 +237,9 @@ function getRuleSuggestions(quadKey: string, teams: QTeam[], remainDays: number)
   return { obs: "", actions: [] };
 }
 
-function QuadSuggestion({ quadKey, teams, remainDays }: { quadKey: string; teams: QTeam[]; remainDays: number }) {
+function QuadSuggestion({ quadKey, teams, remainDays, isPaceMonth }: { quadKey: string; teams: QTeam[]; remainDays: number; isPaceMonth: boolean }) {
   const [open, setOpen] = useState(false);
-  const { obs, actions } = getRuleSuggestions(quadKey, teams, remainDays);
+  const { obs, actions } = getRuleSuggestions(quadKey, teams, remainDays, isPaceMonth);
   const dotColor = quadKey === "star" ? "bg-green-500" : quadKey === "potential" ? "bg-violet-500" : quadKey === "stable" ? "bg-amber-500" : "bg-red-500";
   return (
     <div>
@@ -799,12 +844,34 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
               ? ((projDkm - prevMonthDkm) / prevMonthDkm * 100)
               : null;
 
+            // ── TB DS ĐKM / KH ──────────────────────────────────────────────
+            const khDkm      = (t as any).customerCountDkm ?? 0;
+            const prevKhDkm  = prev ? ((prev as any).customerCountDkm ?? 0) : 0;
+            // avgDkm: không cần pace-adjust vì đã là chỉ số "trung bình / KH"
+            const avgDkm     = khDkm > 0 ? rawDkm / khDkm : 0;
+            const prevAvgDkm = prevKhDkm > 0 ? prevDkm / prevKhDkm : 0;
+            const avgDkmYoy  = avgDkm > 0 && prevAvgDkm > 0
+              ? ((avgDkm - prevAvgDkm) / prevAvgDkm * 100) : null;
+
+            // MoM avgDkm: lấy dữ liệu tháng trước (cùng năm nay)
+            const prevMkIdx2 = MONTHS_SPARK.indexOf(selectedMonth) - 1;
+            const prevMk2 = prevMkIdx2 >= 0 ? MONTHS_SPARK[prevMkIdx2] : null;
+            const prevMoTeam = prevMk2
+              ? allMonths.find(m => m.month === prevMk2)?.teams.find(t2 => t2.teamId === t.teamId)
+              : null;
+            const prevMoKhDkm = prevMoTeam ? ((prevMoTeam as any).customerCountDkm ?? 0) : 0;
+            const prevMoDkm   = prevMoTeam ? DKM_SVC_KEYS.reduce((s, sk) => s + ((prevMoTeam as any)[sk.key] ?? 0), 0) : 0;
+            const prevMonthAvgDkm = prevMoKhDkm > 0 ? prevMoDkm / prevMoKhDkm : 0;
+            const avgDkmMom   = avgDkm > 0 && prevMonthAvgDkm > 0
+              ? ((avgDkm - prevMonthAvgDkm) / prevMonthAvgDkm * 100) : null;
+
             return {
               id: t.teamId, name: t.teamName, region: t.region,
               rawDkm, projDkm, rawRev: t.revenue, projRev, target: t.target,
               prevDkm, yoy, hasYoy: prevDkm > 0,
               kpiPct, dkmKpiPct, dkmTarget, dkmTargetNote,
               sparkVals, confidence, momTrend,
+              khDkm, avgDkm, prevAvgDkm, avgDkmYoy, prevMonthAvgDkm, avgDkmMom,
             };
           }).filter(t => t.rawDkm > 0 || t.rawRev > 0);
 
@@ -1031,7 +1098,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                     <div key={q.key} className={`rounded-xl border p-4 ${q.borderCls} ${q.bgCls}`}>
                       <div className="flex items-center justify-between mb-0.5 gap-2">
                         <div className={`text-sm font-bold whitespace-nowrap ${q.headCls}`}>{q.label}</div>
-                        <QuadSuggestion quadKey={q.key} teams={q.teams} remainDays={remainDays} />
+                        <QuadSuggestion quadKey={q.key} teams={q.teams} remainDays={remainDays} isPaceMonth={isProjected} />
                       </div>
                       <div className="text-[11px] text-slate-500 mb-3">{q.sub} · {q.teams.length} team</div>
                       {q.teams.length === 0 ? (
