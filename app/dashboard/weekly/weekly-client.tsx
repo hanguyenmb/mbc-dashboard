@@ -267,7 +267,8 @@ function TaskDetailPanel({ task, isManager, onEdit, onSaveNotes, onClose }: {
   onClose: () => void;
 }) {
   const cat = CAT_MAP[task.category];
-  const meta = STATUS_META[task.status];
+  const liveStatus: TaskStatus = task.progress === 100 ? "done" : task.progress > 0 ? "inprogress" : "notstarted";
+  const meta = STATUS_META[liveStatus];
   const [notes, setNotes] = useState(task.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -393,10 +394,12 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
-  // KPIs
-  const done       = tasks.filter((t) => t.status === "done").length;
-  const inprogress = tasks.filter((t) => t.status === "inprogress").length;
-  const notstarted = tasks.filter((t) => t.status === "notstarted").length;
+  // KPIs — derive status from progress (consistent with TaskCard liveStatus)
+  const computeStatus = (progress: number): TaskStatus =>
+    progress === 100 ? "done" : progress > 0 ? "inprogress" : "notstarted";
+  const done       = tasks.filter((t) => computeStatus(t.progress) === "done").length;
+  const inprogress = tasks.filter((t) => computeStatus(t.progress) === "inprogress").length;
+  const notstarted = tasks.filter((t) => computeStatus(t.progress) === "notstarted").length;
   const total      = tasks.length;
   const avgProgress = total > 0 ? Math.round(tasks.reduce((s, t) => s + t.progress, 0) / total) : 0;
 
@@ -531,11 +534,11 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
             <CardHeader><CardTitle>Tiến Độ Việc Đang Làm</CardTitle><Badge variant="neutral">{inprogress} việc</Badge></CardHeader>
             <CardContent>
               {loading ? <div className="text-sm text-slate-500 text-center py-8">Đang tải...</div> :
-               tasks.filter((t) => t.status === "inprogress").length === 0 ? (
+               tasks.filter((t) => computeStatus(t.progress) === "inprogress").length === 0 ? (
                 <div className="text-sm text-slate-500 text-center py-8">Không có việc đang làm</div>
               ) : (
                 <div className="space-y-3">
-                  {tasks.filter((t) => t.status === "inprogress").sort((a, b) => b.progress - a.progress).map((task) => (
+                  {tasks.filter((t) => computeStatus(t.progress) === "inprogress").sort((a, b) => b.progress - a.progress).map((task) => (
                     <div key={task.id} className="flex items-center gap-3">
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: CAT_MAP[task.category]?.color ?? "#94a3b8" }} />
                       <span className="text-xs text-slate-300 flex-1 line-clamp-1" title={task.title}>{task.title}</span>
@@ -582,7 +585,7 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
                 {isManager && <button onClick={() => openAddTask("doanh-so")} className="ml-2 text-blue-400 hover:underline">Thêm tác vụ</button>}
               </div>
             ) : grouped.map(({ cat, tasks: grpTasks }) => {
-              const doneCnt = grpTasks.filter((t) => t.status === "done").length;
+              const doneCnt = grpTasks.filter((t) => computeStatus(t.progress) === "done").length;
               return (
                 <div key={cat.id} className="bg-slate-800/30 rounded-2xl border border-slate-700/30 overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3" style={{ background: `${cat.color}12`, borderLeft: `3px solid ${cat.color}` }}>
@@ -683,7 +686,7 @@ export function WeeklyClient({ userName, role }: WeeklyClientProps) {
                     <tbody className="divide-y divide-slate-700/50">
                       {tasks.map((task) => {
                         const cat = CAT_MAP[task.category];
-                        const meta = STATUS_META[task.status];
+                        const meta = STATUS_META[computeStatus(task.progress)];
                         return (
                           <tr key={task.id} className="hover:bg-slate-700/20 transition-colors group">
                             <td className="py-3 px-3">
