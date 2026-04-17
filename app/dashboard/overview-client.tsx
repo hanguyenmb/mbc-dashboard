@@ -195,9 +195,17 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   const annualTarget8  = MONTHLY_DATA.reduce((s, m) => s + (m.mt8  ?? 0), 0);
   // Period target (same months as YTD)
   const ytdTarget10 = ytdMonthsData.reduce((s, m) => s + (m.mt10 ?? 0), 0);
+  // Prorated period target: các tháng trước full + tháng hiện tại × paceRatio
+  const ytdTarget10Prorated = ytdMonthsData.reduce((s, m, i) => {
+    const isLast = i === ytdMonths - 1;
+    const t = m.mt10 ?? 0;
+    return s + (isLast && lastDataIsCurrentMonth && ytdPaceRatio < 1 ? t * ytdPaceRatio : t);
+  }, 0);
 
   // Rates (dùng ytdActual = pace-projected)
   const ytdVsAnnual10 = annualTarget10 > 0 ? ytdActual / annualTarget10 * 100 : 0;
+  // So với target prorated theo ngày thực tế (actual raw / prorated target)
+  const ytdVsProrated10 = ytdTarget10Prorated > 0 ? ytdActualRaw / ytdTarget10Prorated * 100 : 0;
   const ytdVsPeriod10 = ytdTarget10    > 0 ? ytdActual / ytdTarget10    * 100 : 0;
 
   // Full-year forecast tại tốc độ hiện tại
@@ -347,11 +355,13 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                     </div>
                   )}
                 </div>
-                {/* 2. vs Annual plan */}
-                <div className={`rounded-lg px-3 py-2.5 ${thresholdColor(ytdVsAnnual10).bg} border ${thresholdColor(ytdVsAnnual10).border}`}>
-                  <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">vs Kế Hoạch Năm MT10%</div>
-                  <div className={`text-lg font-bold tabular-nums ${thresholdColor(ytdVsAnnual10).text}`}>{ytdVsAnnual10.toFixed(1)}%</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">KH năm: {annualTarget10.toFixed(2)} tỷ</div>
+                {/* 2. vs Prorated period target */}
+                <div className={`rounded-lg px-3 py-2.5 ${thresholdColor(ytdVsProrated10).bg} border ${thresholdColor(ytdVsProrated10).border}`}>
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">vs KH MT10% cùng kỳ</div>
+                  <div className={`text-lg font-bold tabular-nums ${thresholdColor(ytdVsProrated10).text}`}>{ytdVsProrated10.toFixed(1)}%</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    KH {ytdMonths}T{lastDataIsCurrentMonth && ytdPaceRatio < 1 ? ` (${ytdDayOfMonth}/${ytdDaysInMonth}d)` : ""}: {ytdTarget10Prorated.toFixed(2)} tỷ
+                  </div>
                 </div>
                 {/* 3. Full-year forecast */}
                 <div className="rounded-lg bg-slate-700/40 border border-slate-600/40 px-3 py-2.5">
