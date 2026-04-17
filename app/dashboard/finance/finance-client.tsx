@@ -64,6 +64,7 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
   const isAdmin = role === "admin";
   const [activeTab, setActiveTab] = useState<"report" | "input">("report");
   const [inputYear, setInputYear] = useState<number>(CUR_YEAR);
+  const [pieMode, setPieMode] = useState<"month" | "q1" | "q2" | "q3" | "q4" | "year">("month");
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
 
@@ -161,20 +162,39 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
     };
   }), [revCur, revPrev, salCur, salPrev]);
 
-  // ── Chart 4 — Pie tỷ trọng lương theo nhóm (tháng mới nhất có data) ────────
+  // ── Chart 4 — Pie tỷ trọng lương theo nhóm ────────────────────────────────
+  const Q_MONTHS: Record<string, string[]> = {
+    q1: ["T1","T2","T3"], q2: ["T4","T5","T6"],
+    q3: ["T7","T8","T9"], q4: ["T10","T11","T12"],
+  };
   const pieData = useMemo(() => {
-    const lastMonth = [...MONTHS].reverse().find((m) => salCur[m]?.total > 0);
-    if (!lastMonth) return null;
-    const s = salCur[lastMonth];
+    let selectedMonths: string[];
+    let label: string;
+    if (pieMode === "year") {
+      selectedMonths = MONTHS;
+      label = `Năm ${CUR_YEAR}`;
+    } else if (pieMode === "month") {
+      const lastMonth = [...MONTHS].reverse().find((m) => salCur[m]?.total > 0);
+      if (!lastMonth) return null;
+      selectedMonths = [lastMonth];
+      label = `${lastMonth} ${CUR_YEAR}`;
+    } else {
+      selectedMonths = Q_MONTHS[pieMode];
+      label = `${pieMode.toUpperCase()} ${CUR_YEAR}`;
+    }
+    const months = selectedMonths.filter(m => salCur[m]?.total > 0);
+    if (!months.length) return null;
+    const sum = (field: keyof SalaryMonthRecord) =>
+      months.reduce((s, m) => s + ((salCur[m]?.[field] as number) ?? 0), 0);
     return {
-      month: lastMonth,
+      label,
       slices: [
-        { name: "Ocean",    value: s.ocean,      color: "#3b82f6" },
-        { name: "Reseller", value: s.reseller,   color: "#8b5cf6" },
-        { name: "Tư vấn",   value: s.consultant, color: "#10b981" },
+        { name: "Ocean",    value: sum("ocean"),      color: "#3b82f6" },
+        { name: "Reseller", value: sum("reseller"),   color: "#8b5cf6" },
+        { name: "Tư vấn",   value: sum("consultant"), color: "#10b981" },
       ].filter(d => d.value > 0),
     };
-  }, [salCur]);
+  }, [salCur, pieMode]);
 
   // ── KPI summary ─────────────────────────────────────────────────────────────
   const kpiSummary = useMemo(() => {
@@ -343,7 +363,26 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
               <Card>
                 <CardHeader>
                   <CardTitle>Cơ Cấu Lương Theo Nhóm</CardTitle>
-                  <Badge variant="neutral">{pieData.month} {CUR_YEAR}</Badge>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {([
+                      { key: "month", label: "Tháng" },
+                      { key: "q1",    label: "Q1" },
+                      { key: "q2",    label: "Q2" },
+                      { key: "q3",    label: "Q3" },
+                      { key: "q4",    label: "Q4" },
+                      { key: "year",  label: "Cả năm" },
+                    ] as const).map(opt => (
+                      <button key={opt.key} onClick={() => setPieMode(opt.key)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                          pieMode === opt.key
+                            ? "bg-blue-600 text-white"
+                            : "text-slate-400 hover:text-white bg-slate-700/50"
+                        }`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                    <Badge variant="neutral" className="ml-1">{pieData.label}</Badge>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col lg:flex-row items-center gap-6">
