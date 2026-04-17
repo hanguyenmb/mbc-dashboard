@@ -64,7 +64,12 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
   const isAdmin = role === "admin";
   const [activeTab, setActiveTab] = useState<"report" | "input">("report");
   const [inputYear, setInputYear] = useState<number>(CUR_YEAR);
-  const [pieMode, setPieMode] = useState<"month" | "q1" | "q2" | "q3" | "q4" | "year">("month");
+  const [pieView, setPieView] = useState<"month" | "quarter" | "year">("month");
+  const [pieMonth, setPieMonth] = useState<string>(() => {
+    // mặc định tháng mới nhất — sẽ được override sau khi salCur tính xong
+    return "T3";
+  });
+  const [pieQuarter, setPieQuarter] = useState<"q1" | "q2" | "q3" | "q4">("q1");
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
 
@@ -170,17 +175,15 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
   const pieData = useMemo(() => {
     let selectedMonths: string[];
     let label: string;
-    if (pieMode === "year") {
+    if (pieView === "year") {
       selectedMonths = MONTHS;
       label = `Năm ${CUR_YEAR}`;
-    } else if (pieMode === "month") {
-      const lastMonth = [...MONTHS].reverse().find((m) => salCur[m]?.total > 0);
-      if (!lastMonth) return null;
-      selectedMonths = [lastMonth];
-      label = `${lastMonth} ${CUR_YEAR}`;
+    } else if (pieView === "quarter") {
+      selectedMonths = Q_MONTHS[pieQuarter];
+      label = `${pieQuarter.toUpperCase()} ${CUR_YEAR}`;
     } else {
-      selectedMonths = Q_MONTHS[pieMode];
-      label = `${pieMode.toUpperCase()} ${CUR_YEAR}`;
+      selectedMonths = [pieMonth];
+      label = `${pieMonth} ${CUR_YEAR}`;
     }
     const months = selectedMonths.filter(m => salCur[m]?.total > 0);
     if (!months.length) return null;
@@ -194,7 +197,7 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
         { name: "Tư vấn",   value: sum("consultant"), color: "#10b981" },
       ].filter(d => d.value > 0),
     };
-  }, [salCur, pieMode]);
+  }, [salCur, pieView, pieMonth, pieQuarter]);
 
   // ── KPI summary ─────────────────────────────────────────────────────────────
   const kpiSummary = useMemo(() => {
@@ -363,25 +366,35 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
               <Card>
                 <CardHeader>
                   <CardTitle>Cơ Cấu Lương Theo Nhóm</CardTitle>
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {([
-                      { key: "month", label: "Tháng" },
-                      { key: "q1",    label: "Q1" },
-                      { key: "q2",    label: "Q2" },
-                      { key: "q3",    label: "Q3" },
-                      { key: "q4",    label: "Q4" },
-                      { key: "year",  label: "Cả năm" },
-                    ] as const).map(opt => (
-                      <button key={opt.key} onClick={() => setPieMode(opt.key)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                          pieMode === opt.key
-                            ? "bg-blue-600 text-white"
-                            : "text-slate-400 hover:text-white bg-slate-700/50"
-                        }`}>
-                        {opt.label}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Tháng */}
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setPieView("month")}
+                        className={`px-2.5 py-1 rounded-l-lg text-xs font-medium border-r border-slate-600 transition-all ${pieView === "month" ? "bg-blue-600 text-white" : "bg-slate-700/50 text-slate-400 hover:text-white"}`}>
+                        Tháng
                       </button>
-                    ))}
-                    <Badge variant="neutral" className="ml-1">{pieData.label}</Badge>
+                      <select value={pieMonth} onChange={e => { setPieMonth(e.target.value); setPieView("month"); }}
+                        className="bg-slate-700/50 border-0 rounded-r-lg px-2 py-1 text-xs text-slate-300 focus:outline-none cursor-pointer">
+                        {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    {/* Quý */}
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setPieView("quarter")}
+                        className={`px-2.5 py-1 rounded-l-lg text-xs font-medium border-r border-slate-600 transition-all ${pieView === "quarter" ? "bg-blue-600 text-white" : "bg-slate-700/50 text-slate-400 hover:text-white"}`}>
+                        Quý
+                      </button>
+                      <select value={pieQuarter} onChange={e => { setPieQuarter(e.target.value as any); setPieView("quarter"); }}
+                        className="bg-slate-700/50 border-0 rounded-r-lg px-2 py-1 text-xs text-slate-300 focus:outline-none cursor-pointer">
+                        {["q1","q2","q3","q4"].map(q => <option key={q} value={q}>{q.toUpperCase()}</option>)}
+                      </select>
+                    </div>
+                    {/* Cả năm */}
+                    <button onClick={() => setPieView("year")}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${pieView === "year" ? "bg-blue-600 text-white" : "bg-slate-700/50 text-slate-400 hover:text-white"}`}>
+                      Cả năm
+                    </button>
+                    <Badge variant="neutral">{pieData.label}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
