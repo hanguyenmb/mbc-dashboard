@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, PieChart, Pie, Cell, LabelList,
@@ -75,6 +75,9 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
     });
 
   const [rows, setRows] = useState<SalaryMonthRecord[]>(() => initRows(CUR_YEAR));
+
+  // Sync rows khi salaryData prop thay đổi (sau khi save và re-navigate)
+  useEffect(() => { setRows(initRows(inputYear)); }, [salaryData]);
 
   function handleYearChange(y: number) {
     setInputYear(y);
