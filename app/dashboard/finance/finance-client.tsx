@@ -405,10 +405,16 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                   </thead>
                   <tbody className="divide-y divide-slate-700/40">
                     {rows.map((row, i) => {
-                      const rev = revCur[row.month];
+                      // Dùng đúng doanh số theo năm đang nhập
+                      const revMap = inputYear === CUR_YEAR ? revCur : inputYear === PREV_YEAR ? revPrev : {};
+                      const rev = (revMap as typeof revCur)[row.month];
                       const r = rev?.total > 0 ? ratio(row.total, rev.total) : null;
-                      const prev = revPrev[row.month];
-                      const rPrev = prev?.total > 0 && salPrev[row.month] ? ratio(salPrev[row.month].total, prev.total) : null;
+                      // So cùng kỳ: chỉ tính được nếu có dữ liệu năm trước
+                      const prevYearSal = salaryData.filter(s => s.year === inputYear - 1);
+                      const prevYearRevMap = inputYear === CUR_YEAR ? revPrev : {};
+                      const prevRev = (prevYearRevMap as typeof revPrev)[row.month];
+                      const prevSal = prevYearSal.find(s => s.month === row.month);
+                      const rPrev = prevRev?.total > 0 && prevSal?.total ? ratio(prevSal.total, prevRev.total) : null;
                       const diff = r !== null && rPrev !== null ? r - rPrev : null;
                       return (
                         <tr key={row.month} className="hover:bg-slate-700/20 transition-colors">
