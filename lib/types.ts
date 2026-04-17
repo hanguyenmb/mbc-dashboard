@@ -138,6 +138,7 @@ export interface SalaryMonthRecord {
   ocean: number;       // 2 team Ocean
   reseller: number;    // 2 team Reseller
   consultant: number;  // 10 team Tư vấn còn lại
+  note?: string;       // Ghi chú bất thường
 }
 
 export type SalaryData = SalaryMonthRecord[];

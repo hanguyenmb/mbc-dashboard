@@ -3,13 +3,13 @@
 import { useState, useMemo } from "react";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer, PieChart, Pie, Cell, LabelList,
+  Legend, ResponsiveContainer, PieChart, Pie, Cell, ReferenceLine,
 } from "recharts";
 import { Header, PageHeader } from "@/components/layout/header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Save, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Save, TrendingUp, TrendingDown, Minus, StickyNote } from "lucide-react";
 import type { UserRole, SalaryData, SalaryMonthRecord, TeamMonthlyData } from "@/lib/types";
 
 const MONTHS = ["T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12"];
@@ -88,8 +88,12 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
     setRows(initRows(y, salaryData));
   }
 
-  function setCell(monthIdx: number, field: keyof Omit<SalaryMonthRecord, "month" | "year">, val: string) {
+  function setCell(monthIdx: number, field: keyof Omit<SalaryMonthRecord, "month" | "year" | "note">, val: string) {
     setRows((prev) => prev.map((r, i) => i === monthIdx ? { ...r, [field]: parseFloat(val) || 0 } : r));
+  }
+
+  function setNote(monthIdx: number, val: string) {
+    setRows((prev) => prev.map((r, i) => i === monthIdx ? { ...r, note: val } : r));
   }
 
   async function handleSave() {
@@ -120,6 +124,11 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
   // Salary maps by year
   const salCur  = useMemo(() => Object.fromEntries(salaryData.filter(r => r.year === CUR_YEAR).map(r => [r.month, r])), [salaryData]);
   const salPrev = useMemo(() => Object.fromEntries(salaryData.filter(r => r.year === PREV_YEAR).map(r => [r.month, r])), [salaryData]);
+
+  // Tháng có ghi chú bất thường (2026)
+  const notesByMonth = useMemo(() =>
+    Object.fromEntries(salaryData.filter(r => r.year === CUR_YEAR && r.note).map(r => [r.month, r.note!])),
+  [salaryData]);
 
   // Revenue 2025 đáng tin cậy: dùng cumKy từ monthly_data (không bị ảnh hưởng bởi team_service_prev)
   // Ngưỡng tối thiểu để lọc dữ liệu revPrev bất thường (< 5 tỷ = dữ liệu sai)
@@ -351,6 +360,10 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                     <Bar yAxisId="rev" dataKey="DS 2026 (triệu)" fill="#3b82f6" opacity={0.6} radius={[2,2,0,0]} />
                     <Line yAxisId="pct" type="monotone" dataKey="Tỷ lệ 2026 (%)" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} connectNulls />
                     <Line yAxisId="pct" type="monotone" dataKey="Tỷ lệ 2025 (%)" stroke="#475569" strokeWidth={1.5} strokeDasharray="4 3" dot={{ r: 2 }} connectNulls />
+                    {Object.entries(notesByMonth).map(([m, note]) => (
+                      <ReferenceLine key={m} x={m} yAxisId="pct" stroke="#fbbf24" strokeDasharray="3 3"
+                        label={{ value: "📝", position: "top", fontSize: 12 }} />
+                    ))}
                   </ComposedChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -382,6 +395,10 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                     <Line yAxisId="pct" type="monotone" dataKey="HCM % 2026" stroke="#34d399" strokeWidth={2} dot={{ r: 3 }} connectNulls />
                     <Line yAxisId="pct" type="monotone" dataKey="HN % 2025"  stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.5} connectNulls />
                     <Line yAxisId="pct" type="monotone" dataKey="HCM % 2025" stroke="#34d399" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.5} connectNulls />
+                    {Object.entries(notesByMonth).map(([m, note]) => (
+                      <ReferenceLine key={m} x={m} yAxisId="pct" stroke="#fbbf24" strokeDasharray="3 3"
+                        label={{ value: "📝", position: "top", fontSize: 12 }} />
+                    ))}
                   </ComposedChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -407,6 +424,10 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                     <Line type="monotone" dataKey="Ocean % 2025"    stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.5} connectNulls />
                     <Line type="monotone" dataKey="Reseller % 2025" stroke="#8b5cf6" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.5} connectNulls />
                     <Line type="monotone" dataKey="Tư vấn % 2025"   stroke="#10b981" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.5} connectNulls />
+                    {Object.entries(notesByMonth).map(([m, note]) => (
+                      <ReferenceLine key={m} x={m} stroke="#fbbf24" strokeDasharray="3 3"
+                        label={{ value: "📝", position: "top", fontSize: 12 }} />
+                    ))}
                   </ComposedChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -507,7 +528,7 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-700">
-                      {["Tháng", "Tổng lương", "Tư vấn HN", "Tư vấn HCM", "Ocean", "Reseller", "Tư vấn", "DS tháng (triệu)", "Tỷ lệ % vs CK"].map((h) => (
+                      {["Tháng", "Tổng lương", "Tư vấn HN", "Tư vấn HCM", "Ocean", "Reseller", "Tư vấn", "DS tháng (triệu)", "Tỷ lệ % vs CK", "Ghi chú"].map((h) => (
                         <th key={h} className="text-left text-xs text-slate-400 font-medium py-2 px-2 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -566,6 +587,15 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                                 )}
                               </div>
                             ) : <span className="text-slate-600 text-xs">—</span>}
+                          </td>
+                          <td className="py-1.5 px-1.5">
+                            <input
+                              type="text"
+                              value={row.note || ""}
+                              onChange={(e) => setNote(i, e.target.value)}
+                              placeholder="Ghi chú bất thường..."
+                              className="w-48 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:border-amber-500 focus:outline-none"
+                            />
                           </td>
                         </tr>
                       );
