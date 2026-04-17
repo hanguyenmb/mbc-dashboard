@@ -123,32 +123,44 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
   const salCur  = useMemo(() => Object.fromEntries(salaryData.filter(r => r.year === CUR_YEAR).map(r => [r.month, r])), [salaryData]);
   const salPrev = useMemo(() => Object.fromEntries(salaryData.filter(r => r.year === PREV_YEAR).map(r => [r.month, r])), [salaryData]);
 
+  // Revenue 2025 đáng tin cậy: dùng cumKy từ monthly_data (không bị ảnh hưởng bởi team_service_prev)
+  // Ngưỡng tối thiểu để lọc dữ liệu revPrev bất thường (< 5 tỷ = dữ liệu sai)
+  const MIN_REV = 5000; // triệu
+  const rev2025Total = useMemo(() => Object.fromEntries(
+    MONTHS.map(m => {
+      const md = monthlyData.find((d: any) => d.month === m);
+      return [m, md?.cumKy ? Math.round(md.cumKy * 1000) : null];
+    })
+  ), [monthlyData]);
+
   // ── Chart 1 data — Toàn quốc ────────────────────────────────────────────────
   const chart1Data = useMemo(() => MONTHS.map((m) => {
     const rc = revCur[m];
-    const rp = revPrev[m];
     const sc = salCur[m];
     const sp = salPrev[m];
+    const rev25 = rev2025Total[m]; // dùng cumKy thay revPrev để tránh dữ liệu sai
     return {
       month: m,
       "DS 2026 (triệu)": rc?.total > 0 ? rc.total : null,
       "Tỷ lệ 2026 (%)":  rc && sc ? ratio(sc.total, rc.total) : null,
-      "Tỷ lệ 2025 (%)":  rp && sp ? ratio(sp.total, rp.total) : null,
+      "Tỷ lệ 2025 (%)":  rev25 && sp ? ratio(sp.total, rev25) : null,
     };
-  }), [revCur, revPrev, salCur, salPrev]);
+  }), [revCur, salCur, salPrev, rev2025Total]);
 
   // ── Chart 2 data — Khu vực ─────────────────────────────────────────────────
   const chart2Data = useMemo(() => MONTHS.map((m) => {
     const rc = revCur[m]; const rp = revPrev[m];
     const sc = salCur[m]; const sp = salPrev[m];
+    // Chỉ dùng revPrev cho khu vực nếu total vượt ngưỡng hợp lệ
+    const rpValid = rp?.total >= MIN_REV ? rp : null;
     return {
       month: m,
       "DS HN 2026":  rc?.hn > 0 ? rc.hn : null,
       "DS HCM 2026": rc?.hcm > 0 ? rc.hcm : null,
       "HN % 2026":  rc?.hn && sc ? ratio(sc.hn, rc.hn) : null,
       "HCM % 2026": rc?.hcm && sc ? ratio(sc.hcm, rc.hcm) : null,
-      "HN % 2025":  rp?.hn && sp ? ratio(sp.hn, rp.hn) : null,
-      "HCM % 2025": rp?.hcm && sp ? ratio(sp.hcm, rp.hcm) : null,
+      "HN % 2025":  rpValid?.hn && sp ? ratio(sp.hn, rpValid.hn) : null,
+      "HCM % 2025": rpValid?.hcm && sp ? ratio(sp.hcm, rpValid.hcm) : null,
     };
   }), [revCur, revPrev, salCur, salPrev]);
 
@@ -156,14 +168,15 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
   const chart3Data = useMemo(() => MONTHS.map((m) => {
     const rc = revCur[m]; const rp = revPrev[m];
     const sc = salCur[m]; const sp = salPrev[m];
+    const rpValid = rp?.total >= MIN_REV ? rp : null;
     return {
       month: m,
       "Ocean % 2026":      rc?.ocean && sc      ? ratio(sc.ocean, rc.ocean)           : null,
       "Reseller % 2026":   rc?.reseller && sc   ? ratio(sc.reseller, rc.reseller)     : null,
       "Tư vấn % 2026":     rc?.consultant && sc ? ratio(sc.consultant, rc.consultant) : null,
-      "Ocean % 2025":      rp?.ocean && sp      ? ratio(sp.ocean, rp.ocean)           : null,
-      "Reseller % 2025":   rp?.reseller && sp   ? ratio(sp.reseller, rp.reseller)     : null,
-      "Tư vấn % 2025":     rp?.consultant && sp ? ratio(sp.consultant, rp.consultant) : null,
+      "Ocean % 2025":      rpValid?.ocean && sp      ? ratio(sp.ocean, rpValid.ocean)           : null,
+      "Reseller % 2025":   rpValid?.reseller && sp   ? ratio(sp.reseller, rpValid.reseller)     : null,
+      "Tư vấn % 2025":     rpValid?.consultant && sp ? ratio(sp.consultant, rpValid.consultant) : null,
     };
   }), [revCur, revPrev, salCur, salPrev]);
 
