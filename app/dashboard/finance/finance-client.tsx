@@ -263,8 +263,8 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                       tickFormatter={(v) => `${v}%`}
                       label={{ value: "Tỷ lệ %", angle: 90, position: "insideRight", fill: "#64748b", fontSize: 11 }} />
                     <Tooltip {...TOOLTIP_STYLE}
-                      formatter={(v: any, name: string) => [
-                        name.includes("DS") ? `${Number(v).toLocaleString("vi-VN")} triệu` : `${v}%`, name,
+                      formatter={(v: any, name: any) => [
+                        String(name).includes("DS") ? `${Number(v).toLocaleString("vi-VN")} triệu` : `${v}%`, name,
                       ]} />
                     <Legend wrapperStyle={{ fontSize: 12, color: "#94a3b8" }} />
                     <Bar yAxisId="rev" dataKey="DS 2026 (triệu)" fill="#3b82f6" opacity={0.6} radius={[2,2,0,0]} />
@@ -291,8 +291,8 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                     <YAxis yAxisId="pct" orientation="right" tick={{ fill: "#94a3b8", fontSize: 11 }}
                       tickFormatter={(v) => `${v}%`} />
                     <Tooltip {...TOOLTIP_STYLE}
-                      formatter={(v: any, name: string) => [
-                        name.startsWith("DS") ? `${Number(v).toLocaleString("vi-VN")} triệu` : `${v}%`, name,
+                      formatter={(v: any, name: any) => [
+                        String(name).startsWith("DS") ? `${Number(v).toLocaleString("vi-VN")} triệu` : `${v}%`, name,
                       ]} />
                     <Legend wrapperStyle={{ fontSize: 12, color: "#94a3b8" }} />
                     <Bar yAxisId="rev" dataKey="DS HN 2026"  fill="#60a5fa" opacity={0.5} radius={[2,2,0,0]} />
@@ -343,7 +343,7 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                     <ResponsiveContainer width="100%" height={220}>
                       <PieChart>
                         <Pie data={pieData.slices} cx="50%" cy="50%" outerRadius={90} dataKey="value" paddingAngle={2}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                           labelLine={{ stroke: "#475569" }}>
                           {pieData.slices.map((d, i) => <Cell key={i} fill={d.color} />)}
                         </Pie>
