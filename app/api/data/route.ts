@@ -18,6 +18,7 @@ const FALLBACKS: Record<DataKey, unknown> = {
   team_service_prev: TEAM_SERVICE_DATA,
   service_config:    DEFAULT_SERVICE_CONFIG,
   users:             [],
+  salary_data:       [],
 };
 
 // GET /api/data?key=monthly_data

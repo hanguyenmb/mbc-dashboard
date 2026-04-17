@@ -25,7 +25,8 @@ export type DataKey =
   | "team_service"
   | "team_service_prev"
   | "service_config"
-  | "users";
+  | "users"
+  | "salary_data";
 
 export async function getData<T>(key: DataKey): Promise<T | null> {
   const sb = supabaseAdmin();

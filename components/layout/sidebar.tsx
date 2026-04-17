@@ -7,10 +7,8 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
-  UserCircle,
-  Database,
   BarChart3,
-  Trophy,
+  TrendingUp,
   Settings,
   Upload,
   LogOut,
@@ -27,13 +25,13 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard",         label: "Tổng Quan",        icon: LayoutDashboard, roles: ["admin", "viewer"] },
-  { href: "/dashboard/teams",     label: "Chi Tiết Doanh Số",   icon: Users,      roles: ["admin", "viewer", "teams_only"] },
-  { href: "/dashboard/customers", label: "Báo Cáo Khách Hàng", icon: UserCheck,  roles: ["admin", "viewer", "teams_only"] },
-  { href: "/dashboard/weekly",    label: "Báo Cáo Tuần",        icon: BarChart3,  roles: ["admin", "viewer"] },
-  { href: "/dashboard/ranking", label: "Bảng Xếp Hạng",    icon: Trophy,          roles: ["admin"] },
-  { href: "/dashboard/import",  label: "Nhập Dữ Liệu",     icon: Upload,          roles: ["admin"] },
-  { href: "/dashboard/users",   label: "Quản Lý User",     icon: Settings,        roles: ["admin"] },
+  { href: "/dashboard",           label: "Tổng Quan",          icon: LayoutDashboard, roles: ["admin", "viewer"] },
+  { href: "/dashboard/teams",     label: "Chi Tiết Doanh Số",  icon: Users,           roles: ["admin", "viewer", "teams_only"] },
+  { href: "/dashboard/customers", label: "Báo Cáo Khách Hàng", icon: UserCheck,       roles: ["admin", "viewer", "teams_only"] },
+  { href: "/dashboard/weekly",    label: "Báo Cáo Tuần",       icon: BarChart3,       roles: ["admin", "viewer"] },
+  { href: "/dashboard/finance",   label: "Báo Cáo Tài Chính",  icon: TrendingUp,      roles: ["admin", "viewer"] },
+  { href: "/dashboard/import",    label: "Nhập Dữ Liệu",       icon: Upload,          roles: ["admin"] },
+  { href: "/dashboard/users",     label: "Quản Lý User",       icon: Settings,        roles: ["admin"] },
 ];
 
 // Phase 2 - Odoo API (not yet active)
@@ -61,7 +59,7 @@ export function Sidebar({ role, userName, userAvatar }: SidebarProps) {
         </div>
         <div>
           <div className="text-white font-semibold text-sm leading-tight">BZ MBC Dashboard</div>
-          <div className="text-slate-400 text-xs">v1.2</div>
+          <div className="text-slate-400 text-xs">v1.3</div>
         </div>
       </div>
 

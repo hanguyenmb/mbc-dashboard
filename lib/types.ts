@@ -129,6 +129,19 @@ export const DEFAULT_SERVICE_CONFIG: ServiceConfig[] = [
 
 export type TeamMonthlyData = { month: string; teams: TeamServiceRecord[]; prevYearRevenue?: number }[];
 
+export interface SalaryMonthRecord {
+  month: string;   // "T1" – "T12"
+  year: number;    // 2025, 2026
+  total: number;   // Tổng lương toàn quốc (triệu VNĐ)
+  hn: number;
+  hcm: number;
+  ocean: number;       // 2 team Ocean
+  reseller: number;    // 2 team Reseller
+  consultant: number;  // 10 team Tư vấn còn lại
+}
+
+export type SalaryData = SalaryMonthRecord[];
+
 export interface AIAnalysis {
   summary: string;
   strengths: string[];
