@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, PieChart, Pie, Cell, LabelList,
@@ -60,28 +60,28 @@ interface Props {
   salaryData: SalaryData;
 }
 
-export function FinanceClient({ role, monthlyData, teamServiceData, teamServicePrev, salaryData }: Props) {
+export function FinanceClient({ role, monthlyData, teamServiceData, teamServicePrev, salaryData: initialSalaryData }: Props) {
   const isAdmin = role === "admin";
   const [activeTab, setActiveTab] = useState<"report" | "input">("report");
   const [inputYear, setInputYear] = useState<number>(CUR_YEAR);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
 
+  // Local copy — cập nhật sau mỗi lần save, không phụ thuộc prop
+  const [salaryData, setSalaryData] = useState<SalaryData>(initialSalaryData);
+
   // ── Input form state ────────────────────────────────────────────────────────
-  const initRows = (year: number) =>
+  const initRows = (year: number, data: SalaryData) =>
     MONTHS.map((month) => {
-      const existing = salaryData.find((r) => r.year === year && r.month === month);
+      const existing = data.find((r) => r.year === year && r.month === month);
       return { month, year, ...(existing ?? EMPTY_ROW()) };
     });
 
-  const [rows, setRows] = useState<SalaryMonthRecord[]>(() => initRows(CUR_YEAR));
-
-  // Sync rows khi salaryData prop thay đổi (sau khi save và re-navigate)
-  useEffect(() => { setRows(initRows(inputYear)); }, [salaryData]);
+  const [rows, setRows] = useState<SalaryMonthRecord[]>(() => initRows(CUR_YEAR, initialSalaryData));
 
   function handleYearChange(y: number) {
     setInputYear(y);
-    setRows(initRows(y));
+    setRows(initRows(y, salaryData));
   }
 
   function setCell(monthIdx: number, field: keyof Omit<SalaryMonthRecord, "month" | "year">, val: string) {
@@ -96,6 +96,12 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ records: rows }),
       });
+      // Fetch lại dữ liệu mới nhất để local state luôn đúng
+      const res = await fetch("/api/salary");
+      const json = await res.json();
+      const fresh: SalaryData = json.data ?? [];
+      setSalaryData(fresh);
+      setRows(initRows(inputYear, fresh));
       setSavedMsg("Đã lưu!");
       setTimeout(() => setSavedMsg(""), 2500);
     } finally {
