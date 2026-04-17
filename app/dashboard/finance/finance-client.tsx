@@ -209,17 +209,17 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
     );
     const avgRatio = months2026.reduce((s, m) => s + ratioByMonth[m], 0) / months2026.length;
 
-    // 2025 avg dùng monthly_data.cumKy làm DS
-    const months2025 = MONTHS.filter(m => {
+    // 2025 avg — chỉ tính trên CÙNG các tháng với 2026 để so đồng cấp
+    const months2025 = months2026.filter(m => {
       const md = monthlyData.find((d: any) => d.month === m);
       return md?.cumKy && salPrev[m]?.total > 0;
     });
-    const avgPrev = months2025.length
+    const avgPrev = months2025.length === months2026.length
       ? months2025.reduce((s, m) => {
           const md = monthlyData.find((d: any) => d.month === m);
           return s + (ratio(salPrev[m].total, Math.round(md.cumKy * 1000)) ?? 0);
         }, 0) / months2025.length
-      : null;
+      : null; // null nếu thiếu DL 2025 cho bất kỳ tháng nào của 2026
 
     // Tháng có tỷ lệ cao nhất 2026
     const worstMonth = months2026.reduce((a, b) => ratioByMonth[a] >= ratioByMonth[b] ? a : b);
