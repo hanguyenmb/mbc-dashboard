@@ -392,7 +392,7 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-700">
-                      {["Tháng", "Tổng lương", "HN", "HCM", "Ocean", "Reseller", "Tư vấn", "DS tháng (triệu)", "Tỷ lệ %"].map((h) => (
+                      {["Tháng", "Tổng lương", "Tư vấn HN", "Tư vấn HCM", "Ocean", "Reseller", "Tư vấn", "DS tháng (triệu)", "Tỷ lệ % vs CK"].map((h) => (
                         <th key={h} className="text-left text-xs text-slate-400 font-medium py-2 px-2 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
