@@ -366,6 +366,16 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                     ))}
                   </ComposedChart>
                 </ResponsiveContainer>
+                {Object.keys(notesByMonth).length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {Object.entries(notesByMonth).map(([m, note]) => (
+                      <div key={m} className="flex items-start gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-1.5 text-xs">
+                        <span className="text-amber-400 font-semibold shrink-0">{m}:</span>
+                        <span className="text-slate-300">{note}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -401,6 +411,16 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                     ))}
                   </ComposedChart>
                 </ResponsiveContainer>
+                {Object.keys(notesByMonth).length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {Object.entries(notesByMonth).map(([m, note]) => (
+                      <div key={m} className="flex items-start gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-1.5 text-xs">
+                        <span className="text-amber-400 font-semibold shrink-0">{m}:</span>
+                        <span className="text-slate-300">{note}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -430,6 +450,16 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                     ))}
                   </ComposedChart>
                 </ResponsiveContainer>
+                {Object.keys(notesByMonth).length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {Object.entries(notesByMonth).map(([m, note]) => (
+                      <div key={m} className="flex items-start gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-1.5 text-xs">
+                        <span className="text-amber-400 font-semibold shrink-0">{m}:</span>
+                        <span className="text-slate-300">{note}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
