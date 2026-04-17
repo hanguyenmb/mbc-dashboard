@@ -405,16 +405,26 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                   </thead>
                   <tbody className="divide-y divide-slate-700/40">
                     {rows.map((row, i) => {
-                      // Dùng đúng doanh số theo năm đang nhập
-                      const revMap = inputYear === CUR_YEAR ? revCur : inputYear === PREV_YEAR ? revPrev : {};
-                      const rev = (revMap as typeof revCur)[row.month];
-                      const r = rev?.total > 0 ? ratio(row.total, rev.total) : null;
-                      // So cùng kỳ: chỉ tính được nếu có dữ liệu năm trước
-                      const prevYearSal = salaryData.filter(s => s.year === inputYear - 1);
-                      const prevYearRevMap = inputYear === CUR_YEAR ? revPrev : {};
-                      const prevRev = (prevYearRevMap as typeof revPrev)[row.month];
-                      const prevSal = prevYearSal.find(s => s.month === row.month);
-                      const rPrev = prevRev?.total > 0 && prevSal?.total ? ratio(prevSal.total, prevRev.total) : null;
+                      // DS theo năm đang nhập:
+                      // 2026 → team_service (revCur, triệu)
+                      // 2025 → monthly_data.cumKy (cùng kỳ 2025, tỷ → triệu)
+                      // khác → không có
+                      let revTotal: number | null = null;
+                      if (inputYear === CUR_YEAR) {
+                        revTotal = revCur[row.month]?.total > 0 ? revCur[row.month].total : null;
+                      } else if (inputYear === PREV_YEAR) {
+                        const md = monthlyData.find((d: any) => d.month === row.month);
+                        revTotal = md?.cumKy ? Math.round(md.cumKy * 1000) : null;
+                      }
+                      const r = revTotal ? ratio(row.total, revTotal) : null;
+                      // So cùng kỳ: chỉ có nếu inputYear=2026 (có DS 2025 từ cumKy + lương 2025)
+                      let rPrev: number | null = null;
+                      if (inputYear === CUR_YEAR) {
+                        const md = monthlyData.find((d: any) => d.month === row.month);
+                        const prevRevTotal = md?.cumKy ? Math.round(md.cumKy * 1000) : null;
+                        const prevSal = salaryData.find(s => s.year === PREV_YEAR && s.month === row.month);
+                        rPrev = prevRevTotal && prevSal?.total ? ratio(prevSal.total, prevRevTotal) : null;
+                      }
                       const diff = r !== null && rPrev !== null ? r - rPrev : null;
                       return (
                         <tr key={row.month} className="hover:bg-slate-700/20 transition-colors">
@@ -431,7 +441,7 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                             </td>
                           ))}
                           <td className="py-2 px-2 text-xs text-slate-400 tabular-nums">
-                            {rev?.total > 0 ? rev.total.toLocaleString("vi-VN") : "—"}
+                            {revTotal ? revTotal.toLocaleString("vi-VN") : "—"}
                           </td>
                           <td className="py-2 px-2">
                             {r !== null ? (
