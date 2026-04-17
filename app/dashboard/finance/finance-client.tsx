@@ -166,8 +166,6 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
         { name: "Ocean",    value: s.ocean,      color: "#3b82f6" },
         { name: "Reseller", value: s.reseller,   color: "#8b5cf6" },
         { name: "Tư vấn",   value: s.consultant, color: "#10b981" },
-        { name: "HN khác",  value: Math.max(0, s.hn - s.ocean - s.reseller),  color: "#f59e0b" },
-        { name: "HCM khác", value: Math.max(0, s.hcm - s.ocean - s.reseller), color: "#f97316" },
       ].filter(d => d.value > 0),
     };
   }, [salCur]);
