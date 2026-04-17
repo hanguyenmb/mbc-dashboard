@@ -65,11 +65,9 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
   const [activeTab, setActiveTab] = useState<"report" | "input">("report");
   const [inputYear, setInputYear] = useState<number>(CUR_YEAR);
   const [pieView, setPieView] = useState<"month" | "quarter" | "year">("month");
-  const [pieMonth, setPieMonth] = useState<string>(() => {
-    // mặc định tháng mới nhất — sẽ được override sau khi salCur tính xong
-    return "T3";
-  });
+  const [pieMonth, setPieMonth] = useState<string>("T3");
   const [pieQuarter, setPieQuarter] = useState<"q1" | "q2" | "q3" | "q4">("q1");
+  const [pieYear, setPieYear] = useState<number>(CUR_YEAR);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
 
@@ -186,11 +184,15 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
     q3: ["T7","T8","T9"], q4: ["T10","T11","T12"],
   };
   const pieData = useMemo(() => {
+    // Với "Cả năm" dùng pieYear có thể khác CUR_YEAR
+    const salByYear = Object.fromEntries(
+      salaryData.filter(r => r.year === (pieView === "year" ? pieYear : CUR_YEAR)).map(r => [r.month, r])
+    );
     let selectedMonths: string[];
     let label: string;
     if (pieView === "year") {
       selectedMonths = MONTHS;
-      label = `Năm ${CUR_YEAR}`;
+      label = `Năm ${pieYear}`;
     } else if (pieView === "quarter") {
       selectedMonths = Q_MONTHS[pieQuarter];
       label = `${pieQuarter.toUpperCase()} ${CUR_YEAR}`;
@@ -198,10 +200,10 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
       selectedMonths = [pieMonth];
       label = `${pieMonth} ${CUR_YEAR}`;
     }
-    const months = selectedMonths.filter(m => salCur[m]?.total > 0);
+    const months = selectedMonths.filter(m => salByYear[m]?.total > 0);
     if (!months.length) return null;
     const sum = (field: keyof SalaryMonthRecord) =>
-      months.reduce((s, m) => s + ((salCur[m]?.[field] as number) ?? 0), 0);
+      months.reduce((s, m) => s + ((salByYear[m]?.[field] as number) ?? 0), 0);
     return {
       label,
       slices: [
@@ -439,10 +441,16 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                       </select>
                     </div>
                     {/* Cả năm */}
-                    <button onClick={() => setPieView("year")}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${pieView === "year" ? "bg-blue-600 text-white" : "bg-slate-700/50 text-slate-400 hover:text-white"}`}>
-                      Cả năm
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setPieView("year")}
+                        className={`px-2.5 py-1 rounded-l-lg text-xs font-medium border-r border-slate-600 transition-all ${pieView === "year" ? "bg-blue-600 text-white" : "bg-slate-700/50 text-slate-400 hover:text-white"}`}>
+                        Cả năm
+                      </button>
+                      <select value={pieYear} onChange={e => { setPieYear(Number(e.target.value)); setPieView("year"); }}
+                        className="bg-slate-700/50 border-0 rounded-r-lg px-2 py-1 text-xs text-slate-300 focus:outline-none cursor-pointer">
+                        {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
                     <Badge variant="neutral">{pieData.label}</Badge>
                   </div>
                 </CardHeader>
