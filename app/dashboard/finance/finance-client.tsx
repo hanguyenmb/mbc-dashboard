@@ -203,13 +203,38 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
   const kpiSummary = useMemo(() => {
     const months2026 = MONTHS.filter(m => revCur[m]?.total > 0 && salCur[m]?.total > 0);
     if (!months2026.length) return null;
-    const avgRatio = months2026.reduce((s, m) => s + (ratio(salCur[m].total, revCur[m].total) ?? 0), 0) / months2026.length;
-    const months2025 = MONTHS.filter(m => revPrev[m]?.total > 0 && salPrev[m]?.total > 0);
+
+    const ratioByMonth = Object.fromEntries(
+      months2026.map(m => [m, ratio(salCur[m].total, revCur[m].total) ?? 0])
+    );
+    const avgRatio = months2026.reduce((s, m) => s + ratioByMonth[m], 0) / months2026.length;
+
+    // 2025 avg dùng monthly_data.cumKy làm DS
+    const months2025 = MONTHS.filter(m => {
+      const md = monthlyData.find((d: any) => d.month === m);
+      return md?.cumKy && salPrev[m]?.total > 0;
+    });
     const avgPrev = months2025.length
-      ? months2025.reduce((s, m) => s + (ratio(salPrev[m].total, revPrev[m].total) ?? 0), 0) / months2025.length
+      ? months2025.reduce((s, m) => {
+          const md = monthlyData.find((d: any) => d.month === m);
+          return s + (ratio(salPrev[m].total, Math.round(md.cumKy * 1000)) ?? 0);
+        }, 0) / months2025.length
       : null;
-    return { avgRatio, avgPrev, diff: avgPrev !== null ? avgRatio - avgPrev : null, count: months2026.length };
-  }, [revCur, revPrev, salCur, salPrev]);
+
+    // Tháng có tỷ lệ cao nhất 2026
+    const worstMonth = months2026.reduce((a, b) => ratioByMonth[a] >= ratioByMonth[b] ? a : b);
+
+    // Chi phí lương chênh lệch tuyệt đối so CK (triệu VNĐ)
+    // = tổng lương thực tế - tổng lương nếu giữ nguyên tỷ lệ 2025
+    let extraCost: number | null = null;
+    if (avgPrev !== null) {
+      const totalSal = months2026.reduce((s, m) => s + salCur[m].total, 0);
+      const totalRev = months2026.reduce((s, m) => s + revCur[m].total, 0);
+      extraCost = totalSal - totalRev * avgPrev / 100;
+    }
+
+    return { avgRatio, avgPrev, count: months2026.length, worstMonth, worstRatio: ratioByMonth[worstMonth], extraCost };
+  }, [revCur, salCur, salPrev, monthlyData]);
 
   const hasData = Object.keys(salCur).length > 0 || Object.keys(salPrev).length > 0;
 
@@ -226,25 +251,36 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
         {/* KPI cards */}
         {kpiSummary && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { label: `TB tỷ lệ lương ${CUR_YEAR}`, value: `${kpiSummary.avgRatio.toFixed(1)}%`, color: "border-blue-500/30 text-blue-400", sub: `${kpiSummary.count} tháng` },
-              { label: `TB tỷ lệ lương ${PREV_YEAR}`, value: kpiSummary.avgPrev !== null ? `${kpiSummary.avgPrev.toFixed(1)}%` : "—", color: "border-slate-600 text-slate-400", sub: "cùng kỳ" },
-              {
-                label: "Biến động YoY",
-                value: kpiSummary.diff !== null ? `${kpiSummary.diff > 0 ? "+" : ""}${kpiSummary.diff.toFixed(1)}pp` : "—",
-                color: kpiSummary.diff !== null
-                  ? kpiSummary.diff > 0 ? "border-red-500/30 text-red-400" : "border-green-500/30 text-green-400"
-                  : "border-slate-600 text-slate-400",
-                sub: kpiSummary.diff !== null ? (kpiSummary.diff > 0 ? "tăng chi phí" : "cải thiện") : "",
-              },
-              { label: "Năm phân tích", value: String(CUR_YEAR), color: "border-slate-600 text-white", sub: "hiện tại" },
-            ].map((item) => (
-              <div key={item.label} className={`bg-slate-800/60 rounded-xl border p-4 ${item.color.split(" ")[0]}`}>
-                <div className="text-xs text-slate-400 mb-2">{item.label}</div>
-                <div className={`text-3xl font-bold ${item.color.split(" ")[1]}`}>{item.value}</div>
-                <div className="text-xs text-slate-500 mt-1">{item.sub}</div>
-              </div>
-            ))}
+            {(() => {
+              const ratioColor = (r: number) => r < 7
+                ? { border: "border-green-500/30", text: "text-green-400" }
+                : { border: "border-amber-500/30", text: "text-amber-400" };
+              const c26 = ratioColor(kpiSummary.avgRatio);
+              const c25 = kpiSummary.avgPrev !== null ? ratioColor(kpiSummary.avgPrev) : { border: "border-slate-600", text: "text-slate-400" };
+              const cW  = ratioColor(kpiSummary.worstRatio);
+
+              const extraAbs = kpiSummary.extraCost;
+              const extraTy  = extraAbs !== null ? extraAbs / 1000 : null;
+              const extraStr = extraTy !== null
+                ? `${extraTy > 0 ? "+" : ""}${extraTy.toFixed(2)} tỷ`
+                : "—";
+              const cExtra = extraAbs !== null
+                ? extraAbs > 0 ? { border: "border-red-500/30", text: "text-red-400" } : { border: "border-green-500/30", text: "text-green-400" }
+                : { border: "border-slate-600", text: "text-slate-400" };
+
+              return [
+                { label: `TB tỷ lệ lương ${CUR_YEAR}`, value: `${kpiSummary.avgRatio.toFixed(1)}%`, border: c26.border, text: c26.text, sub: `${kpiSummary.count} tháng · ${kpiSummary.avgRatio < 7 ? "✓ tốt" : "⚠ cần chú ý"}` },
+                { label: `TB tỷ lệ lương ${PREV_YEAR}`, value: kpiSummary.avgPrev !== null ? `${kpiSummary.avgPrev.toFixed(1)}%` : "—", border: c25.border, text: c25.text, sub: "cùng kỳ năm trước" },
+                { label: "Chi lương tăng thêm vs CK", value: extraStr, border: cExtra.border, text: cExtra.text, sub: extraAbs !== null ? (extraAbs > 0 ? "so với giữ tỷ lệ 2025" : "tiết kiệm so CK") : "chưa có DL 2025" },
+                { label: "Tháng chi phí cao nhất", value: `${kpiSummary.worstMonth} · ${kpiSummary.worstRatio.toFixed(1)}%`, border: cW.border, text: cW.text, sub: "cần xem xét" },
+              ].map((item) => (
+                <div key={item.label} className={`bg-slate-800/60 rounded-xl border p-4 ${item.border}`}>
+                  <div className="text-xs text-slate-400 mb-2">{item.label}</div>
+                  <div className={`text-2xl font-bold ${item.text}`}>{item.value}</div>
+                  <div className="text-xs text-slate-500 mt-1">{item.sub}</div>
+                </div>
+              ));
+            })()}
           </div>
         )}
 
