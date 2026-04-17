@@ -142,8 +142,11 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
     ? _selDaysElapsed / _selDaysInMonth : 1;
   // Dùng projected cho trend/so sánh, raw cho hiển thị số thực
   const selThucHien = selPace < 1 ? selThucHienRaw / selPace : selThucHienRaw;
-  const selTlMt8  = selMonth?.mt8  > 0 ? (selThucHien / selMonth.mt8)  * 100 : 0;
-  const selTlMt10 = selMonth?.mt10 > 0 ? (selThucHien / selMonth.mt10) * 100 : 0;
+  // So với mục tiêu theo ngày thực tế: actual / (target * paceRatio)
+  const selMt8Prorated  = selIsCurrentMonth && selPace < 1 ? (selMonth?.mt8  ?? 0) * selPace : (selMonth?.mt8  ?? 0);
+  const selMt10Prorated = selIsCurrentMonth && selPace < 1 ? (selMonth?.mt10 ?? 0) * selPace : (selMonth?.mt10 ?? 0);
+  const selTlMt8  = selMt8Prorated  > 0 ? (selThucHienRaw / selMt8Prorated)  * 100 : 0;
+  const selTlMt10 = selMt10Prorated > 0 ? (selThucHienRaw / selMt10Prorated) * 100 : 0;
   // Trend so tháng trước (dùng projected để so sánh công bằng)
   const prevMonth = selectedMonthIdx > 0 ? MONTHLY_DATA[selectedMonthIdx - 1] : null;
   const prevThucHien = prevMonth ? (prevMonth.hn ?? 0) + (prevMonth.hcm ?? 0) : 0;
@@ -454,15 +457,35 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                 </div>
               </div>,
               <div key="mt8" className={`rounded-xl border p-4 ${c8.border} ${c8.bg}`}>
-                <div className="text-xs text-slate-400 mb-1">Mục tiêu 8% {selMonth?.month}</div>
-                <div className={`text-xl font-bold ${c8.text}`}>{(selMonth?.mt8 ?? 0).toFixed(2)} tỷ</div>
+                <div className="text-xs text-slate-400 mb-1">
+                  Mục tiêu 8% {selMonth?.month}
+                  {selIsCurrentMonth && selPace < 1 && <span className="ml-1 text-amber-400/70">({_selDaysElapsed}/{_selDaysInMonth}d)</span>}
+                </div>
+                <div className={`text-xl font-bold ${c8.text}`}>
+                  {selIsCurrentMonth && selPace < 1
+                    ? ((selMonth?.mt8 ?? 0) * selPace).toFixed(2)
+                    : (selMonth?.mt8 ?? 0).toFixed(2)} tỷ
+                </div>
+                {selIsCurrentMonth && selPace < 1 && (
+                  <div className="text-[10px] text-slate-500">/ {(selMonth?.mt8 ?? 0).toFixed(2)} tỷ cả tháng</div>
+                )}
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${c8.badge}`}>Đạt {selTlMt8.toFixed(1)}%</span>
                 </div>
               </div>,
               <div key="mt10" className={`rounded-xl border p-4 ${c10.border} ${c10.bg}`}>
-                <div className="text-xs text-slate-400 mb-1">Mục tiêu 10% {selMonth?.month}</div>
-                <div className={`text-xl font-bold ${c10.text}`}>{(selMonth?.mt10 ?? 0).toFixed(2)} tỷ</div>
+                <div className="text-xs text-slate-400 mb-1">
+                  Mục tiêu 10% {selMonth?.month}
+                  {selIsCurrentMonth && selPace < 1 && <span className="ml-1 text-amber-400/70">({_selDaysElapsed}/{_selDaysInMonth}d)</span>}
+                </div>
+                <div className={`text-xl font-bold ${c10.text}`}>
+                  {selIsCurrentMonth && selPace < 1
+                    ? ((selMonth?.mt10 ?? 0) * selPace).toFixed(2)
+                    : (selMonth?.mt10 ?? 0).toFixed(2)} tỷ
+                </div>
+                {selIsCurrentMonth && selPace < 1 && (
+                  <div className="text-[10px] text-slate-500">/ {(selMonth?.mt10 ?? 0).toFixed(2)} tỷ cả tháng</div>
+                )}
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${c10.badge}`}>Đạt {selTlMt10.toFixed(1)}%</span>
                 </div>
