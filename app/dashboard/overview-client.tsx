@@ -911,13 +911,26 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                   const sumVal = (fieldKey: string, monthLabels: string[]) =>
                     monthLabels.reduce((s, ml) => s + ((REVENUE_TYPE.find(r => r.month === ml) as any)?.[fieldKey] ?? 0), 0);
 
+                  // Tháng hiện tại — điều chỉnh prevVal theo số ngày đã qua
+                  const _now = new Date();
+                  const _curMonthLabel = `T${_now.getMonth() + 1}`;
+                  const _dayOfMonth = _now.getDate();
+                  const _daysInMonth = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
+                  const _isPartialMonth = _dayOfMonth < _daysInMonth;
+                  const _paceRatio = _isPartialMonth ? _dayOfMonth / _daysInMonth : 1;
+
                   return (
                     <>
                       <thead>
                         <tr className="bg-slate-800/80">
                           <td className="py-2 px-3 font-semibold text-slate-300 border-b border-slate-700/50 min-w-[150px]">Chi tiết Doanh số</td>
                           {cols.map(col => (
-                            <td key={col.label} className="py-2 px-3 text-right font-semibold text-slate-400 border-b border-slate-700/50 min-w-[90px]">{col.label}</td>
+                            <td key={col.label} className="py-2 px-3 text-right font-semibold text-slate-400 border-b border-slate-700/50 min-w-[90px]">
+                              {col.label}
+                              {col.months.includes(_curMonthLabel) && _isPartialMonth && (
+                                <div className="text-[9px] font-normal text-slate-500">{_dayOfMonth}/{_daysInMonth} ngày</div>
+                              )}
+                            </td>
                           ))}
                         </tr>
                       </thead>
@@ -929,7 +942,12 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
                               <td className={`py-2 px-3 ${row.bold ? "font-semibold" : "font-medium"} ${row.color} ${row.lb}`}>{row.label}</td>
                               {cols.map(col => {
                                 const val = sumVal(row.key, col.months);
-                                const prevVal = isSubRow ? null : sumVal(row.prevKey, col.months);
+                                const rawPrev = isSubRow ? null : sumVal(row.prevKey, col.months);
+                                // Tháng hiện tại chưa đủ tháng → scale prevVal theo số ngày thực tế để so đồng cấp
+                                const isCurrentCol = col.months.includes(_curMonthLabel);
+                                const prevVal = rawPrev !== null && isCurrentCol && _isPartialMonth
+                                  ? rawPrev * _paceRatio
+                                  : rawPrev;
                                 const yoy = (val > 0 && prevVal && prevVal > 0) ? ((val - prevVal) / prevVal * 100) : null;
                                 return (
                                   <td key={col.label} className="py-1.5 px-3 text-right tabular-nums">
