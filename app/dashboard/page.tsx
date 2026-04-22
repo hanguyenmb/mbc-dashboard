@@ -10,16 +10,23 @@ import type { TeamMonthlyData, ServiceConfig } from "@/lib/types";
 
 function deriveServiceMonthly(teamMonthlyData: TeamMonthlyData, svcKeys: string[]): typeof SERVICE_MONTHLY {
   return teamMonthlyData.map(({ month, teams }) => {
-    const hnTeams = teams.filter(t => t.region === "HN");
+    const hnTeams  = teams.filter(t => t.region === "HN");
     const hcmTeams = teams.filter(t => t.region === "HCM");
-    const sumSvc = (ts: typeof teams) =>
-      Object.fromEntries(svcKeys.map(f => [f, ts.reduce((s, t) => s + ((t as any)[f] ?? 0), 0)]));
-    return {
-      month,
-      ...Object.fromEntries(svcKeys.map(f => [f, teams.reduce((s, t) => s + ((t as any)[f] ?? 0), 0)])),
-      hn: sumSvc(hnTeams),
-      hcm: sumSvc(hcmTeams),
-    } as any;
+    const sumField = (ts: typeof teams, f: string) => ts.reduce((s, t) => s + ((t as any)[f] ?? 0), 0);
+    const sumSvc = (ts: typeof teams) => Object.fromEntries(svcKeys.map(f => [f, sumField(ts, f)]));
+
+    const totals = Object.fromEntries(svcKeys.map(f => [f, sumField(teams, f)]));
+    const hnTotals  = sumSvc(hnTeams);
+    const hcmTotals = sumSvc(hcmTeams);
+
+    // cloudServer đã nhập bao gồm cả Elastic → trừ elastic để tránh tính 2 lần
+    if ("cloudServer" in totals && "elastic" in totals) {
+      totals.cloudServer    = Math.max(0, totals.cloudServer    - totals.elastic);
+      hnTotals.cloudServer  = Math.max(0, (hnTotals.cloudServer  ?? 0) - (hnTotals.elastic  ?? 0));
+      hcmTotals.cloudServer = Math.max(0, (hcmTotals.cloudServer ?? 0) - (hcmTotals.elastic ?? 0));
+    }
+
+    return { month, ...totals, hn: hnTotals, hcm: hcmTotals } as any;
   });
 }
 
