@@ -97,19 +97,20 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
     { key: "cloudServer", label: "Cloud Server",        color: "#F97316" },
   ] as const;
 
-  // Donut: lọc theo bộ lọc đang chọn
+  // Donut: lọc theo bộ lọc đang chọn — dùng month name thay vì index
+  const _selectedMonthName = `T${selectedMonthIdx + 1}`;
+  const Q_SVC_MONTHS: Record<number, string[]> = { 1: ["T1","T2","T3"], 2: ["T4","T5","T6"], 3: ["T7","T8","T9"], 4: ["T10","T11","T12"] };
   const svcFilteredMonths = (() => {
     if (view === "thang") {
-      const m = SERVICE_MONTHLY[selectedMonthIdx];
-      return m ? [m] : SERVICE_MONTHLY;
+      const m = SERVICE_MONTHLY.find((x: any) => x.month === _selectedMonthName);
+      return m ? [m] : [];
     }
-    // Quý: lấy các tháng trong quý có data
-    const start = (selectedQuarter - 1) * 3;
-    return SERVICE_MONTHLY.filter((_, i) => i >= start && i < start + 3);
+    const qMonthNames = Q_SVC_MONTHS[selectedQuarter] ?? [];
+    return SERVICE_MONTHLY.filter((x: any) => qMonthNames.includes(x.month));
   })();
 
   const svcLabel = view === "thang"
-    ? (SERVICE_MONTHLY[selectedMonthIdx]?.month ?? "Tổng")
+    ? _selectedMonthName
     : `Q${selectedQuarter}`;
 
   const svcQ1 = SVC_KEYS.map((s) => ({
@@ -120,12 +121,13 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
 
   const totalService = svcQ1.reduce((s, g) => s + g.value, 0);
 
+  const _svcFind = (month: string) => SERVICE_MONTHLY.find((x: any) => x.month === month) as any;
   const svcByGroup = SVC_KEYS.map((s) => ({
     name: s.label,
-    T1: (SERVICE_MONTHLY[0] as any)[s.key] as number,
-    T2: (SERVICE_MONTHLY[1] as any)[s.key] as number,
-    T3: (SERVICE_MONTHLY[2] as any)[s.key] as number,
-    q1: SERVICE_MONTHLY.reduce((sum, m) => sum + ((m as any)[s.key] as number), 0),
+    T1: (_svcFind("T1")?.[s.key] ?? 0) as number,
+    T2: (_svcFind("T2")?.[s.key] ?? 0) as number,
+    T3: (_svcFind("T3")?.[s.key] ?? 0) as number,
+    q1: SERVICE_MONTHLY.reduce((sum, m) => sum + (((m as any)[s.key] as number) ?? 0), 0),
   }));
 
   // KPI theo tháng được chọn
