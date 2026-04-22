@@ -28,8 +28,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",           label: "Tổng Quan",          icon: LayoutDashboard, roles: ["admin", "viewer"] },
   { href: "/dashboard/teams",     label: "Chi Tiết Doanh Số",  icon: Users,           roles: ["admin", "viewer", "teams_only"] },
   { href: "/dashboard/customers", label: "Báo Cáo Khách Hàng", icon: UserCheck,       roles: ["admin", "viewer", "teams_only"] },
-  { href: "/dashboard/weekly",    label: "Báo Cáo Tuần",       icon: BarChart3,       roles: ["admin", "viewer"] },
   { href: "/dashboard/finance",   label: "Báo Cáo Tài Chính",  icon: TrendingUp,      roles: ["admin", "viewer"] },
+  { href: "/dashboard/weekly",    label: "Báo Cáo Tuần",       icon: BarChart3,       roles: ["admin", "viewer"] },
   { href: "/dashboard/import",    label: "Nhập Dữ Liệu",       icon: Upload,          roles: ["admin"] },
   { href: "/dashboard/users",     label: "Quản Lý User",       icon: Settings,        roles: ["admin"] },
 ];
