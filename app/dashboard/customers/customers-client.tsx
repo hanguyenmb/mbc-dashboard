@@ -469,7 +469,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   {/* Single flat grid: rank | name | bar | value | assess | yoy — columns align across all rows */}
-                  <div className="grid gap-y-2.5 items-center" style={{ gridTemplateColumns: "1.25rem 5.5rem 1fr 4.5rem 5.5rem 2.75rem" }}>
+                  <div className="grid gap-y-2.5 items-center" style={{ gridTemplateColumns: "1.25rem 8rem 1fr 5rem 9rem 3.5rem" }}>
                     {avgDsData.map((d, i) => {
                       const barW    = (d.avgDs / maxAvgDs) * 100;
                       const baseW   = d.baseline ? (d.baseline / maxAvgDs) * 100 : null;
@@ -646,7 +646,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                     </div>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
-                    <div className="grid gap-y-2.5 items-center" style={{ gridTemplateColumns: "1.25rem 5.5rem 1fr 4.5rem 5.5rem 2.75rem" }}>
+                    <div className="grid gap-y-2.5 items-center" style={{ gridTemplateColumns: "1.25rem 8rem 1fr 5rem 9rem 3.5rem" }}>
                       {avgDkmData.map((d, i) => {
                         const barW    = (d.avgDkm / maxAvgDkm) * 100;
                         const baseW   = d.baseline ? (d.baseline / maxAvgDkm) * 100 : null;
