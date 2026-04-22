@@ -15,6 +15,7 @@ interface CustomersClientProps {
   teamServiceData: TeamMonthlyData;
   teamPrevData: TeamMonthlyData;
   serviceConfig: ServiceConfig[];
+  lastUpdated?: string | null;
 }
 
 const QUARTER_MONTHS: Record<number, string[]> = {
@@ -22,7 +23,7 @@ const QUARTER_MONTHS: Record<number, string[]> = {
   3: ["T7","T8","T9"], 4: ["T10","T11","T12"],
 };
 
-export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, serviceConfig }: CustomersClientProps) {
+export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, serviceConfig, lastUpdated }: CustomersClientProps) {
   const SVC_KEYS: ServiceConfig[] = serviceConfig?.length ? serviceConfig : DEFAULT_SERVICE_CONFIG;
   const DKM_SVC_KEYS = SVC_KEYS.filter(s => s.key !== 'elastic');
 
@@ -165,7 +166,7 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
 
   return (
     <div>
-      <Header title="Báo Cáo Khách Hàng" />
+      <Header title="Báo Cáo Khách Hàng" lastUpdated={lastUpdated} />
       <div className="p-6 space-y-5">
 
         {/* Filters */}

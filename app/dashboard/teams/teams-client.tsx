@@ -28,6 +28,7 @@ interface TeamsClientProps {
   teamPrevData: TeamMonthlyData;
   monthlyData: MonthlyRow[];
   serviceConfig?: ServiceConfig[];
+  lastUpdated?: string | null;
 }
 
 const QUARTER_MONTHS: Record<number, string[]> = {
@@ -267,7 +268,7 @@ function QuadSuggestion({ quadKey, teams, remainDays, isPaceMonth }: { quadKey: 
   );
 }
 
-export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, monthlyData, serviceConfig }: TeamsClientProps) {
+export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, monthlyData, serviceConfig, lastUpdated }: TeamsClientProps) {
   const SVC_KEYS: ServiceConfig[] = serviceConfig?.length ? serviceConfig : DEFAULT_SERVICE_CONFIG;
   // Elastic không cộng vào tổng ĐKM (đã có trong Cloud Server, để riêng theo dõi)
   const DKM_SVC_KEYS = SVC_KEYS.filter(s => s.key !== 'elastic');
@@ -464,7 +465,7 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
 
   return (
     <div>
-      <Header title="Chi Tiết Doanh Số">
+      <Header title="Chi Tiết Doanh Số" lastUpdated={lastUpdated}>
         <Button variant="ghost" size="sm" onClick={() => setShowHistory(true)}>
           <History size={14} /> Lịch Sử AI
         </Button>

@@ -1,7 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { TeamsClient } from "./teams-client";
-import { getData } from "@/lib/db";
+import { getData, getLastUpdated } from "@/lib/db";
 import { TEAM_SERVICE_DATA, MONTHLY_DATA } from "@/lib/mock-data";
 import type { TeamMonthlyData, ServiceConfig } from "@/lib/types";
 import { DEFAULT_SERVICE_CONFIG } from "@/lib/types";
@@ -18,11 +20,12 @@ export default async function TeamsPage() {
   const user = session.user as any;
   if (user.role !== "admin" && user.role !== "viewer" && user.role !== "teams_only") redirect("/dashboard");
 
-  const [raw, rawPrev, monthlyData, serviceConfig] = await Promise.all([
+  const [raw, rawPrev, monthlyData, serviceConfig, lastUpdated] = await Promise.all([
     getData<any>("team_service").catch(() => null),
     getData<any>("team_service_prev").catch(() => null),
     getData<typeof MONTHLY_DATA>("monthly_data").then(d => d ?? MONTHLY_DATA).catch(() => MONTHLY_DATA),
     getData<ServiceConfig[]>("service_config").catch(() => null),
+    getLastUpdated("team_service").catch(() => null),
   ]);
 
   return (
@@ -33,6 +36,7 @@ export default async function TeamsPage() {
       teamPrevData={normalizeTeamData(rawPrev)}
       monthlyData={monthlyData}
       serviceConfig={serviceConfig ?? DEFAULT_SERVICE_CONFIG}
+      lastUpdated={lastUpdated as string | null}
     />
   );
 }

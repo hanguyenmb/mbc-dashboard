@@ -234,7 +234,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, serviceC
 
   return (
     <div>
-      <Header title="Tổng Quan">
+      <Header title="Tổng Quan" lastUpdated={lastUpdated}>
         <Button variant="ghost" size="sm" onClick={() => setShowHistory(true)}>
           <History size={14} /> Lịch Sử AI
         </Button>

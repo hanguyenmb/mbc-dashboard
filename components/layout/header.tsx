@@ -7,17 +7,24 @@ import { useEffect, useState } from "react";
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  lastUpdated?: string | null;
   children?: React.ReactNode;
 }
 
-export function Header({ title, subtitle, children }: HeaderProps) {
+export function Header({ title, subtitle, lastUpdated, children }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   return (
     <header className="h-16 border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm flex items-center px-6 gap-4 sticky top-0 z-30">
-      <div className="flex-1" />
+      <div className="flex-1">
+        {lastUpdated && (
+          <span className="text-[10px] text-slate-500">
+            Cập nhật: {new Date(lastUpdated).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
+      </div>
 
       {/* Right actions */}
       <div className="flex items-center gap-2">

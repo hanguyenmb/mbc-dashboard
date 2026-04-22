@@ -58,9 +58,10 @@ interface Props {
   teamServiceData: TeamMonthlyData;
   teamServicePrev: TeamMonthlyData;
   salaryData: SalaryData;
+  lastUpdated?: string | null;
 }
 
-export function FinanceClient({ role, monthlyData, teamServiceData, teamServicePrev, salaryData: initialSalaryData }: Props) {
+export function FinanceClient({ role, monthlyData, teamServiceData, teamServicePrev, salaryData: initialSalaryData, lastUpdated }: Props) {
   const isAdmin = role === "admin";
   const [activeTab, setActiveTab] = useState<"report" | "input">("report");
   const [inputYear, setInputYear] = useState<number>(CUR_YEAR);
@@ -264,7 +265,7 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
 
   return (
     <div>
-      <Header title="Báo Cáo Tài Chính" />
+      <Header title="Báo Cáo Tài Chính" lastUpdated={lastUpdated} />
 
       <div className="p-6 space-y-5">
         <PageHeader

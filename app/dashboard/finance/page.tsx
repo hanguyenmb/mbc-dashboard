@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { FinanceClient } from "./finance-client";
-import { getData } from "@/lib/db";
+import { getData, getLastUpdated } from "@/lib/db";
 import { MONTHLY_DATA, TEAM_SERVICE_DATA } from "@/lib/mock-data";
 import type { SalaryData, TeamMonthlyData } from "@/lib/types";
 
@@ -13,11 +13,12 @@ export default async function FinancePage() {
   const user = session.user as any;
   if (user.role !== "admin" && user.role !== "viewer") redirect("/dashboard");
 
-  const [monthlyRaw, teamServiceRaw, teamServicePrevRaw, salaryRaw] = await Promise.all([
+  const [monthlyRaw, teamServiceRaw, teamServicePrevRaw, salaryRaw, lastUpdated] = await Promise.all([
     getData<any>("monthly_data").catch(() => null),
     getData<any>("team_service").catch(() => null),
     getData<any>("team_service_prev").catch(() => null),
     getData<SalaryData>("salary_data").catch(() => null),
+    getLastUpdated("monthly_data").catch(() => null),
   ]);
 
   return (
@@ -27,6 +28,7 @@ export default async function FinancePage() {
       teamServiceData={(Array.isArray(teamServiceRaw) && teamServiceRaw.length > 0 && "month" in teamServiceRaw[0]) ? teamServiceRaw : TEAM_SERVICE_DATA}
       teamServicePrev={(Array.isArray(teamServicePrevRaw) && teamServicePrevRaw.length > 0 && "month" in teamServicePrevRaw[0]) ? teamServicePrevRaw : TEAM_SERVICE_DATA}
       salaryData={salaryRaw ?? []}
+      lastUpdated={lastUpdated as string | null}
     />
   );
 }
