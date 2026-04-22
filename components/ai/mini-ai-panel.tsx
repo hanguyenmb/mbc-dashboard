@@ -100,7 +100,7 @@ export function MiniAiPanel({ context, data, label = "AI phân tích" }: MiniAiP
   const isCached = !!readCache(ck);
 
   return (
-    <div className="w-full">
+    <div className="relative">
       {/* Trigger */}
       <button
         onClick={handleClick}
@@ -116,9 +116,9 @@ export function MiniAiPanel({ context, data, label = "AI phân tích" }: MiniAiP
         {isCached && !open && <span className="w-1.5 h-1.5 rounded-full bg-green-500/70 ml-0.5" title="Đã lưu cache" />}
       </button>
 
-      {/* Inline panel */}
+      {/* Dropdown panel — absolute so không đè layout */}
       {open && (
-        <div className="mt-3 rounded-xl border border-purple-500/20 bg-purple-500/5 overflow-hidden">
+        <div className="absolute right-0 top-full mt-1 z-30 w-[520px] max-w-[90vw] rounded-xl border border-purple-500/20 bg-slate-900/95 backdrop-blur-sm shadow-xl overflow-hidden">
           {/* Panel header */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-purple-500/10">
             <div className="flex items-center gap-1.5 text-[11px] text-purple-400 font-medium">
