@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { QUARTERLY_DATA, MONTHLY_DATA, SERVICE_MONTHLY, REVENUE_TYPE } from "@/lib/mock-data";
+import { DEFAULT_SERVICE_CONFIG } from "@/lib/types";
+import type { ServiceConfig } from "@/lib/types";
 import { Sparkles, History, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 import { AiHistoryPanel } from "@/components/ai/ai-history-panel";
@@ -19,6 +21,7 @@ interface OverviewClientProps {
   userName: string;
   monthlyData: typeof MONTHLY_DATA;
   serviceMonthly: typeof SERVICE_MONTHLY;
+  serviceConfig?: ServiceConfig[];
   revenueType: typeof REVENUE_TYPE;
   lastUpdated?: string | null;
 }
@@ -75,7 +78,7 @@ function RateBadge({ value, label }: { value: number; label: string }) {
   );
 }
 
-export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueType, lastUpdated }: OverviewClientProps) {
+export function OverviewClient({ userName, monthlyData, serviceMonthly, serviceConfig: serviceConfigProp, revenueType, lastUpdated }: OverviewClientProps) {
   // Dùng prop (từ DB) thay vì import mock
   const MONTHLY_DATA = monthlyData;
   const SERVICE_MONTHLY = serviceMonthly;
@@ -87,15 +90,9 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, revenueT
   const [selectedQuarter, setSelectedQuarter] = useState(1);
   const [openDropdown, setOpenDropdown] = useState<"thang" | "quy" | null>(null);
   const [svcView, setSvcView] = useState<"stacked" | "grouped">("stacked");
-  const SVC_KEYS = [
-    { key: "hostMail",    label: "Hosting/Email",      color: "#0066CC" },
-    { key: "msgws",       label: "MS/GWS",             color: "#10B981" },
-    { key: "tenMien",     label: "Tên miền + DV khác", color: "#F59E0B" },
-    { key: "transferGws", label: "Transfer GWS",       color: "#8B5CF6" },
-    { key: "saleAi",      label: "Sale AI",            color: "#EF4444" },
-    { key: "elastic",     label: "Elastic",            color: "#06B6D4" },
-    { key: "cloudServer", label: "Cloud Server",        color: "#F97316" },
-  ] as const;
+  // Dùng serviceConfig từ DB (keys thực tế) thay vì hard-code
+  const SVC_KEYS: readonly { key: string; label: string; color: string }[] =
+    serviceConfigProp ?? DEFAULT_SERVICE_CONFIG;
 
   // Donut: lọc theo bộ lọc đang chọn — dùng month name thay vì index
   const _selectedMonthName = `T${selectedMonthIdx + 1}`;
