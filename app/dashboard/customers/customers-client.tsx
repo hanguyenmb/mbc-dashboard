@@ -255,24 +255,43 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
               };
             });
 
-          // Chart 2: TB DS/KH — ranking list với baseline theo vùng
+          // Chart 2: TB DS/KH — baseline theo nhóm (Ocean/Reseller/Tư vấn) × khu vực
+          const tType = (name: string) => {
+            const n = name.toLowerCase();
+            if (n.includes("ocean")) return "ocean";
+            if (n.includes("reseller")) return "reseller";
+            return "consultant";
+          };
+          const tTypeLabel: Record<string, string> = { ocean: "Ocean", reseller: "Reseller", consultant: "Tư vấn" };
           const avgDsRows = rows.filter(r => r.avgDs > 0);
-          const hnAvgDs  = (() => { const ts = avgDsRows.filter(r => r.region === "HN");  return ts.length ? ts.reduce((s,r) => s + r.avgDs, 0) / ts.length : null; })();
-          const hcmAvgDs = (() => { const ts = avgDsRows.filter(r => r.region === "HCM"); return ts.length ? ts.reduce((s,r) => s + r.avgDs, 0) / ts.length : null; })();
+          const groupAvgDs = (type: string, reg: string) => {
+            const ts = avgDsRows.filter(r => tType(r.teamName) === type && r.region === reg);
+            return ts.length ? ts.reduce((s, r) => s + r.avgDs, 0) / ts.length : null;
+          };
+          // Pre-compute all 6 baselines
+          const dsBaselines: Record<string, Record<string, number | null>> = {
+            ocean:      { HN: groupAvgDs("ocean", "HN"),      HCM: groupAvgDs("ocean", "HCM") },
+            reseller:   { HN: groupAvgDs("reseller", "HN"),   HCM: groupAvgDs("reseller", "HCM") },
+            consultant: { HN: groupAvgDs("consultant", "HN"), HCM: groupAvgDs("consultant", "HCM") },
+          };
           const avgDsData = avgDsRows
             .sort((a, b) => b.avgDs - a.avgDs)
             .map(r => {
-              const baseline = r.region === "HN" ? hnAvgDs : hcmAvgDs;
+              const type = tType(r.teamName);
+              const baseline = dsBaselines[type][r.region];
               const vsBaseline = baseline && baseline > 0 ? (r.avgDs - baseline) / baseline * 100 : null;
+              const baselineLabel = baseline ? `TB ${tTypeLabel[type]} ${r.region}` : "";
               return {
                 name: shortName(r.teamName),
                 fullName: r.teamName,
                 region: r.region,
+                type,
                 avgDs: r.avgDs,
                 color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
                 yoyVal: r.avgYoy,
                 baseline,
                 vsBaseline,
+                baselineLabel,
               };
             });
 
@@ -324,23 +343,34 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
               };
             });
 
-          // Chart 5: DS TB / KH ĐKM — ranking list với baseline theo vùng
+          // Chart 5: DS TB / KH ĐKM — baseline theo nhóm × khu vực
           const avgDkmRows = dkmRows.filter(r => r.avgDkm > 0);
-          const hnAvgDkm  = (() => { const ts = avgDkmRows.filter(r => r.region === "HN");  return ts.length ? ts.reduce((s,r) => s + r.avgDkm, 0) / ts.length : null; })();
-          const hcmAvgDkm = (() => { const ts = avgDkmRows.filter(r => r.region === "HCM"); return ts.length ? ts.reduce((s,r) => s + r.avgDkm, 0) / ts.length : null; })();
+          const groupAvgDkm = (type: string, reg: string) => {
+            const ts = avgDkmRows.filter(r => tType(r.teamName) === type && r.region === reg);
+            return ts.length ? ts.reduce((s, r) => s + r.avgDkm, 0) / ts.length : null;
+          };
+          const dkmBaselines: Record<string, Record<string, number | null>> = {
+            ocean:      { HN: groupAvgDkm("ocean", "HN"),      HCM: groupAvgDkm("ocean", "HCM") },
+            reseller:   { HN: groupAvgDkm("reseller", "HN"),   HCM: groupAvgDkm("reseller", "HCM") },
+            consultant: { HN: groupAvgDkm("consultant", "HN"), HCM: groupAvgDkm("consultant", "HCM") },
+          };
           const avgDkmData = avgDkmRows
             .sort((a, b) => b.avgDkm - a.avgDkm)
             .map(r => {
-              const baseline = r.region === "HN" ? hnAvgDkm : hcmAvgDkm;
+              const type = tType(r.teamName);
+              const baseline = dkmBaselines[type][r.region];
               const vsBaseline = baseline && baseline > 0 ? (r.avgDkm - baseline) / baseline * 100 : null;
+              const baselineLabel = baseline ? `TB ${tTypeLabel[type]} ${r.region}` : "";
               return {
                 name: shortName(r.teamName),
                 region: r.region,
+                type,
                 avgDkm: r.avgDkm,
                 color: r.region === "HN" ? HN_COLOR : HCM_COLOR,
                 yoyVal: r.avgDkmYoy,
                 baseline,
                 vsBaseline,
+                baselineLabel,
               };
             });
           const maxAvgDkm = Math.max(...avgDkmData.map(d => d.avgDkm), 1);
@@ -418,11 +448,22 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                 <CardHeader className="pb-2 pt-4 px-4">
                   <div className="flex items-center justify-between flex-wrap gap-3">
                     <CardTitle className="text-xs font-semibold text-slate-300">TB Doanh Số / Khách Hàng — Xếp Hạng</CardTitle>
-                    {/* Baseline badges */}
-                    <div className="flex items-center gap-3 text-[10px]">
-                      {hnAvgDs !== null && <span className="flex items-center gap-1 px-2 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-blue-300"><span className="font-mono">HN TB:</span><span className="font-bold">{hnAvgDs.toFixed(2)} tr</span></span>}
-                      {hcmAvgDs !== null && <span className="flex items-center gap-1 px-2 py-0.5 rounded border border-orange-500/30 bg-orange-500/10 text-orange-300"><span className="font-mono">HCM TB:</span><span className="font-bold">{hcmAvgDs.toFixed(2)} tr</span></span>}
-                      <span className="text-slate-500">· vạch ▸ = baseline vùng</span>
+                    {/* Baseline badges theo nhóm × khu vực */}
+                    <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                      {(["ocean","reseller","consultant"] as const).map(type =>
+                        (["HN","HCM"] as const).map(reg => {
+                          const val = dsBaselines[type][reg];
+                          if (!val) return null;
+                          const isHn = reg === "HN";
+                          return (
+                            <span key={`${type}-${reg}`} className={`flex items-center gap-1 px-2 py-0.5 rounded border ${isHn ? "border-blue-500/30 bg-blue-500/10 text-blue-300" : "border-orange-500/30 bg-orange-500/10 text-orange-300"}`}>
+                              <span className="font-mono">{tTypeLabel[type]} {reg}:</span>
+                              <span className="font-bold">{val.toFixed(2)} tr</span>
+                            </span>
+                          );
+                        })
+                      )}
+                      <span className="text-slate-500">· vạch ▸ = baseline nhóm</span>
                     </div>
                   </div>
                 </CardHeader>
@@ -438,9 +479,9 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                         : d.vsBaseline >= -10 ? "text-amber-400"
                         : "text-red-400";
                       const assessLabel = d.vsBaseline === null ? ""
-                        : d.vsBaseline >= 10  ? `+${d.vsBaseline.toFixed(0)}% TB vùng`
-                        : d.vsBaseline >= -10 ? `≈ TB vùng`
-                        : `${d.vsBaseline.toFixed(0)}% TB vùng`;
+                        : d.vsBaseline >= 10  ? `+${d.vsBaseline.toFixed(0)}% ${d.baselineLabel}`
+                        : d.vsBaseline >= -10 ? `≈ ${d.baselineLabel}`
+                        : `${d.vsBaseline.toFixed(0)}% ${d.baselineLabel}`;
                       return (
                         <>
                           {/* Rank */}
@@ -586,10 +627,21 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                   <CardHeader className="pb-2 pt-4 px-4">
                     <div className="flex items-center justify-between flex-wrap gap-3">
                       <CardTitle className="text-xs font-semibold text-slate-300">TB Doanh Số / KH Đăng Ký Mới — Xếp Hạng</CardTitle>
-                      <div className="flex items-center gap-3 text-[10px]">
-                        {hnAvgDkm !== null && <span className="flex items-center gap-1 px-2 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-blue-300"><span className="font-mono">HN TB:</span><span className="font-bold">{hnAvgDkm.toFixed(2)} tr</span></span>}
-                        {hcmAvgDkm !== null && <span className="flex items-center gap-1 px-2 py-0.5 rounded border border-orange-500/30 bg-orange-500/10 text-orange-300"><span className="font-mono">HCM TB:</span><span className="font-bold">{hcmAvgDkm.toFixed(2)} tr</span></span>}
-                        <span className="text-slate-500">· vạch ▸ = baseline vùng</span>
+                      <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                        {(["ocean","reseller","consultant"] as const).map(type =>
+                          (["HN","HCM"] as const).map(reg => {
+                            const val = dkmBaselines[type][reg];
+                            if (!val) return null;
+                            const isHn = reg === "HN";
+                            return (
+                              <span key={`${type}-${reg}`} className={`flex items-center gap-1 px-2 py-0.5 rounded border ${isHn ? "border-blue-500/30 bg-blue-500/10 text-blue-300" : "border-orange-500/30 bg-orange-500/10 text-orange-300"}`}>
+                                <span className="font-mono">{tTypeLabel[type]} {reg}:</span>
+                                <span className="font-bold">{val.toFixed(2)} tr</span>
+                              </span>
+                            );
+                          })
+                        )}
+                        <span className="text-slate-500">· vạch ▸ = baseline nhóm</span>
                       </div>
                     </div>
                   </CardHeader>
@@ -604,9 +656,9 @@ export function CustomersClient({ role, teamId, teamServiceData, teamPrevData, s
                           : d.vsBaseline >= -10 ? "text-amber-400"
                           : "text-red-400";
                         const assessLabel = d.vsBaseline === null ? ""
-                          : d.vsBaseline >= 10  ? `+${d.vsBaseline.toFixed(0)}% TB vùng`
-                          : d.vsBaseline >= -10 ? `≈ TB vùng`
-                          : `${d.vsBaseline.toFixed(0)}% TB vùng`;
+                          : d.vsBaseline >= 10  ? `+${d.vsBaseline.toFixed(0)}% ${d.baselineLabel}`
+                          : d.vsBaseline >= -10 ? `≈ ${d.baselineLabel}`
+                          : `${d.vsBaseline.toFixed(0)}% ${d.baselineLabel}`;
                         return (
                           <>
                             <span key={`r-${d.name}`} className="text-[11px] font-bold text-slate-500 text-right pr-1">{i + 1}</span>
