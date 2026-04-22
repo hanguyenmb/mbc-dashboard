@@ -548,126 +548,6 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
           </div>
         )}
 
-        {/* ── LEADERBOARD ── */}
-        {hasData && (() => {
-          const prevRankMap: Record<string, number> = {};
-          [...prevTeams].filter(t => t.revenue > 0)
-            .sort((a, b) => b.revenue - a.revenue)
-            .forEach((t, i) => { prevRankMap[t.teamId] = i + 1; });
-
-          const curSorted = [...allTeams]
-            .filter(t => t.revenue > 0 || t.target > 0)
-            .sort((a, b) =>
-              lbMetric === "ds"
-                ? projRev(b.revenue) - projRev(a.revenue)
-                : pct(projRev(b.revenue), b.target) - pct(projRev(a.revenue), a.target)
-            );
-
-          const lbRows = curSorted.map((t, i) => {
-            const curRank = i + 1;
-            const prevRank = prevRankMap[t.teamId] ?? null;
-            const delta = prevRank !== null ? prevRank - curRank : null;
-            const projDs = projRev(t.revenue);
-            const achievePct = pct(projDs, t.target);
-            return { ...t, curRank, delta, projDs, achievePct };
-          });
-
-          const maxDs = Math.max(...lbRows.map(r => r.projDs), 1);
-          const rankStyle = (rank: number) =>
-            rank === 1 ? "text-yellow-300 bg-yellow-500/20 border-yellow-500/30"
-            : rank === 2 ? "text-slate-300 bg-slate-500/20 border-slate-500/30"
-            : rank === 3 ? "text-amber-500 bg-amber-700/20 border-amber-600/30"
-            : "text-slate-600 bg-slate-800/40 border-slate-700/20";
-
-          return (
-            <Card>
-              <CardHeader className="pb-2 pt-4 px-4">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <CardTitle className="text-xs font-semibold text-slate-300">🏆 Leaderboard — {filterLabel}</CardTitle>
-                    {prevLabel
-                      ? <span className="text-[10px] text-slate-500">· biến động so {prevLabel}</span>
-                      : <span className="text-[10px] text-slate-600">· chưa có kỳ trước để so</span>
-                    }
-                  </div>
-                  <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg p-0.5 border border-slate-700/50">
-                    <button onClick={() => setLbMetric("ds")}
-                      className={`px-3 py-1 text-[11px] font-medium rounded-md transition-colors ${lbMetric === "ds" ? "bg-blue-600 text-white shadow" : "text-slate-400 hover:text-white"}`}>
-                      Doanh Số
-                    </button>
-                    <button onClick={() => setLbMetric("pct")}
-                      className={`px-3 py-1 text-[11px] font-medium rounded-md transition-colors ${lbMetric === "pct" ? "bg-purple-600 text-white shadow" : "text-slate-400 hover:text-white"}`}>
-                      % KH
-                    </button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="grid gap-y-2.5 items-center" style={{ gridTemplateColumns: "2.25rem 2.5rem 1fr 9rem 4rem 3.5rem" }}>
-                  {/* Header row */}
-                  <span className="text-[10px] text-slate-600 text-center">#</span>
-                  <span className="text-[10px] text-slate-600 text-center">±</span>
-                  <span className="text-[10px] text-slate-600 pl-1">Team</span>
-                  <span className="text-[10px] text-slate-600 text-center">DS dự kiến</span>
-                  <span className="text-[10px] text-slate-600 text-right pr-2">DS</span>
-                  <span className="text-[10px] text-slate-600 text-right">% KH</span>
-
-                  {lbRows.map((r) => {
-                    const barW = (r.projDs / maxDs) * 100;
-                    const pctColor = r.achievePct >= 100 ? "text-green-400" : r.achievePct >= 80 ? "text-amber-400" : "text-red-400";
-                    const regionColor = r.region === "HN" ? "#60a5fa" : "#fb923c";
-                    return (
-                      <>
-                        {/* Rank */}
-                        <span key={`lb-rank-${r.teamId}`}
-                          className={`text-[11px] font-black text-center w-7 h-7 mx-auto flex items-center justify-center rounded-lg border text-xs leading-none ${rankStyle(r.curRank)}`}>
-                          {r.curRank}
-                        </span>
-                        {/* Delta */}
-                        <span key={`lb-delta-${r.teamId}`} className="text-center">
-                          {r.delta === null
-                            ? <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded">NEW</span>
-                            : r.delta === 0
-                              ? <span className="text-[11px] text-slate-600">—</span>
-                              : r.delta > 0
-                                ? <span className="text-[11px] font-bold text-green-400">▲{r.delta}</span>
-                                : <span className="text-[11px] font-bold text-red-400">▼{Math.abs(r.delta)}</span>
-                          }
-                        </span>
-                        {/* Name */}
-                        <div key={`lb-name-${r.teamId}`} className="min-w-0 pl-1">
-                          <span className="text-[11px] font-medium text-slate-200 block truncate leading-tight">{r.teamName}</span>
-                          <span className={`text-[9px] font-mono ${r.region === "HN" ? "text-blue-400" : "text-orange-400"}`}>{r.region}</span>
-                        </div>
-                        {/* Bar */}
-                        <div key={`lb-bar-${r.teamId}`} className="relative h-[6px] bg-slate-700/60 rounded-full overflow-hidden mx-2">
-                          <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-                            style={{ width: `${barW}%`, backgroundColor: regionColor }} />
-                        </div>
-                        {/* DS value */}
-                        <span key={`lb-ds-${r.teamId}`} className="text-[11px] font-bold tabular-nums text-right pr-2 leading-tight"
-                          style={{ color: regionColor }}>
-                          {r.projDs >= 1000 ? `${(r.projDs / 1000).toFixed(2)}tỷ` : `${r.projDs.toLocaleString()}tr`}
-                        </span>
-                        {/* % KH */}
-                        <span key={`lb-pct-${r.teamId}`} className={`text-[11px] font-bold text-right tabular-nums ${pctColor}`}>
-                          {r.achievePct > 0 ? `${r.achievePct}%` : "—"}
-                        </span>
-                      </>
-                    );
-                  })}
-                </div>
-                {paceBadgeLabel && (
-                  <div className="mt-3 text-[10px] text-slate-500 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60 inline-block" />
-                    DS hiển thị đã chiếu theo pace {paceBadgeLabel} — ước tính cả tháng
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })()}
-
         {/* Phần 1: KPI Tổng + Vùng */}
         {(() => {
           const totalRev    = allTeams.reduce((s, t) => s + t.revenue, 0);
@@ -1404,6 +1284,126 @@ export function TeamsClient({ role, teamId, teamServiceData, teamPrevData, month
                   <span className="text-slate-500">·</span>
                   <span>Mục tiêu ĐKM = tỉ lệ ĐKM/DS CK2025 × 1.1 × KH tháng · Reseller dùng tỉ lệ riêng không nhân 1.1</span>
                 </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        {/* ── LEADERBOARD ── */}
+        {hasData && (() => {
+          const prevRankMap: Record<string, number> = {};
+          [...prevTeams].filter(t => t.revenue > 0)
+            .sort((a, b) => b.revenue - a.revenue)
+            .forEach((t, i) => { prevRankMap[t.teamId] = i + 1; });
+
+          const curSorted = [...allTeams]
+            .filter(t => t.revenue > 0 || t.target > 0)
+            .sort((a, b) =>
+              lbMetric === "ds"
+                ? projRev(b.revenue) - projRev(a.revenue)
+                : pct(projRev(b.revenue), b.target) - pct(projRev(a.revenue), a.target)
+            );
+
+          const lbRows = curSorted.map((t, i) => {
+            const curRank = i + 1;
+            const prevRank = prevRankMap[t.teamId] ?? null;
+            const delta = prevRank !== null ? prevRank - curRank : null;
+            const projDs = projRev(t.revenue);
+            const achievePct = pct(projDs, t.target);
+            return { ...t, curRank, delta, projDs, achievePct };
+          });
+
+          const maxDs = Math.max(...lbRows.map(r => r.projDs), 1);
+          const rankStyle = (rank: number) =>
+            rank === 1 ? "text-yellow-300 bg-yellow-500/20 border-yellow-500/30"
+            : rank === 2 ? "text-slate-300 bg-slate-500/20 border-slate-500/30"
+            : rank === 3 ? "text-amber-500 bg-amber-700/20 border-amber-600/30"
+            : "text-slate-600 bg-slate-800/40 border-slate-700/20";
+
+          return (
+            <Card>
+              <CardHeader className="pb-2 pt-4 px-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CardTitle className="text-xs font-semibold text-slate-300">🏆 Leaderboard — {filterLabel}</CardTitle>
+                    {prevLabel
+                      ? <span className="text-[10px] text-slate-500">· biến động so {prevLabel}</span>
+                      : <span className="text-[10px] text-slate-600">· chưa có kỳ trước để so</span>
+                    }
+                  </div>
+                  <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg p-0.5 border border-slate-700/50">
+                    <button onClick={() => setLbMetric("ds")}
+                      className={`px-3 py-1 text-[11px] font-medium rounded-md transition-colors ${lbMetric === "ds" ? "bg-blue-600 text-white shadow" : "text-slate-400 hover:text-white"}`}>
+                      Doanh Số
+                    </button>
+                    <button onClick={() => setLbMetric("pct")}
+                      className={`px-3 py-1 text-[11px] font-medium rounded-md transition-colors ${lbMetric === "pct" ? "bg-purple-600 text-white shadow" : "text-slate-400 hover:text-white"}`}>
+                      % KH
+                    </button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="grid gap-y-2.5 items-center" style={{ gridTemplateColumns: "2.25rem 2.5rem 1fr 9rem 4rem 3.5rem" }}>
+                  {/* Header row */}
+                  <span className="text-[10px] text-slate-600 text-center">#</span>
+                  <span className="text-[10px] text-slate-600 text-center">±</span>
+                  <span className="text-[10px] text-slate-600 pl-1">Team</span>
+                  <span className="text-[10px] text-slate-600 text-center">DS dự kiến</span>
+                  <span className="text-[10px] text-slate-600 text-right pr-2">DS</span>
+                  <span className="text-[10px] text-slate-600 text-right">% KH</span>
+
+                  {lbRows.map((r) => {
+                    const barW = (r.projDs / maxDs) * 100;
+                    const pctColor = r.achievePct >= 100 ? "text-green-400" : r.achievePct >= 80 ? "text-amber-400" : "text-red-400";
+                    const regionColor = r.region === "HN" ? "#60a5fa" : "#fb923c";
+                    return (
+                      <>
+                        {/* Rank */}
+                        <span key={`lb-rank-${r.teamId}`}
+                          className={`text-[11px] font-black text-center w-7 h-7 mx-auto flex items-center justify-center rounded-lg border text-xs leading-none ${rankStyle(r.curRank)}`}>
+                          {r.curRank}
+                        </span>
+                        {/* Delta */}
+                        <span key={`lb-delta-${r.teamId}`} className="text-center">
+                          {r.delta === null
+                            ? <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded">NEW</span>
+                            : r.delta === 0
+                              ? <span className="text-[11px] text-slate-600">—</span>
+                              : r.delta > 0
+                                ? <span className="text-[11px] font-bold text-green-400">▲{r.delta}</span>
+                                : <span className="text-[11px] font-bold text-red-400">▼{Math.abs(r.delta)}</span>
+                          }
+                        </span>
+                        {/* Name */}
+                        <div key={`lb-name-${r.teamId}`} className="min-w-0 pl-1">
+                          <span className="text-[11px] font-medium text-slate-200 block truncate leading-tight">{r.teamName}</span>
+                          <span className={`text-[9px] font-mono ${r.region === "HN" ? "text-blue-400" : "text-orange-400"}`}>{r.region}</span>
+                        </div>
+                        {/* Bar */}
+                        <div key={`lb-bar-${r.teamId}`} className="relative h-[6px] bg-slate-700/60 rounded-full overflow-hidden mx-2">
+                          <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                            style={{ width: `${barW}%`, backgroundColor: regionColor }} />
+                        </div>
+                        {/* DS value */}
+                        <span key={`lb-ds-${r.teamId}`} className="text-[11px] font-bold tabular-nums text-right pr-2 leading-tight"
+                          style={{ color: regionColor }}>
+                          {r.projDs >= 1000 ? `${(r.projDs / 1000).toFixed(2)}tỷ` : `${r.projDs.toLocaleString()}tr`}
+                        </span>
+                        {/* % KH */}
+                        <span key={`lb-pct-${r.teamId}`} className={`text-[11px] font-bold text-right tabular-nums ${pctColor}`}>
+                          {r.achievePct > 0 ? `${r.achievePct}%` : "—"}
+                        </span>
+                      </>
+                    );
+                  })}
+                </div>
+                {paceBadgeLabel && (
+                  <div className="mt-3 text-[10px] text-slate-500 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60 inline-block" />
+                    DS hiển thị đã chiếu theo pace {paceBadgeLabel} — ước tính cả tháng
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
