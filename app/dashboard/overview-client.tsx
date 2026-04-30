@@ -246,7 +246,7 @@ export function OverviewClient({ userName, monthlyData, serviceMonthly, serviceC
       <div className="p-6">
         <PageHeader
           title="Tổng Quan Dashboard"
-          subtitle={`Xin chào ${userName}. ${lastUpdated ? `Dữ liệu cập nhật lúc: ${new Date(lastUpdated).toLocaleString("vi-VN")}` : "Dữ liệu mới nhất"}`}
+          subtitle={`Xin chào ${userName}.`}
         >
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400">Bộ lọc:</span>
