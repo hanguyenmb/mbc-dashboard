@@ -34,9 +34,11 @@ function calcGroupRevenue(teamData: TeamMonthlyData) {
       const ocean      = teams.filter(t => teamType(t.teamName) === "ocean").reduce((s, t) => s + (t.revenue ?? 0), 0);
       const reseller   = teams.filter(t => teamType(t.teamName) === "reseller").reduce((s, t) => s + (t.revenue ?? 0), 0);
       const consultant = teams.filter(t => teamType(t.teamName) === "consultant").reduce((s, t) => s + (t.revenue ?? 0), 0);
-      return [month, { total, hn, hcm, ocean, reseller, consultant }];
+      const consultantHn  = teams.filter(t => teamType(t.teamName) === "consultant" && t.region === "HN").reduce((s, t) => s + (t.revenue ?? 0), 0);
+      const consultantHcm = teams.filter(t => teamType(t.teamName) === "consultant" && t.region === "HCM").reduce((s, t) => s + (t.revenue ?? 0), 0);
+      return [month, { total, hn, hcm, ocean, reseller, consultant, consultantHn, consultantHcm }];
     })
-  ) as Record<string, { total: number; hn: number; hcm: number; ocean: number; reseller: number; consultant: number }>;
+  ) as Record<string, { total: number; hn: number; hcm: number; ocean: number; reseller: number; consultant: number; consultantHn: number; consultantHcm: number }>;
 }
 
 function ratio(salary: number, revenue: number) {
@@ -155,20 +157,19 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
     };
   }), [revCur, salCur, salPrev, rev2025Total]);
 
-  // ── Chart 2 data — Khu vực ─────────────────────────────────────────────────
+  // ── Chart 2 data — Khu vực (chỉ DS Tư vấn vì lương nhập là lương Tư vấn) ──
   const chart2Data = useMemo(() => MONTHS.map((m) => {
     const rc = revCur[m]; const rp = revPrev[m];
     const sc = salCur[m]; const sp = salPrev[m];
-    // Chỉ dùng revPrev cho khu vực nếu total vượt ngưỡng hợp lệ
     const rpValid = rp?.total >= MIN_REV ? rp : null;
     return {
       month: m,
-      "DS HN 2026":  rc?.hn > 0 ? rc.hn : null,
-      "DS HCM 2026": rc?.hcm > 0 ? rc.hcm : null,
-      "HN % 2026":  rc?.hn && sc ? ratio(sc.hn, rc.hn) : null,
-      "HCM % 2026": rc?.hcm && sc ? ratio(sc.hcm, rc.hcm) : null,
-      "HN % 2025":  rpValid?.hn && sp ? ratio(sp.hn, rpValid.hn) : null,
-      "HCM % 2025": rpValid?.hcm && sp ? ratio(sp.hcm, rpValid.hcm) : null,
+      "DS Tư vấn HN":  rc?.consultantHn > 0 ? rc.consultantHn : null,
+      "DS Tư vấn HCM": rc?.consultantHcm > 0 ? rc.consultantHcm : null,
+      "HN % 2026":  rc?.consultantHn && sc ? ratio(sc.hn, rc.consultantHn) : null,
+      "HCM % 2026": rc?.consultantHcm && sc ? ratio(sc.hcm, rc.consultantHcm) : null,
+      "HN % 2025":  rpValid?.consultantHn && sp ? ratio(sp.hn, rpValid.consultantHn) : null,
+      "HCM % 2025": rpValid?.consultantHcm && sp ? ratio(sp.hcm, rpValid.consultantHcm) : null,
     };
   }), [revCur, revPrev, salCur, salPrev]);
 
@@ -383,8 +384,8 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
             {/* Chart 2 — Khu vực HN / HCM */}
             <Card>
               <CardHeader>
-                <CardTitle>Tỷ Lệ Lương — Theo Khu Vực</CardTitle>
-                <Badge variant="neutral">HN · HCM</Badge>
+                <CardTitle>Tỷ Lệ Lương — Theo Khu Vực (Tư Vấn)</CardTitle>
+                <Badge variant="neutral">HN 4 team · HCM 6 team</Badge>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
@@ -400,8 +401,8 @@ export function FinanceClient({ role, monthlyData, teamServiceData, teamServiceP
                         String(name).startsWith("DS") ? `${Number(v).toLocaleString("vi-VN")} triệu` : `${v}%`, name,
                       ]} />
                     <Legend wrapperStyle={{ fontSize: 12, color: "#94a3b8" }} />
-                    <Bar yAxisId="rev" dataKey="DS HN 2026"  fill="#60a5fa" opacity={0.5} radius={[2,2,0,0]} />
-                    <Bar yAxisId="rev" dataKey="DS HCM 2026" fill="#34d399" opacity={0.5} radius={[2,2,0,0]} />
+                    <Bar yAxisId="rev" dataKey="DS Tư vấn HN"  fill="#60a5fa" opacity={0.5} radius={[2,2,0,0]} />
+                    <Bar yAxisId="rev" dataKey="DS Tư vấn HCM" fill="#34d399" opacity={0.5} radius={[2,2,0,0]} />
                     <Line yAxisId="pct" type="monotone" dataKey="HN % 2026"  stroke="#60a5fa" strokeWidth={2} dot={{ r: 3 }} connectNulls />
                     <Line yAxisId="pct" type="monotone" dataKey="HCM % 2026" stroke="#34d399" strokeWidth={2} dot={{ r: 3 }} connectNulls />
                     <Line yAxisId="pct" type="monotone" dataKey="HN % 2025"  stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.5} connectNulls />
